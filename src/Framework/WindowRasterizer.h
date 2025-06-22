@@ -438,7 +438,7 @@ namespace IntegerWorld
 
 	public: // 3D Projection drawing (raster) interface.
 		/// <summary>
-		/// Draws a line between two points on the framebuffer, applying a custom pixel shader to each pixel.
+		/// Rasterizes a line between two points, applying a custom pixel shader to each pixel.
 		/// The line is clipped to the window boundaries as needed.
 		/// </summary>
 		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
@@ -531,7 +531,7 @@ namespace IntegerWorld
 		}
 
 		/// <summary>
-		/// Rasterizes a 3D line segment with Z-plane clipping and applies a pixel shader to each pixel along the line.
+		/// Rasterizes a 3D line segment with Z-plane clipping and applying a custom pixel shader to each pixel.
 		/// The line is clipped to the window boundaries as needed.
 		/// </summary>
 		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
@@ -588,7 +588,18 @@ namespace IntegerWorld
 			RasterLine(s.x, s.y, e.x, e.y, pixelShader);
 		}
 
-
+		/// <summary>
+		/// Rasterizes (fills) a triangle using a custom pixel shader, handling window clipping and degenerate cases.
+		/// The pixel shader is invoked for each pixel within the triangle, allowing for per-pixel color and visibility control.
+		/// </summary>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t& color, int16_t x, int16_t x) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <param name="x1">The x-coordinate of the first vertex of the triangle.</param>
+		/// <param name="y1">The y-coordinate of the first vertex of the triangle.</param>
+		/// <param name="x2">The x-coordinate of the second vertex of the triangle.</param>
+		/// <param name="y2">The y-coordinate of the second vertex of the triangle.</param>
+		/// <param name="x3">The x-coordinate of the third vertex of the triangle.</param>
+		/// <param name="y3">The y-coordinate of the third vertex of the triangle.</param>
+		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the triangle surface. It is called with the color, relative x offset, and relative y offset.</param>
 		template<typename PixelShader>
 		void RasterTriangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
@@ -677,6 +688,16 @@ namespace IntegerWorld
 			}
 		}
 
+		/// <summary>
+		/// Rasterizes (fills) a triangle defined by three 3D vertices using a custom pixel shader.
+		/// Handles z-plane clipping: only pixels with z > 0 are considered visible.
+		/// The pixel shader is invoked for each pixel within the visible portion of the triangle, allowing for per-pixel color and visibility control.
+		/// </summary>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t& color, int16_t x, int16_tx) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <param name="a">The first vertex of the triangle, including x, y, and z coordinates.</param>
+		/// <param name="b">The second vertex of the triangle, including x, y, and z coordinates.</param>
+		/// <param name="c">The third vertex of the triangle, including x, y, and z coordinates.</param>
+		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the triangle surface. It is called with the color, relative x offset, and relative y offset.</param>
 		template<typename PixelShader>
 		void RasterTriangle(const vertex16_t a, const vertex16_t b, const vertex16_t c, PixelShader&& pixelShader)
 		{
@@ -801,24 +822,40 @@ namespace IntegerWorld
 			}
 		}
 
-
 	public:
+		/// <summary>
+		/// Determines whether the specified 2D point (x, y) is within the current drawing window boundaries.
+		/// </summary>
+		/// <param name="x">The x-coordinate of the point to test.</param>
+		/// <param name="y">The y-coordinate of the point to test.</param>
+		/// <returns>True if the point is inside the window; otherwise, false.</returns>
 		bool IsInsideWindow(const int16_t x, const int16_t y) const
 		{
 			return x >= 0 && x < SurfaceWidth
 				&& y >= 0 && y < SurfaceHeight;
 		}
 
+		/// <summary>
+		/// Determines whether the specified 3D vertex is within the current drawing window and in front of the z=0 plane.
+		/// </summary>
+		/// <param name="point">The 3D vertex to test, including x, y, and z coordinates.</param>
+		/// <returns>True if the vertex is inside the window and z is non-negative; otherwise, false.</returns>
 		bool IsInsideWindow(const vertex16_t point) const
 		{
 			return point.z >= 0 && IsInsideWindow(point.x, point.y);
 		}
 
+		/// <summary>
+		/// Clamps the specified coordinates to ensure they remain within the current drawing window boundaries.
+		/// </summary>
+		/// <param name="x">Reference to the x-coordinate to clamp. Modified in place if out of bounds.</param>
+		/// <param name="y">Reference to the y-coordinate to clamp. Modified in place if out of bounds.</param>
 		void LimitToWindow(int16_t& x, int16_t& y) const
 		{
 			x = LimitValue(x, int16_t(0), int16_t(SurfaceWidth - 1));
 			y = LimitValue(y, int16_t(0), int16_t(SurfaceHeight - 1));
 		}
+
 	private:
 		/// <summary>
 		/// Clips the endpoint (x1, y1) of a line segment to the boundaries of the window, using (x2, y2) as the other endpoint.
