@@ -305,13 +305,6 @@ namespace IntegerWorld
 					ax = x3; ay = y3; bx = x1; by = y1; cx = x2; cy = y2;
 				}
 
-				//TODO: Handle cases where polygon overlaps corners.
-				//const bool topLeft = PointInTriangle(0, 0, ax, ay, bx, by, cx, cy);
-				//const bool bottomLeft = PointInTriangle(0, SurfaceHeight, ax, ay, bx, by, cx, cy);
-				//const bool topRight = PointInTriangle(SurfaceWidth, 0, ax, ay, bx, by, cx, cy);
-				//const bool bottomRight = PointInTriangle(SurfaceWidth, SurfaceHeight, ax, ay, bx, by, cx, cy);
-				//const uint8_t coverCount = (uint8_t)topLeft + (uint8_t)bottomLeft + (uint8_t)topRight + (uint8_t)bottomRight;
-
 				// Clip edge AB
 				int16_t pbx = bx, pby = by;
 				ClipEndpointToWindow(pbx, pby, ax, ay);
@@ -325,11 +318,6 @@ namespace IntegerWorld
 					ax, ay,
 					pbx, pby,
 					pcx, pcy);
-			}
-			else if (TriangleCoversWindow(x1, y1, x2, y2, x3, y3))
-			{
-				// Triangle covers the whole window.
-				Surface->RectangleFill(color, 0, 0, SurfaceWidth, SurfaceHeight);
 			}
 			else  // insideCount == 0, !TriangleCoversWindow
 			{
@@ -527,7 +515,7 @@ namespace IntegerWorld
 			else
 			{
 				// Diagonal line. Unroll to appropriate Bresenham line rasterizer.
-				BresenhamShade(x1c, y1c, x2c, y2c, x1, y1, pixelShader);
+				BresenhamLineShade(x1c, y1c, x2c, y2c, x1, y1, pixelShader);
 			}
 		}
 
@@ -782,8 +770,7 @@ namespace IntegerWorld
 	private:
 		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
 		template<typename PixelShader>
-		void BresenhamShade(
-			int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+		void BresenhamLineShade(int16_t x1, int16_t y1, int16_t x2, int16_t y2,
 			int16_t x0, int16_t y0, PixelShader&& pixelShader)
 		{
 			const int16_t dx = AbsValue(x2 - x1);
@@ -814,68 +801,6 @@ namespace IntegerWorld
 				}
 			}
 		}
-
-		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
-		template<typename PixelShader>
-		void BresenhamRightShade(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
-		{
-			const int16_t scaledWidth = (x2 - x1) << 1;
-			const int32_t slopeMagnitude = AbsValue(y2 - y1) << 1;
-			const int8_t slopeUnit = (y2 >= y1) ? 1 : -1;
-
-			int32_t slopeError = slopeMagnitude - (x2 - x1);
-			int16_t y = y1;
-			color_fraction16_t color{};
-			for (int_fast16_t x = x1; x < x2; x++)
-			{
-				if (pixelShader(color, x - x0, y - y0))
-				{
-					Surface->Pixel(color, x, y);
-				}
-
-				slopeError += slopeMagnitude;
-				if (slopeError >= 0)
-				{
-					y += slopeUnit;
-					slopeError -= scaledWidth;
-				}
-			}
-		}
-
-		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
-		template<typename PixelShader>
-		void BresenhamUpShade(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
-		{
-			const int16_t scaledHeight = (y2 - y1) << 1;
-			const int16_t slopeMagnitude = AbsValue(x2 - x1) << 1;
-			const int8_t slopeUnit = (x2 >= x1) ? 1 : -1;
-
-			int32_t slopeError = (int32_t)slopeMagnitude - (y2 - y1);
-			int16_t x = x1;
-			color_fraction16_t color{};
-			for (int_fast16_t y = y1; y <= y2; y++)
-			{
-				if (pixelShader(color, x - x0, y - y0))
-				{
-					Surface->Pixel(color, x, y);
-				}
-
-				slopeError += slopeMagnitude;
-				if (slopeError >= 0)
-				{
-					x += slopeUnit;
-					slopeError -= scaledHeight;
-				}
-			}
-		}
-
-
-
-		//template<typename PixelShader>
-		//void BresenhamFlatTopFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
-		//{
-
-		//}
 	};
 }
 #endif
