@@ -256,7 +256,8 @@ namespace Assets
 
 				RaysShaderFunctor() {}
 
-				bool operator()(color_fraction16_t& color, const int16_t x, int16_t y) {
+				bool operator()(color_fraction16_t& color, const int16_t x, int16_t y)
+				{
 					// Calculate point properties.
 					const int16_t xShifted = x - radius;
 					const int16_t yShifted = y - radius;
@@ -436,11 +437,13 @@ namespace Assets
 
 		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount>
 		{
+			int16_t ZOffset = -1;
+
 			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount>(Grid8x8::Vertices) {}
 
-			virtual int16_t GetZPosition() const
+			int16_t GetZPosition() const final
 			{
-				return VERTEX16_RANGE;
+				return VERTEX16_RANGE + ZOffset;
 			}
 		};
 

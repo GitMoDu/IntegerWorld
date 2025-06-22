@@ -13,7 +13,7 @@ using namespace IntegerWorld;
 class AnimatedDemoScene : private TS::Task
 {
 public:
-	static constexpr uint16_t ObjectsCount = 6;
+	static constexpr uint16_t ObjectsCount = 7;
 
 private:
 
@@ -54,7 +54,6 @@ private:
 	TriangleFillZFragmentShader MeshZShader{};
 	TriangleFillNormalFragmentShader MeshNormalShader{};
 
-	//PointPositionFragmentShader PointPositionShader{};
 	Assets::Shaders::FloorFragmentShader FloorShader{};
 
 	PointZFragmentShader PointZShader{};
@@ -72,7 +71,11 @@ private:
 	// Cube has a palleted diffuse color for each face.
 	Assets::Objects::CubeMeshObject ObjectCube{};
 
+	// Simple screen fill background.
+	ScreenFillShader BackgroundShader{};
+	FlatBackgroundObject Background{};
 
+	// Resumable animation trackers.
 	uint32_t AnimationStart = 0;
 	uint32_t AnimationPause = 0;
 
@@ -92,18 +95,18 @@ public:
 
 	void Start(IEngineRenderer& engineRenderer, const int16_t width, const int16_t height)
 	{
+		// Configure animation based on surface dimensions.
 		ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * width) / height;
 
 		// Place lights.
 		Light1.Translation.x = -((ShapeMoveX * 2) / 3);
 		Light1.Translation.y = -(DistanceUnit * 2) / 10;
 		Light1.Translation.z = BaseDistance - ShapeMoveZ - ((DistanceUnit * 20) / 10);
-
 		Light2.Translation.x = -Light1.Translation.x;
 		Light2.Translation.y = Light1.Translation.y;
 		Light2.Translation.z = Light1.Translation.z;
 
-		// Place the illuminated floor.
+		// Configure and place floor.
 		FloorShader.Radius = MaxValue(1, MinValue(width, height) / 96);
 		ObjectFloor.Resize = Resize::GetResize16(uint8_t(22), uint8_t(1));
 		ObjectFloor.Resize = Resize::GetResize16(uint8_t(25), uint8_t(1));
@@ -111,6 +114,7 @@ public:
 		ObjectFloor.Translation.y = DistanceUnit * 1;
 		ObjectFloor.Translation.z = BaseDistance + Scale(ObjectFloor.Resize, int16_t(-DistanceUnit / 4));
 		ObjectFloor.Rotation.x = Trigonometry::ANGLE_90;
+		ObjectFloor.ZOffset = -1;
 
 		// Set the ambient color.
 		SceneShader.AmbientLight = ColorFraction::RgbToColorFraction((uint32_t)0x18232D);
@@ -138,20 +142,22 @@ public:
 		ObjectCube.Material = material_t{ 0, UFRACTION8_1X, 0, 0 };
 		ObjectSphere.Material = material_t{ 0,UFRACTION8_1X, 0, 0 };
 
-		// Attach shaders to objects for rendering.
-		SetSceneShader();
-		SetPixelShader();
+		// Configure background.
+		Background.FragmentShader = &BackgroundShader;
 
 		// Add all render objects to the pipeline, including light sources.
 		engineRenderer.ClearObjects();
-
+		engineRenderer.AddObject(&Background);
 		engineRenderer.AddObject(&Light1);
 		engineRenderer.AddObject(&Light2);
-
 		engineRenderer.AddObject(&ObjectSphere);
 		engineRenderer.AddObject(&ObjectStar);
 		engineRenderer.AddObject(&ObjectCube);
 		engineRenderer.AddObject(&ObjectFloor);
+
+		// Attach shaders to objects for rendering.
+		SetSceneShader();
+		SetPixelShader();
 	}
 
 private:
@@ -211,6 +217,7 @@ public:
 			ObjectFloor.SceneShader = &SceneShader;
 			Light1.SceneShader = &SceneShader;
 			Light2.SceneShader = &SceneShader;
+			Background.SceneShader = &SceneShader;
 		}
 		else
 		{
@@ -220,6 +227,7 @@ public:
 			ObjectFloor.SceneShader = nullptr;
 			Light1.SceneShader = nullptr;
 			Light2.SceneShader = nullptr;
+			Background.SceneShader = nullptr;
 		}
 	}
 
@@ -243,6 +251,11 @@ public:
 
 		Light1.FragmentShader = &LightSourceShader;
 		Light2.FragmentShader = &LightSourceShader;
+
+		// Set background color as half the ambient light.
+		Background.Color.r = SceneShader.AmbientLight.r >> 1;
+		Background.Color.g = SceneShader.AmbientLight.g >> 1;
+		Background.Color.b = SceneShader.AmbientLight.b >> 1;
 	}
 
 	void SetZShader()
@@ -253,6 +266,9 @@ public:
 		ObjectFloor.FragmentShader = &PointZShader;
 		Light1.FragmentShader = &PointZShader;
 		Light2.FragmentShader = &PointZShader;
+		Background.Color = MeshZShader.FarColor;
+		PointZShader.NearColor = MeshZShader.NearColor;
+		PointZShader.FarColor = MeshZShader.FarColor;
 	}
 
 	void SetNormalShader()
@@ -263,6 +279,8 @@ public:
 		ObjectFloor.FragmentShader = &PointNormalShader;
 		Light1.FragmentShader = &PointNormalShader;
 		Light2.FragmentShader = &PointNormalShader;
+
+		Background.Color = ColorFraction::COLOR_BLACK;
 	}
 
 	void SetLight1Enabled(const bool enabled)
