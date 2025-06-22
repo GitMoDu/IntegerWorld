@@ -8,6 +8,9 @@ namespace IntegerWorld
 {
 	class WindowRasterizer
 	{
+	private:
+		static constexpr uint8_t BRESENHAM_SCALE = 16;
+
 	protected:
 		int16_t SurfaceWidth;
 		int16_t SurfaceHeight;
@@ -577,6 +580,135 @@ namespace IntegerWorld
 			RasterLine(s.x, s.y, e.x, e.y, pixelShader);
 		}
 
+
+		template<typename PixelShader>
+		void RasterTriangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
+		{
+			// Count how many vertices are inside the window
+			const bool in1 = IsInsideWindow(x1, y1);
+			const bool in2 = IsInsideWindow(x2, y2);
+			const bool in3 = IsInsideWindow(x3, y3);
+
+			const uint8_t insideCount = (uint8_t)in1 + (uint8_t)in2 + (uint8_t)in3;
+			if (insideCount == 3)
+			{
+				// The whole triangle fits in the window.
+				TriangleYRaster(x1, y1, x2, y2, x3, y3, pixelShader);
+			}
+			else if (insideCount == 2)
+			{
+				// Find the two inside vertices and the outside vertex
+				int16_t ax, ay, bx, by, cx, cy;
+				if (!in1)
+				{
+					// x1,y1 is outside
+					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
+				}
+				else if (!in2)
+				{
+					// x2,y2 is outside
+					ax = x1; ay = y1; bx = x3; by = y3; cx = x2; cy = y2;
+				}
+				else
+				{
+					// x3,y3 is outside
+					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
+				}
+
+				// Clip edge AC
+				int16_t pcx1 = cx, pcy1 = cy;
+				ClipEndpointToWindow(pcx1, pcy1, ax, ay);
+
+				// Clip edge BC
+				int16_t pcx2 = cx, pcy2 = cy;
+				ClipEndpointToWindow(pcx2, pcy2, bx, by);
+
+				// The clipped polygon is a quad: A, B, pcx2/pcy2, pcx1/pcy1
+				// Split into two triangles: (A, B, pcx2/pcy2) and (A, pcx2/pcy2, pcx1/pcy1)
+				TriangleYRaster(ax, ay,
+					bx, by,
+					pcx2, pcy2, pixelShader);
+				TriangleYRaster(ax, ay,
+					pcx2, pcy2,
+					pcx1, pcy1, pixelShader);
+			}
+			else if (insideCount == 1)
+			{
+				// Find the inside vertex and the two outside vertices
+				int16_t ax, ay, bx, by, cx, cy;
+				if (in1)
+				{
+					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
+				}
+				else if (in2)
+				{
+					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
+				}
+				else // in3
+				{
+					ax = x3; ay = y3; bx = x1; by = y1; cx = x2; cy = y2;
+				}
+
+				// Clip edge AB
+				int16_t pbx = bx, pby = by;
+				ClipEndpointToWindow(pbx, pby, ax, ay);
+
+				// Clip edge AC
+				int16_t pcx = cx, pcy = cy;
+				ClipEndpointToWindow(pcx, pcy, ax, ay);
+
+				// Draw the clipped triangle
+				TriangleYRaster(ax, ay,
+					pbx, pby,
+					pcx, pcy, pixelShader);
+			}
+			else  // insideCount == 0, !TriangleCoversWindow
+			{
+				// All vertices are outside the window.
+				//TODO: Check if triangle intersects the window and draw remaining are with polygon sub-division.
+			}
+		}
+
+		template<typename PixelShader>
+		void RasterTriangle(const vertex16_t a, const vertex16_t b, const vertex16_t c, PixelShader&& pixelShader)
+		{
+			if (a.z == b.z
+				&& a.z == c.z)
+			{
+				// Screen plane 2D triangle, only need to check one point for bounds.
+				if (a.z > 0)
+				{
+					RasterTriangle(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
+				}
+				else
+				{
+					// Whole triangle out of z-bounds.
+				}
+			}
+			else
+			{
+				const uint8_t inBounds = (a.z > 0) + (b.z > 0) + (c.z > 0);
+
+				if (inBounds == 3)
+				{
+					// Whole triangle is in bounds.
+					RasterTriangle(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
+				}
+				else if (inBounds == 0)
+				{
+					// Whole triangle out of z-bounds.
+				}
+				else if (inBounds == 2)
+				{
+					//TODO: Triangle has 2 points in bounds.
+				}
+				else
+				{
+					//TODO: Triangle has 1 point in bounds.
+				}
+			}
+		}
+
 		/// <summary>
 		/// Renders a rectangle on the framebuffer using a custom pixel shader, handling clipping to the surface boundaries and degenerate cases (lines or points).
 		/// </summary>
@@ -799,6 +931,194 @@ namespace IntegerWorld
 					err += dx;
 					y1 += sy;
 				}
+			}
+		}
+
+		template<typename PixelShader>
+		void BresenhamFlatTopFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
+		{
+			// Calculate inverse slopes in fixed-point
+			const int32_t invSlope1 = ((int32_t)(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
+			const int32_t invSlope2 = ((int32_t)(x3 - x2) << BRESENHAM_SCALE) / (y3 - y2);
+
+			// Starting x positions in fixed-point
+			int32_t ax = (int32_t)x3 << BRESENHAM_SCALE;
+			int32_t bx = ax;
+
+			// Loop from c.y down to a.y (inclusive)
+			const int16_t startY = y3;
+			const int16_t endY = MaxValue(int16_t(0), y1);
+
+			color_fraction16_t color{};
+			for (int16_t y = startY; y >= endY; y--)
+			{
+				if (y >= 0 && y < SurfaceHeight)
+				{
+					int16_t xStart{};
+					int16_t xEnd{};
+
+					if (ax > bx)
+					{
+						xStart = bx >> BRESENHAM_SCALE;
+						xEnd = ax >> BRESENHAM_SCALE;
+					}
+					else
+					{
+						xStart = ax >> BRESENHAM_SCALE;
+						xEnd = bx >> BRESENHAM_SCALE;
+					}
+
+					xStart = MaxValue(int16_t(0), xStart);
+					xEnd = MinValue(int16_t(SurfaceWidth - 1), xEnd);
+
+					if (xStart <= xEnd)
+					{
+						for (int_fast16_t x = xStart; x <= xEnd; x++)
+						{
+							if (pixelShader(color, x - x0, y - y0))
+							{
+								Surface->Pixel(color, x, y);
+							}
+						}
+					}
+				}
+
+				ax -= invSlope1;
+				bx -= invSlope2;
+			}
+		}
+
+		template<typename PixelShader>
+		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
+		{
+			// Calculate inverse slopes in fixed-point
+			int32_t invSlope1 = 1;
+			if (y2 != y1)
+			{
+				invSlope1 = (int32_t(x2 - x1) << BRESENHAM_SCALE) / (y2 - y1);
+			}
+			int32_t invSlope2 = 1;
+			if (y3 != y1)
+			{
+				invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
+			}
+
+			// Starting x positions in fixed-point
+			int32_t ax = int32_t(x1) << BRESENHAM_SCALE;
+			int32_t bx = ax;
+
+			// Loop from y1 to y2 (inclusive)
+			const int16_t startY = y1;
+			const int16_t endY = min(int16_t(SurfaceHeight - 1), y2);
+
+			color_fraction16_t color{};
+			for (int16_t y = startY; y < endY; y++)
+			{
+				if (y >= 0 && y < SurfaceHeight)
+				{
+					int16_t xStart{};
+					int16_t xEnd{};
+
+					if (ax > bx)
+					{
+						xStart = bx >> BRESENHAM_SCALE;
+						xEnd = ax >> BRESENHAM_SCALE;
+					}
+					else
+					{
+						xStart = ax >> BRESENHAM_SCALE;
+						xEnd = bx >> BRESENHAM_SCALE;
+					}
+
+					xStart = MaxValue(int16_t(0), xStart);
+					xEnd = MinValue(int16_t(SurfaceWidth - 1), xEnd);
+
+					if (xStart <= xEnd)
+					{
+						for (int_fast16_t x = xStart; x <= xEnd; x++)
+						{
+							if (pixelShader(color, x - x0, y - y0))
+							{
+								Surface->Pixel(color, x, y);
+							}
+						}
+					}
+				}
+
+				ax += invSlope1;
+				bx += invSlope2;
+			}
+		}
+
+		template<typename PixelShader>
+		void TriangleYRaster(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
+		{
+			if (y1 <= y2 && y1 <= y3)
+			{
+				// Vertex A is at the top.
+				if (y2 <= y3)
+				{
+					TriangleYOrderedRaster(x1, y1, x2, y2, x3, y3, pixelShader);
+				}
+				else
+				{
+					TriangleYOrderedRaster(x1, y1, x3, y3, x2, y2, pixelShader);
+				}
+			}
+			else if (y2 <= y1 && y2 <= y3)
+			{
+				// Vertex B is at the top.
+				if (y1 <= y3)
+				{
+					TriangleYOrderedRaster(x2, y2, x1, y1, x3, y3, pixelShader);
+				}
+				else
+				{
+					TriangleYOrderedRaster(x2, y2, x3, y3, x1, y1, pixelShader);
+				}
+			}
+			else
+			{
+				// Vertex C is at the top.
+				if (y1 <= y2)
+				{
+					TriangleYOrderedRaster(x3, y3, x1, y1, x2, y2, pixelShader);
+				}
+				else
+				{
+					TriangleYOrderedRaster(x3, y3, x2, y2, x1, y1, pixelShader);
+				}
+			}
+		}
+
+		template<typename PixelShader>
+		void TriangleYOrderedRaster(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
+		{
+			if (y2 == y3) // Flat bottom.
+			{
+				BresenhamFlatBottomFill(x1, y1, x2, y2, x3, y3, x1, y1, pixelShader);
+			}
+			else if (y1 == y2) // Flat top.
+			{
+				BresenhamFlatTopFill(x1, y1, x2, y2, x3, y3, x1, y1, pixelShader);
+			}
+			else // General triangle: split it.
+			{
+				// Calculate splitting vertex Vi.
+				const int16_t dxTotal = x3 - x1;
+				const int16_t dyTotal = y3 - y1;
+				const int16_t dySegment = y2 - y1;
+
+				if (dyTotal == 0)
+					return; // Degenerate triangle
+
+				// Calculate Vi_x in fixed-point.
+				const int16_t Vi_x = SignedRightShift((((int32_t)x1 << BRESENHAM_SCALE) + ((((int32_t)dxTotal << BRESENHAM_SCALE) * dySegment) / dyTotal)), BRESENHAM_SCALE);
+				const int16_t Vi_y = y2;
+
+				// Draw the two sub-triangles
+				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, Vi_y, x1, y1, pixelShader);
+				BresenhamFlatTopFill(x2, y2, Vi_x, Vi_y, x3, y3, x1, y1, pixelShader);
 			}
 		}
 	};
