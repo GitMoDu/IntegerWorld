@@ -11,7 +11,7 @@ namespace Assets
 	{
 		struct CubeEdgeObject : public EdgeSingleColorSingleMaterialObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>
 		{
-			CubeEdgeObject(const EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::CullCenterZBehind)
+			CubeEdgeObject(const EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling)
 				: EdgeSingleColorSingleMaterialObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>(
 					Shapes::Cube::Vertices,
 					Shapes::Cube::Edges, edgeDrawMode) {
@@ -20,7 +20,7 @@ namespace Assets
 
 		struct OctahedronEdgeObject : public EdgeSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>
 		{
-			OctahedronEdgeObject(const EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::CullAllBehind)
+			OctahedronEdgeObject(const EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling)
 				: EdgeSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>(
 					Shapes::Octahedron::Vertices,
 					Shapes::Octahedron::Edges, edgeDrawMode) {

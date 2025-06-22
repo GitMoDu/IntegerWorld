@@ -90,15 +90,15 @@ void setup()
 	delay(1000);
 #endif
 
-	EngineRenderer.Start();
-	Scene.Start(&EngineRenderer);
-
-#if defined(DEBUG)
 	int16_t width, height;
 	uint8_t colorDepth;
 	Driver.GetSurfaceDimensions(width, height, colorDepth);
 
-	Serial.println(F("Direct Draw Tiny Demo"));
+	EngineRenderer.Start();
+	Scene.Start(EngineRenderer, colorDepth);
+
+#if defined(DEBUG)
+	Serial.println(F("Integer World 3D Tiny Scenee"));
 	Serial.print(F("Display "));
 	Serial.print(width);
 	Serial.print('x');
