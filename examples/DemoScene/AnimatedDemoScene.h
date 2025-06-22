@@ -16,7 +16,6 @@ public:
 	static constexpr uint16_t ObjectsCount = 7;
 
 private:
-
 	static constexpr uint32_t FloorColorPeriodMicros = 3000000000;
 	static constexpr uint32_t FlickerPeriodMicros = 6400000;
 	static constexpr uint32_t FlashColorPeriodMicros = 3000000;
@@ -35,7 +34,7 @@ private:
 	int16_t ShapeMoveX = (((int32_t)ShapeMove * 4) / 10);
 
 private:
-	// World tracked light source with sprite representation.
+	// World tracked light sources with sprite representation.
 	Assets::Lights::TemplateOnOffLightSource<
 		Assets::Objects::ShadedLightSourceObject<
 		PointLightSource>> Light1{};
@@ -45,31 +44,33 @@ private:
 	Assets::Lights::TemplateOnOffLightSource<
 		DirectionalLightSource> GlobalLight{};
 
+	// Custom shader to draw the light source objects.
+	Assets::Shaders::LightSourceFragmentShader LightSourceShader{};
+
 	// Shader for this scene.
 	LightsShader<3> SceneShader{};
 
-	Assets::Shaders::LightSourceFragmentShader LightSourceShader{};
-
+	// Shared mesh objects shaders.
 	TriangleFillFragmentShader MeshShader{};
 	TriangleFillZFragmentShader MeshZShader{};
 	TriangleFillNormalFragmentShader MeshNormalShader{};
 
-	Assets::Shaders::FloorFragmentShader FloorShader{};
-
-	PointZFragmentShader PointZShader{};
-	PointPixelFixedColorFragmentShader<> PointNormalShader{};
-
-	// The floor has shiny animated color points.
-	Assets::Objects::FloorPointCloudObject ObjectFloor{};
-
-	// Sphere has a diffuse white color.
+	// Sphere has a diffuse material.
 	Assets::Objects::SphereMeshObject ObjectSphere{};
 
-	// Star has a reflective, slightly metallic, animated color.
+	// Star has a reflective, slightly metallic material with animated color.
 	Assets::Objects::StarMeshObject ObjectStar{};
 
 	// Cube has a palleted diffuse color for each face.
 	Assets::Objects::CubeMeshObject ObjectCube{};
+
+	// Shared point objects shaders.
+	PointZFragmentShader PointZShader{};
+	PointPixelFixedColorFragmentShader<> PointNormalShader{};
+
+	// Custom shader to draw the diffuse material floor object.
+	Assets::Shaders::FloorFragmentShader FloorShader{};
+	Assets::Objects::FloorPointCloudObject ObjectFloor{};
 
 	// Simple screen fill background.
 	ScreenFillShader BackgroundShader{};
@@ -340,4 +341,3 @@ public:
 	}
 };
 #endif
-
