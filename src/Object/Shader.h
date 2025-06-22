@@ -211,6 +211,119 @@ namespace IntegerWorld
 		}
 	};
 
+	struct TriangleInterpolateZFragmentShader : IFragmentShader<triangle_fragment_t>
+	{
+	private:
+		class ZInterpolatorShaderFunctor
+		{
+		public:
+			color_fraction16_t FarColor{ UFRACTION16_1X,0, 0 };
+			color_fraction16_t NearColor{ 0, 0, UFRACTION16_1X };
+
+		private:
+			int32_t TriangleArea = 0;
+			vertex16_t A{};
+			vertex16_t B{};
+			vertex16_t C{};
+			int16_t BmCy = 0;
+			int16_t CmBx = 0;
+			int16_t CmAy = 0;
+			int16_t AmCx = 0;
+
+		public:
+			ZInterpolatorShaderFunctor() {}
+
+			bool SetFragmentData(const triangle_fragment_t& fragment)
+			{
+				A = fragment.triangleScreenA;
+				B = fragment.triangleScreenB;
+				C = fragment.triangleScreenC;
+
+				// Compute denominator (twice the area of the triangle)
+				TriangleArea = (int32_t(B.y) - C.y) * (int32_t(A.x) - C.x) + (int32_t(C.x) - B.x) * (int32_t(A.y) - C.y);
+
+				if (TriangleArea < -1)
+				{
+					// Find the top-left vertex among A, B, C.
+					int16_t minX = A.x;
+					int16_t minY = A.y;
+					if ((B.y < A.y) || (B.y == A.y && B.x < A.x))
+					{
+						if ((C.y < B.y) || (C.y == B.y && C.x < B.x))
+						{
+							minX = C.x;
+							minY = C.y;
+						}
+						else
+						{
+							minX = B.x;
+							minY = B.y;
+						}
+					}
+					else if ((C.y < A.y) || (C.y == A.y && C.x < A.x))
+					{
+						minX = C.x;
+						minY = C.y;
+					}
+
+					// Offset triangles' x/y to local space.
+					A.x -= minX;
+					A.y -= minY;
+					B.x -= minX;
+					B.y -= minY;
+					C.x -= minX;
+					C.y -= minY;
+
+					// Pre-calculate partials.
+					BmCy = B.y - C.y;
+					CmBx = C.x - B.x;
+					CmAy = C.y - A.y;
+					AmCx = A.x - C.x;
+
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			bool operator()(color_fraction16_t& color, const int16_t x, int16_t y)
+			{
+				const int32_t w0 = (int32_t(BmCy) * (x - C.x)) + (int32_t(CmBx) * (y - C.y));
+				const int32_t w1 = (int32_t(CmAy) * (x - C.x)) + (int32_t(AmCx) * (y - C.y));
+				const int32_t w2 = TriangleArea - w0 - w1;
+				const int16_t z = ((w0 * A.z) + (w1 * B.z) + (w2 * C.z)) / TriangleArea;
+				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 0, VERTEX16_RANGE / 2);
+				ColorFraction::ColorInterpolateLinear(color, FarColor, NearColor, proximityFraction);
+
+				return true;
+			}
+		};
+
+		ZInterpolatorShaderFunctor ZShader{};
+
+	public:
+		void SetColors(const color_fraction16_t nearColor, const color_fraction16_t farColor)
+		{
+			ZShader.NearColor = nearColor;
+			ZShader.FarColor = farColor;
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		{
+			FragmentShade(rasterizer, fragment);
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
+		{
+			if (ZShader.SetFragmentData(fragment))
+			{
+				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, ZShader);
+			}
+		}
+	};
+
 	struct TriangleFillNormalFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
 	private:
