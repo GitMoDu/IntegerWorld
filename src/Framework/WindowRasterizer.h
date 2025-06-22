@@ -427,6 +427,14 @@ namespace IntegerWorld
 			}
 		}
 
+		/// <summary>
+		/// Fills the entire drawing surface with the specified color.
+		/// </summary>
+		/// <param name="color">The color to use for filling surface</param>
+		void FillSurface(const color_fraction16_t color)
+		{
+			Surface->RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
+		}
 
 	public: // 3D Projection drawing (raster) interface.
 		/// <summary>
