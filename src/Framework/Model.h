@@ -76,6 +76,10 @@ namespace IntegerWorld
 		vertex16_t triangleScreenC;
 	};
 
+	struct flat_background_fragment_t : base_fragment_t
+	{
+	};
+
 	struct camera_state_t
 	{
 		vertex16_t Position{};

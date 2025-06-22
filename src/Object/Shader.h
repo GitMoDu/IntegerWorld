@@ -52,6 +52,25 @@ namespace IntegerWorld
 		}
 	};
 
+	struct ScreenFillShader : public IFragmentShader<flat_background_fragment_t>
+	{
+	private:
+		color_fraction16_t FragmentColor{};
+
+	public:
+		void FragmentShade(WindowRasterizer& rasterizer, const flat_background_fragment_t& fragment, ISceneShader* sceneShader) final
+		{
+			FragmentColor = fragment.color;
+			sceneShader->Shade(FragmentColor, fragment.material);
+			rasterizer.FillSurface(FragmentColor);
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const flat_background_fragment_t& fragment) final
+		{
+			rasterizer.FillSurface(fragment.color);
+		}
+	};
+
 	struct PointPositionFragmentShader : IFragmentShader<point_fragment_t>
 	{
 	private:
