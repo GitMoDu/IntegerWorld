@@ -26,6 +26,11 @@ namespace IntegerWorld
 		{
 			static constexpr ufraction16_t ColorThreshold = UFRACTION16_1X / 2;
 
+			static constexpr uint8_t GetColorDepth()
+			{
+				return 1;
+			}
+
 			static constexpr uint16_t GetNativeColor(const color_fraction16_t shaderColor)
 			{
 				return (shaderColor.r >= ColorThreshold || shaderColor.g >= ColorThreshold || shaderColor.b >= ColorThreshold) * 1;
@@ -34,6 +39,11 @@ namespace IntegerWorld
 
 		struct Adafruit16BitColorConverter
 		{
+			static constexpr uint8_t GetColorDepth()
+			{
+				return 16;
+			}
+
 			static constexpr uint16_t GetNativeColor(const color_fraction16_t shaderColor)
 			{
 				return uint16_t(Fraction::Scale(shaderColor.r, uint8_t(31))) << 11
@@ -70,9 +80,7 @@ namespace IntegerWorld
 					width = Display.height();
 					break;
 				}
-		/*		width = Display.width();
-				height = Display.height();*/
-				colorDepth = 1;
+				colorDepth = ColorConverter::GetColorDepth();
 			}
 
 			void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) final
