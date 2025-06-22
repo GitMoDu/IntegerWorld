@@ -171,7 +171,7 @@ namespace IntegerWorld
 		color_fraction16_t FragmentColor{};
 
 	public:
-		color_fraction16_t FarColor{ UFRACTION16_1X,0, 0 };
+		color_fraction16_t FarColor{ UFRACTION16_1X, 0, 0 };
 		color_fraction16_t NearColor{ 0, 0, UFRACTION16_1X };
 
 		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
@@ -181,7 +181,7 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
 		{
-			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z, 1, VERTEX16_RANGE);
+			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z, 1, ((VERTEX16_RANGE / 3) * 2));
 			ColorFraction::ColorInterpolateLinear(FragmentColor, FarColor, NearColor, proximityFraction);
 			rasterizer.DrawPoint(FragmentColor, fragment.screen.x, fragment.screen.y);
 		}
@@ -194,7 +194,7 @@ namespace IntegerWorld
 		vertex16_t LineCenter{};
 
 	public:
-		color_fraction16_t FarColor{ UFRACTION16_1X,0, 0 };
+		color_fraction16_t FarColor{ UFRACTION16_1X, 0, 0 };
 		color_fraction16_t NearColor{ 0, 0, UFRACTION16_1X };
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
@@ -205,7 +205,7 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			const uint16_t z = int16_t(((int32_t)fragment.triangleScreenA.z + fragment.triangleScreenB.z + fragment.triangleScreenC.z) / 3);
-			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 1, VERTEX16_RANGE / 2);
+			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 1, ((VERTEX16_RANGE / 3) * 2));
 			ColorFraction::ColorInterpolateLinear(FragmentColor, FarColor, NearColor, proximityFraction);
 			rasterizer.DrawTriangle(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
@@ -294,7 +294,7 @@ namespace IntegerWorld
 				const int32_t w1 = (int32_t(CmAy) * (x - C.x)) + (int32_t(AmCx) * (y - C.y));
 				const int32_t w2 = TriangleArea - w0 - w1;
 				const int16_t z = ((w0 * A.z) + (w1 * B.z) + (w2 * C.z)) / TriangleArea;
-				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 0, VERTEX16_RANGE / 2);
+				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 1, ((VERTEX16_RANGE / 3) * 2));
 				ColorFraction::ColorInterpolateLinear(color, FarColor, NearColor, proximityFraction);
 
 				return true;
@@ -308,6 +308,16 @@ namespace IntegerWorld
 		{
 			ZShader.NearColor = nearColor;
 			ZShader.FarColor = farColor;
+		}
+
+		color_fraction16_t GetNearColor() const
+		{
+			return ZShader.NearColor;
+		}
+
+		color_fraction16_t GetFarColor() const
+		{
+			return ZShader.FarColor;
 		}
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
