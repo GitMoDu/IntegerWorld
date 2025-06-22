@@ -816,8 +816,8 @@ namespace IntegerWorld
 
 		void LimitToWindow(int16_t& x, int16_t& y) const
 		{
-			x = LimitValue(x, int16_t(0), int16_t(SurfaceWidth));
-			y = LimitValue(y, int16_t(0), int16_t(SurfaceHeight));
+			x = LimitValue(x, int16_t(0), int16_t(SurfaceWidth - 1));
+			y = LimitValue(y, int16_t(0), int16_t(SurfaceHeight - 1));
 		}
 	private:
 		/// <summary>
