@@ -232,7 +232,7 @@ namespace IntegerWorld
 		}
 
 	protected:
-		virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
+		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t index)
 		{
 			fragment.color = Color;
 			fragment.material = Material;
