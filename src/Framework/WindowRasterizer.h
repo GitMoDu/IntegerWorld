@@ -436,7 +436,7 @@ namespace IntegerWorld
 			Surface->RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
 		}
 
-	public: // 3D Projection drawing (raster) interface.
+	public: // Screen raster interface.
 		/// <summary>
 		/// Rasterizes a line between two points, applying a custom pixel shader to each pixel.
 		/// The line is clipped to the window boundaries as needed.
@@ -494,7 +494,7 @@ namespace IntegerWorld
 			{
 				// Degenerate line, only draw a single pixel.
 				color_fraction16_t color{};
-				if (pixelShader(color, x1c - x1, y1c - y1))
+				if (pixelShader(color, x1c, y1c))
 				{
 					Surface->Pixel(color, x1c, y1c);
 				}
@@ -505,9 +505,9 @@ namespace IntegerWorld
 				color_fraction16_t color{};
 				for (int_fast16_t x = 0; x <= width; x++)
 				{
-					if (pixelShader(color, x + x1c - x1, y1c - y1))
+					if (pixelShader(color, x + x1c, y1c))
 					{
-						Surface->Pixel(color, x1c + x, y1c);
+						Surface->Pixel(color, x + x1c, y1c);
 					}
 				}
 			}
@@ -517,75 +517,17 @@ namespace IntegerWorld
 				color_fraction16_t color{};
 				for (int_fast16_t y = 0; y <= height; y++)
 				{
-					if (pixelShader(color, x1c - x1, y + y1c - y1))
+					if (pixelShader(color, x1c, y + y1c))
 					{
-						Surface->Pixel(color, x1c, y1c + y);
+						Surface->Pixel(color, x1c, y + y1c);
 					}
 				}
 			}
 			else
 			{
 				// Diagonal line. Unroll to appropriate Bresenham line rasterizer.
-				BresenhamLineShade(x1c, y1c, x2c, y2c, x1, y1, pixelShader);
+				BresenhamLineShade(x1c, y1c, x2c, y2c, pixelShader);
 			}
-		}
-
-		/// <summary>
-		/// Rasterizes a 3D line segment with Z-plane clipping and applying a custom pixel shader to each pixel.
-		/// The line is clipped to the window boundaries as needed.
-		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
-		/// <param name="start">The starting vertex of the line segment, containing x, y, and z coordinates.</param>
-		/// <param name="end">The ending vertex of the line segment, containing x, y, and z coordinates.</param>
-		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the line. It is called with the color, relative x offset, and relative y offset.</param>
-		template<typename PixelShader>
-		void RasterLine(const vertex16_t start, const vertex16_t end, PixelShader&& pixelShader)
-		{
-			// Z-plane clipping: only draw if at least part of the line is in front of z=0
-			const bool in1 = start.z >= 0;
-			const bool in2 = end.z >= 0;
-
-			vertex16_t s = start;
-			vertex16_t e = end;
-
-			if (!in1 && !in2)
-			{
-				// Both endpoints are behind the z=0 plane, nothing to draw
-				return;
-			}
-			else if (!in1 || !in2)
-			{
-				// One endpoint is behind z=0, clip to z=0 plane
-				// Interpolate intersection with z=0
-				const vertex16_t* front = in1 ? &s : &e;
-				const vertex16_t* back = in1 ? &e : &s;
-
-				int16_t dz = front->z - back->z;
-				if (dz == 0) return; // Degenerate, should not happen
-
-				// t = front->z / (front->z - back->z)
-				int16_t t_num = front->z;
-				int16_t t_den = dz;
-
-				int16_t ix = front->x + (int16_t)(((int32_t)(back->x - front->x) * t_num) / t_den);
-				int16_t iy = front->y + (int16_t)(((int32_t)(back->y - front->y) * t_num) / t_den);
-
-				if (in1)
-				{
-					e.x = ix;
-					e.y = iy;
-					e.z = 0;
-				}
-				else
-				{
-					s.x = ix;
-					s.y = iy;
-					s.z = 0;
-				}
-			}
-
-			// Now both s.z and e.z >= 0, so we can rasterize in 2D
-			RasterLine(s.x, s.y, e.x, e.y, pixelShader);
 		}
 
 		/// <summary>
@@ -689,6 +631,149 @@ namespace IntegerWorld
 		}
 
 		/// <summary>
+		/// Renders a rectangle on the framebuffer using a custom pixel shader, handling clipping to the surface boundaries and degenerate cases (lines or points).
+		/// </summary>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int16_t, int16_t) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <param name="x1">The x-coordinate of the first corner of the rectangle.</param>
+		/// <param name="y1">The y-coordinate of the first corner of the rectangle.</param>
+		/// <param name="x2">The x-coordinate of the opposite corner of the rectangle.</param>
+		/// <param name="y2">The y-coordinate of the opposite corner of the rectangle.</param>
+		/// <param name="pixelShader">A callable object or function that determines the color of each pixel. It is called with (color, dx, dy), where 'color' is an output parameter and 'dx', 'dy' are the pixel's coordinates relative to the rectangle's origin.</param>
+		template<typename PixelShader>
+		void RasterRectangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, PixelShader&& pixelShader)
+		{
+			uint8_t inCount = IsInsideWindow(x1, y1);
+			inCount += IsInsideWindow(x1, y2);
+			inCount += IsInsideWindow(x2, y1);
+			inCount += IsInsideWindow(x2, y2);
+
+			if (inCount > 0)
+			{
+				color_fraction16_t color{};
+				const int16_t x1c = LimitValue(x1, int16_t(0), int16_t(SurfaceWidth - 1));
+				const int16_t x2c = LimitValue(x2, int16_t(0), int16_t(SurfaceWidth - 1));
+				const int16_t y1c = LimitValue(y1, int16_t(0), int16_t(SurfaceHeight - 1));
+				const int16_t y2c = LimitValue(y2, int16_t(0), int16_t(SurfaceHeight - 1));
+
+				if (x1c == x2c)
+				{
+					if (y1c == y2c)
+					{
+						// Degenerate rectangle, only draw a single pixel.
+						if (pixelShader(color, x1c, y1c))
+						{
+							Surface->Pixel(color, x1c, y1c);
+						}
+					}
+					else
+					{
+						// Degenerate rectangle, only draw a line.
+						const int16_t height = (y2c - y1c);
+						for (int_fast16_t y = 0; y <= height; y++)
+						{
+							if (pixelShader(color, x1c, y + y1c))
+							{
+								Surface->Pixel(color, x1c, y1c + y);
+							}
+						}
+					}
+				}
+				else if (y1c == y2c)
+				{
+					// Degenerate rectangle, only draw a line.
+					const int16_t width = (x2c - x1c);
+					for (int_fast16_t x = 0; x <= width; x++)
+					{
+						if (pixelShader(color, x + x1c, y1c))
+						{
+							Surface->Pixel(color, x1c + x, y1c);
+						}
+					}
+				}
+				else
+				{
+					// Cropped rectangle.
+					const int16_t height = (y2c - y1c);
+					const int16_t width = (x2c - x1c);
+					for (int_fast16_t y = 0; y <= height; y++)
+					{
+						for (int_fast16_t x = 0; x <= width; x++)
+						{
+							// Convert partial rect coordinates to rect space coordinates.
+							if (pixelShader(color, x + x1c, y + y1c))
+							{
+								Surface->Pixel(color, x1c + x, y1c + y);
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				// Whole rectangle is out of bounds.
+			}
+		}
+
+	public: // 3D Projection raster interface.
+		/// <summary>
+		/// Rasterizes a 3D line segment with Z-plane clipping and applying a custom pixel shader to each pixel.
+		/// The line is clipped to the window boundaries as needed.
+		/// </summary>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <param name="start">The starting vertex of the line segment, containing x, y, and z coordinates.</param>
+		/// <param name="end">The ending vertex of the line segment, containing x, y, and z coordinates.</param>
+		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the line. It is called with the color, relative x offset, and relative y offset.</param>
+		template<typename PixelShader>
+		void RasterLine(const vertex16_t start, const vertex16_t end, PixelShader&& pixelShader)
+		{
+			// Z-plane clipping: only draw if at least part of the line is in front of z=0
+			const bool in1 = start.z >= 0;
+			const bool in2 = end.z >= 0;
+
+			vertex16_t s = start;
+			vertex16_t e = end;
+
+			if (!in1 && !in2)
+			{
+				// Both endpoints are behind the z=0 plane, nothing to draw
+				return;
+			}
+			else if (!in1 || !in2)
+			{
+				// One endpoint is behind z=0, clip to z=0 plane
+				// Interpolate intersection with z=0
+				const vertex16_t* front = in1 ? &s : &e;
+				const vertex16_t* back = in1 ? &e : &s;
+
+				int16_t dz = front->z - back->z;
+				if (dz == 0) return; // Degenerate, should not happen
+
+				// t = front->z / (front->z - back->z)
+				int16_t t_num = front->z;
+				int16_t t_den = dz;
+
+				int16_t ix = front->x + (int16_t)(((int32_t)(back->x - front->x) * t_num) / t_den);
+				int16_t iy = front->y + (int16_t)(((int32_t)(back->y - front->y) * t_num) / t_den);
+
+				if (in1)
+				{
+					e.x = ix;
+					e.y = iy;
+					e.z = 0;
+				}
+				else
+				{
+					s.x = ix;
+					s.y = iy;
+					s.z = 0;
+				}
+			}
+
+			// Now both s.z and e.z >= 0, so we can rasterize in 2D
+			RasterLine(s.x, s.y, e.x, e.y, pixelShader);
+		}
+
+		/// <summary>
 		/// Rasterizes (fills) a triangle defined by three 3D vertices using a custom pixel shader.
 		/// Handles z-plane clipping: only pixels with z > 0 are considered visible.
 		/// The pixel shader is invoked for each pixel within the visible portion of the triangle, allowing for per-pixel color and visibility control.
@@ -697,7 +782,7 @@ namespace IntegerWorld
 		/// <param name="a">The first vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="b">The second vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="c">The third vertex of the triangle, including x, y, and z coordinates.</param>
-		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the triangle surface. It is called with the color, relative x offset, and relative y offset.</param>
+		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the triangle surface.</param>
 		template<typename PixelShader>
 		void RasterTriangle(const vertex16_t a, const vertex16_t b, const vertex16_t c, PixelShader&& pixelShader)
 		{
@@ -735,90 +820,6 @@ namespace IntegerWorld
 				{
 					//TODO: Triangle has 1 point in bounds.
 				}
-			}
-		}
-
-		/// <summary>
-		/// Renders a rectangle on the framebuffer using a custom pixel shader, handling clipping to the surface boundaries and degenerate cases (lines or points).
-		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int16_t, int16_t) and return a bool indicating whether to draw the pixel.</typeparam>
-		/// <param name="x1">The x-coordinate of the first corner of the rectangle.</param>
-		/// <param name="y1">The y-coordinate of the first corner of the rectangle.</param>
-		/// <param name="x2">The x-coordinate of the opposite corner of the rectangle.</param>
-		/// <param name="y2">The y-coordinate of the opposite corner of the rectangle.</param>
-		/// <param name="pixelShader">A callable object or function that determines the color of each pixel. It is called with (color, dx, dy), where 'color' is an output parameter and 'dx', 'dy' are the pixel's coordinates relative to the rectangle's origin.</param>
-		template<typename PixelShader>
-		void RasterRectangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, PixelShader&& pixelShader)
-		{
-			uint8_t inCount = IsInsideWindow(x1, y1);
-			inCount += IsInsideWindow(x1, y2);
-			inCount += IsInsideWindow(x2, y1);
-			inCount += IsInsideWindow(x2, y2);
-
-			if (inCount > 0)
-			{
-				color_fraction16_t color{};
-				const int16_t x1c = LimitValue(x1, int16_t(0), int16_t(SurfaceWidth - 1));
-				const int16_t x2c = LimitValue(x2, int16_t(0), int16_t(SurfaceWidth - 1));
-				const int16_t y1c = LimitValue(y1, int16_t(0), int16_t(SurfaceHeight - 1));
-				const int16_t y2c = LimitValue(y2, int16_t(0), int16_t(SurfaceHeight - 1));
-
-				if (x1c == x2c)
-				{
-					if (y1c == y2c)
-					{
-						// Degenerate rectangle, only draw a single pixel.
-						if (pixelShader(color, x1c - x1, y1c - y1))
-						{
-							Surface->Pixel(color, x1c, y1c);
-						}
-					}
-					else
-					{
-						// Degenerate rectangle, only draw a line.
-						const int16_t height = (y2c - y1c);
-						for (int_fast16_t y = 0; y <= height; y++)
-						{
-							if (pixelShader(color, x1c - x1, y + y1c - y1))
-							{
-								Surface->Pixel(color, x1c, y1c + y);
-							}
-						}
-					}
-				}
-				else if (y1c == y2c)
-				{
-					// Degenerate rectangle, only draw a line.
-					const int16_t width = (x2c - x1c);
-					for (int_fast16_t x = 0; x <= width; x++)
-					{
-						if (pixelShader(color, x + x1c - x1, y1c - y1))
-						{
-							Surface->Pixel(color, x1c + x, y1c);
-						}
-					}
-				}
-				else
-				{
-					// Cropped rectangle.
-					const int16_t height = (y2c - y1c);
-					const int16_t width = (x2c - x1c);
-					for (int_fast16_t y = 0; y <= height; y++)
-					{
-						for (int_fast16_t x = 0; x <= width; x++)
-						{
-							// Convert partial rect coordinates to rect space coordinates.
-							if (pixelShader(color, x + x1c - x1, y + y1c - y1))
-							{
-								Surface->Pixel(color, x1c + x, y1c + y);
-							}
-						}
-					}
-				}
-			}
-			else
-			{
-				// Whole rectangle is out of bounds.
 			}
 		}
 
@@ -947,8 +948,9 @@ namespace IntegerWorld
 	private:
 		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
 		template<typename PixelShader>
-		void BresenhamLineShade(int16_t x1, int16_t y1, int16_t x2, int16_t y2,
-			int16_t x0, int16_t y0, PixelShader&& pixelShader)
+		void BresenhamLineShade(int16_t x1, int16_t y1,
+			int16_t x2, int16_t y2,
+			PixelShader&& pixelShader)
 		{
 			const int16_t dx = AbsValue(x2 - x1);
 			const int8_t sx = x1 < x2 ? 1 : -1;
@@ -959,7 +961,7 @@ namespace IntegerWorld
 
 			while (true)
 			{
-				if (pixelShader(color, x1 - x0, y1 - y0))
+				if (pixelShader(color, x1, y1))
 				{
 					Surface->Pixel(color, x1, y1);
 				}
@@ -980,7 +982,10 @@ namespace IntegerWorld
 		}
 
 		template<typename PixelShader>
-		void BresenhamFlatTopFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
+		void BresenhamFlatTopFill(const int16_t x1, const int16_t y1,
+			const int16_t x2, const int16_t y2,
+			const int16_t x3, const int16_t y3,
+			PixelShader&& pixelShader)
 		{
 			// Calculate inverse slopes in fixed-point
 			const int32_t invSlope1 = ((int32_t)(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
@@ -1020,7 +1025,7 @@ namespace IntegerWorld
 					{
 						for (int_fast16_t x = xStart; x <= xEnd; x++)
 						{
-							if (pixelShader(color, x - x0, y - y0))
+							if (pixelShader(color, x, y))
 							{
 								Surface->Pixel(color, x, y);
 							}
@@ -1034,7 +1039,7 @@ namespace IntegerWorld
 		}
 
 		template<typename PixelShader>
-		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, const int16_t x0, const int16_t y0, PixelShader&& pixelShader)
+		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
 			// Calculate inverse slopes in fixed-point
 			int32_t invSlope1 = 1;
@@ -1082,7 +1087,7 @@ namespace IntegerWorld
 					{
 						for (int_fast16_t x = xStart; x <= xEnd; x++)
 						{
-							if (pixelShader(color, x - x0, y - y0))
+							if (pixelShader(color, x, y))
 							{
 								Surface->Pixel(color, x, y);
 							}
@@ -1141,11 +1146,11 @@ namespace IntegerWorld
 		{
 			if (y2 == y3) // Flat bottom.
 			{
-				BresenhamFlatBottomFill(x1, y1, x2, y2, x3, y3, x1, y1, pixelShader);
+				BresenhamFlatBottomFill(x1, y1, x2, y2, x3, y3, pixelShader);
 			}
 			else if (y1 == y2) // Flat top.
 			{
-				BresenhamFlatTopFill(x1, y1, x2, y2, x3, y3, x1, y1, pixelShader);
+				BresenhamFlatTopFill(x1, y1, x2, y2, x3, y3, pixelShader);
 			}
 			else // General triangle: split it.
 			{
@@ -1162,8 +1167,8 @@ namespace IntegerWorld
 				const int16_t Vi_y = y2;
 
 				// Draw the two sub-triangles
-				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, Vi_y, x1, y1, pixelShader);
-				BresenhamFlatTopFill(x2, y2, Vi_x, Vi_y, x3, y3, x1, y1, pixelShader);
+				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, Vi_y, pixelShader);
+				BresenhamFlatTopFill(x2, y2, Vi_x, Vi_y, x3, y3, pixelShader);
 			}
 		}
 	};
