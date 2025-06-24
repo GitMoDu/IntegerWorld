@@ -350,18 +350,25 @@ namespace IntegerWorld
 				State = StateEnum::WaitForSurface;
 #if defined(INTEGER_WORLD_PERFORMANCE_LOG)
 				Status.EngineSortDuration = micros() - MeasureStart;
+				Status.RasterizeWaitDuration = 0;
 				MeasureStart = micros();
 #endif
 				break;
 			case StateEnum::WaitForSurface:
+#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+				MeasureStart = micros();
+#endif
 				// Poll layer to check if we can draw.
 				if (Rasterizer.Surface->IsSurfaceReady())
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-					Status.RasterizeWaitDuration = micros() - MeasureStart;
-#endif
 					State = StateEnum::Rasterize;
 				}
+#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+				else
+				{
+					Status.RasterizeWaitDuration += micros() - MeasureStart;
+				}
+#endif
 				break;
 			case StateEnum::Rasterize:
 #if defined(INTEGER_WORLD_PERFORMANCE_LOG)
