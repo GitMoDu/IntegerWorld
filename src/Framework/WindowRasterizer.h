@@ -668,45 +668,53 @@ namespace IntegerWorld
 					}
 					else
 					{
-						// Degenerate rectangle, only draw a line.
-						const int16_t height = (y2c - y1c);
-						for (int_fast16_t y = 0; y <= height; y++)
+						// Degenerate rectangle, only draw a vertical line.
+						const int8_t ySign = y1c <= y2c ? 1 : -1;
+						int_fast16_t y = y1c;
+						do
 						{
-							if (pixelShader(color, x1c, y + y1c))
+							if (pixelShader(color, x1c, y))
 							{
-								Surface->Pixel(color, x1c, y1c + y);
+								Surface->Pixel(color, x1c, y);
 							}
-						}
+							y += ySign;
+						} while (y != y2c);
 					}
 				}
 				else if (y1c == y2c)
 				{
-					// Degenerate rectangle, only draw a line.
-					const int16_t width = (x2c - x1c);
-					for (int_fast16_t x = 0; x <= width; x++)
+					// Degenerate rectangle, only draw a horizontal line.
+					const int8_t xSign = x1c <= x2c ? 1 : -1;
+					int_fast16_t x = x1c;
+					do
 					{
-						if (pixelShader(color, x + x1c, y1c))
+						if (pixelShader(color, x, y1c))
 						{
-							Surface->Pixel(color, x1c + x, y1c);
+							Surface->Pixel(color, x, y1c);
 						}
-					}
+						x += xSign;
+					} while (x != x2c);
 				}
 				else
 				{
 					// Cropped rectangle.
-					const int16_t height = (y2c - y1c);
-					const int16_t width = (x2c - x1c);
-					for (int_fast16_t y = 0; y <= height; y++)
+					const int8_t xSign = x1c <= x2c ? 1 : -1;
+					const int8_t ySign = y1c <= y2c ? 1 : -1;
+					int_fast16_t x = x1c;
+					int_fast16_t y = y1c;
+					do
 					{
-						for (int_fast16_t x = 0; x <= width; x++)
+						x = x1c;
+						do
 						{
-							// Convert partial rect coordinates to rect space coordinates.
-							if (pixelShader(color, x + x1c, y + y1c))
+							if (pixelShader(color, x, y))
 							{
-								Surface->Pixel(color, x1c + x, y1c + y);
+								Surface->Pixel(color, x, y);
 							}
-						}
-					}
+							x += xSign;
+						} while (x != x2c);
+						y += ySign;
+					} while (y != y2c);
 				}
 			}
 			else
@@ -987,116 +995,133 @@ namespace IntegerWorld
 			const int16_t x3, const int16_t y3,
 			PixelShader&& pixelShader)
 		{
-			// Calculate inverse slopes in fixed-point
-			const int32_t invSlope1 = ((int32_t)(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
-			const int32_t invSlope2 = ((int32_t)(x3 - x2) << BRESENHAM_SCALE) / (y3 - y2);
-
-			// Starting x positions in fixed-point
-			int32_t ax = (int32_t)x3 << BRESENHAM_SCALE;
-			int32_t bx = ax;
-
-			// Loop from c.y down to a.y (inclusive)
-			const int16_t startY = y3;
-			const int16_t endY = MaxValue(int16_t(0), y1);
-
 			color_fraction16_t color{};
-			for (int16_t y = startY; y >= endY; y--)
+
+			if (y1 == y3)
 			{
-				if (y >= 0 && y < SurfaceHeight)
+				if (x1 == x3)
 				{
-					int16_t xStart{};
-					int16_t xEnd{};
-
-					if (ax > bx)
+					// Degenerate triangle, point only.
+					if (pixelShader(color, x1, y1))
 					{
-						xStart = bx >> BRESENHAM_SCALE;
-						xEnd = ax >> BRESENHAM_SCALE;
-					}
-					else
-					{
-						xStart = ax >> BRESENHAM_SCALE;
-						xEnd = bx >> BRESENHAM_SCALE;
-					}
-
-					xStart = MaxValue(int16_t(0), xStart);
-					xEnd = MinValue(int16_t(SurfaceWidth - 1), xEnd);
-
-					if (xStart <= xEnd)
-					{
-						for (int_fast16_t x = xStart; x <= xEnd; x++)
-						{
-							if (pixelShader(color, x, y))
-							{
-								Surface->Pixel(color, x, y);
-							}
-						}
+						Surface->Pixel(color, x1, y1);
 					}
 				}
+				else
+				{
+					// Degenerate triangle, raster horizontal line only.
+					const int8_t xSign = x1 <= x3 ? 1 : -1;
+					int_fast16_t x = x1;
+					do
+					{
+						if (pixelShader(color, x, y1))
+						{
+							Surface->Pixel(color, x, y1);
+						}
+						x += xSign;
+					} while (x != x3);
+				}
+			}
+			else
+			{
+				// Calculate inverse slopes in fixed-point
+				const int32_t invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
+				const int32_t invSlope1 = (int32_t(x3 - x2) << BRESENHAM_SCALE) / (y3 - y2);
 
-				ax -= invSlope1;
-				bx -= invSlope2;
+				// Starting x positions in fixed-point
+				int32_t ax = int32_t(x3) << BRESENHAM_SCALE;
+				int32_t bx = ax;
+
+				// Loop variables.
+				int16_t xEnd{};
+				const int16_t yEnd = y1 - 1;
+				int_fast16_t x{};
+				int_fast16_t y = y3;
+				do
+				{
+					x = ax >> BRESENHAM_SCALE;
+					xEnd = bx >> BRESENHAM_SCALE;
+					const int8_t xSign = x <= xEnd ? 1 : -1;
+					xEnd += xSign;
+					do
+					{
+						if (pixelShader(color, x, y))
+						{
+							Surface->Pixel(color, x, y);
+						}
+						x += xSign;
+					} while (x != xEnd);
+
+					ax -= invSlope1;
+					bx -= invSlope2;
+					y--;
+				} while (y != yEnd);
 			}
 		}
 
 		template<typename PixelShader>
 		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
-			// Calculate inverse slopes in fixed-point
-			int32_t invSlope1 = 1;
-			if (y2 != y1)
-			{
-				invSlope1 = (int32_t(x2 - x1) << BRESENHAM_SCALE) / (y2 - y1);
-			}
-			int32_t invSlope2 = 1;
-			if (y3 != y1)
-			{
-				invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
-			}
-
-			// Starting x positions in fixed-point
-			int32_t ax = int32_t(x1) << BRESENHAM_SCALE;
-			int32_t bx = ax;
-
-			// Loop from y1 to y2 (inclusive)
-			const int16_t startY = y1;
-			const int16_t endY = min(int16_t(SurfaceHeight - 1), y2);
-
 			color_fraction16_t color{};
-			for (int16_t y = startY; y < endY; y++)
+
+			if (y1 == y2)
 			{
-				if (y >= 0 && y < SurfaceHeight)
+				if (x1 == x2)
 				{
-					int16_t xStart{};
-					int16_t xEnd{};
-
-					if (ax > bx)
+					// Degenerate triangle, point only.
+					if (pixelShader(color, x2, y2))
 					{
-						xStart = bx >> BRESENHAM_SCALE;
-						xEnd = ax >> BRESENHAM_SCALE;
-					}
-					else
-					{
-						xStart = ax >> BRESENHAM_SCALE;
-						xEnd = bx >> BRESENHAM_SCALE;
-					}
-
-					xStart = MaxValue(int16_t(0), xStart);
-					xEnd = MinValue(int16_t(SurfaceWidth - 1), xEnd);
-
-					if (xStart <= xEnd)
-					{
-						for (int_fast16_t x = xStart; x <= xEnd; x++)
-						{
-							if (pixelShader(color, x, y))
-							{
-								Surface->Pixel(color, x, y);
-							}
-						}
+						Surface->Pixel(color, x2, y2);
 					}
 				}
+				else
+				{
+					// Degenerate triangle, raster horizontal line only.
+					const int8_t xSign = x1 <= x2 ? 1 : -1;
+					int_fast16_t x = x1;
+					do
+					{
+						if (pixelShader(color, x, y2))
+						{
+							Surface->Pixel(color, x, y2);
+						}
+						x += xSign;
+					} while (x != x2);
+				}
+			}
+			else
+			{
+				// Calculate inverse slopes in fixed-point
+				const int32_t invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
+				const int32_t invSlope1 = (int32_t(x2 - x1) << BRESENHAM_SCALE) / (y2 - y1);
 
-				ax += invSlope1;
-				bx += invSlope2;
+				// Starting x positions in fixed-point
+				int32_t ax = int32_t(x1) << BRESENHAM_SCALE;
+				int32_t bx = ax;
+
+				// Loop variables.
+				int16_t xEnd{};
+				int_fast16_t x{};
+				int_fast16_t y = y1;
+				do
+				{
+					x = ax >> BRESENHAM_SCALE;
+					xEnd = bx >> BRESENHAM_SCALE;
+					const int8_t xSign = x <= xEnd ? 1 : -1;
+					xEnd += xSign;
+					do
+					{
+						if (pixelShader(color, x, y))
+						{
+							Surface->Pixel(color, x, y);
+						}
+						x += xSign;
+					} while (x != xEnd);
+
+					ax += invSlope1;
+					bx += invSlope2;
+					y++;
+				} while (y != y2);
 			}
 		}
 
@@ -1152,6 +1177,32 @@ namespace IntegerWorld
 			{
 				BresenhamFlatTopFill(x1, y1, x2, y2, x3, y3, pixelShader);
 			}
+			else if (y3 == y1) // Degenerate triangle.
+			{
+				color_fraction16_t color{};
+				if (x1 == x3)
+				{
+					// Degenerate triangle, point only.
+					if (pixelShader(color, x1, y1))
+					{
+						Surface->Pixel(color, x1, y1);
+					}
+				}
+				else
+				{
+					// Degenerate triangle, raster horizontal line only.
+					const int8_t xSign = x1 <= x3 ? 1 : -1;
+					int_fast16_t x = x1;
+					do
+					{
+						if (pixelShader(color, x, y1))
+						{
+							Surface->Pixel(color, x, y1);
+						}
+						x += xSign;
+					} while (x != x3);
+				}
+			}
 			else // General triangle: split it.
 			{
 				// Calculate splitting vertex Vi.
@@ -1159,16 +1210,12 @@ namespace IntegerWorld
 				const int16_t dyTotal = y3 - y1;
 				const int16_t dySegment = y2 - y1;
 
-				if (dyTotal == 0)
-					return; // Degenerate triangle
-
 				// Calculate Vi_x in fixed-point.
 				const int16_t Vi_x = SignedRightShift((((int32_t)x1 << BRESENHAM_SCALE) + ((((int32_t)dxTotal << BRESENHAM_SCALE) * dySegment) / dyTotal)), BRESENHAM_SCALE);
-				const int16_t Vi_y = y2;
 
 				// Draw the two sub-triangles
-				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, Vi_y, pixelShader);
-				BresenhamFlatTopFill(x2, y2, Vi_x, Vi_y, x3, y3, pixelShader);
+				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, y2, pixelShader);
+				BresenhamFlatTopFill(x2, y2, Vi_x, y2, x3, y3, pixelShader);
 			}
 		}
 	};
