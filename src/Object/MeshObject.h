@@ -163,10 +163,6 @@ namespace IntegerWorld
 					}
 					else
 					{
-						//vertex32_t normalScreen{};
-						//GetNormal16(Vertices[triangle.v1], Vertices[triangle.v2], Vertices[triangle.v3], normalScreen);
-						//if (normalScreen.z <= 0)
-
 						// Back face culling after projection.
 						const int32_t signedArea = (int32_t(Vertices[triangle.v2].x - Vertices[triangle.v1].x) * (Vertices[triangle.v3].y - Vertices[triangle.v1].y)) - (int32_t(Vertices[triangle.v2].y - Vertices[triangle.v1].y) * (Vertices[triangle.v3].x - Vertices[triangle.v1].x));
 						if (signedArea <= 0)

@@ -61,7 +61,7 @@ namespace IntegerWorld
 		resize16_t Resize = RESIZE16_1X;
 
 	protected:
-		transform32_scale_rotate_translate_t MeshTransform{};
+		transform16_scale_rotate_translate_t MeshTransform{};
 
 	public:
 		TransformObject() : TranslationObject() {}

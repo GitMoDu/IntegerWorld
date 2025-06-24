@@ -190,6 +190,7 @@ namespace IntegerWorld
 	protected:
 		using BaseObject::Vertices;
 		using BaseObject::Primitives;
+		using BaseObject::MeshTransform;
 
 	public:
 		IFragmentShader<point_fragment_t>* FragmentShader = nullptr;
@@ -201,7 +202,7 @@ namespace IntegerWorld
 		point_fragment_t PointFragment{};
 
 	protected:
-		virtual void VertexAnimate(const uint16_t index) {}
+		virtual void GeometryShade(const uint16_t index) {}
 
 	public:
 		FlatPointCloudObject(const vertex16_t vertices[vertexCount])
@@ -221,10 +222,13 @@ namespace IntegerWorld
 				Vertices[index - 1].y = VerticesSource[index - 1].y;
 				Vertices[index - 1].z = VerticesSource[index - 1].z;
 
-				VertexAnimate(index - 1);
+				GeometryShade(index - 1);
 
-				return BaseObject::VertexShade(index);
+				ApplyTransform(MeshTransform, Vertices[index - 1]);
+				break;
 			}
+
+			return index >= vertexCount;
 		}
 
 		virtual bool PrimitiveWorldShade(const uint16_t index)
