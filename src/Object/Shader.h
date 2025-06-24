@@ -50,9 +50,138 @@ namespace IntegerWorld
 				return Fraction::GetUFraction16(uint32_t(-int32_t(normal)), uint32_t(range));
 			}
 		}
+
+		class AbstractTriangleFunctor
+		{
+		protected:
+			int32_t TriangleArea = 0;
+			int16_t Cx = 0;
+			int16_t Cy = 0;
+			int16_t BmCy = 0;
+			int16_t CmBx = 0;
+			int16_t CmAy = 0;
+			int16_t AmCx = 0;
+
+		public:
+			AbstractTriangleFunctor() {}
+
+			bool SetFragmentData(const triangle_fragment_t& fragment)
+			{
+				const vertex16_t& a = fragment.triangleScreenA;
+				const vertex16_t& b = fragment.triangleScreenB;
+				const vertex16_t& c = fragment.triangleScreenC;
+
+				// Compute denominator (twice the area of the triangle)
+				TriangleArea = (int32_t(b.y) - c.y) * (int32_t(a.x) - c.x) + (int32_t(c.x) - b.x) * (int32_t(a.y) - c.y);
+
+				if (TriangleArea == 0)
+				{
+					return false;
+				}
+				else // Pre-calculate intermediates and cache triangle properties.
+				{
+					if (TriangleArea < 0)
+					{
+						TriangleArea = -TriangleArea;
+
+						// Swap B and C
+						BmCy = c.y - b.y;
+						CmBx = b.x - c.x;
+						CmAy = b.y - a.y;
+						AmCx = a.x - b.x;
+
+						Cx = b.x;
+						Cy = b.y;
+					}
+					else
+					{
+						BmCy = b.y - c.y;
+						CmBx = c.x - b.x;
+						CmAy = c.y - a.y;
+						AmCx = a.x - c.x;
+
+						Cx = c.x;
+						Cy = c.y;
+					}
+
+					return true;
+				}
+			}
+		};
+
+		class AbstractTriangleZFunctor
+		{
+		protected:
+			int32_t TriangleArea = 0;
+			int16_t Az = 0;
+			int16_t Bz = 0;
+			int16_t Cz = 0;
+			int16_t Cx = 0;
+			int16_t Cy = 0;
+			int16_t BmCy = 0;
+			int16_t CmBx = 0;
+			int16_t CmAy = 0;
+			int16_t AmCx = 0;
+
+		public:
+			AbstractTriangleZFunctor() {}
+
+			bool SetFragmentData(const triangle_fragment_t& fragment)
+			{
+				const vertex16_t& a = fragment.triangleScreenA;
+				const vertex16_t& b = fragment.triangleScreenB;
+				const vertex16_t& c = fragment.triangleScreenC;
+
+
+				// Standard CW area formula. TODO: refactor as CCW
+				// Compute denominator (twice the area of the triangle)
+				TriangleArea = (int32_t(b.y) - c.y) * (int32_t(a.x) - c.x) + (int32_t(c.x) - b.x) * (int32_t(a.y) - c.y);
+
+				if (TriangleArea == 0)
+				{
+					return false;
+				}
+				else
+				{
+					if (TriangleArea < 0)
+					{
+						TriangleArea = -TriangleArea;
+
+						// Swap B and C
+						BmCy = c.y - b.y;
+						CmBx = b.x - c.x;
+						CmAy = b.y - a.y;
+						AmCx = a.x - b.x;
+
+						Cx = b.x;
+						Cy = b.y;
+
+						Az = a.z;
+						Bz = c.z;
+						Cz = b.z;
+					}
+					else
+					{
+						BmCy = b.y - c.y;
+						CmBx = c.x - b.x;
+						CmAy = c.y - a.y;
+						AmCx = a.x - c.x;
+
+						Cx = c.x;
+						Cy = c.y;
+
+						Az = a.z;
+						Bz = b.z;
+						Cz = c.z;
+					}
+
+					return true;
+				}
+			}
+		};
 	};
 
-	struct ScreenFillShader : public IFragmentShader<flat_background_fragment_t>
+	struct BackgroundFlatFillShader : public IFragmentShader<flat_background_fragment_t>
 	{
 	private:
 		color_fraction16_t FragmentColor{};
@@ -233,58 +362,10 @@ namespace IntegerWorld
 	struct TriangleInterpolateZFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
 	private:
-		class ZInterpolatorShaderFunctor
+		struct ZInterpolatorShaderFunctor : AbstractPixelShader::AbstractTriangleZFunctor
 		{
-		public:
 			color_fraction16_t FarColor{ UFRACTION16_1X,0, 0 };
 			color_fraction16_t NearColor{ 0, 0, UFRACTION16_1X };
-
-		private:
-			int32_t TriangleArea = 0;
-			int16_t Az = 0;
-			int16_t Bz = 0;
-			int16_t Cz = 0;
-			int16_t Cx = 0;
-			int16_t Cy = 0;
-			int16_t BmCy = 0;
-			int16_t CmBx = 0;
-			int16_t CmAy = 0;
-			int16_t AmCx = 0;
-
-		public:
-			ZInterpolatorShaderFunctor() {}
-
-			bool SetFragmentData(const triangle_fragment_t& fragment)
-			{
-				const vertex16_t& A = fragment.triangleScreenA;
-				const vertex16_t& B = fragment.triangleScreenB;
-				const vertex16_t& C = fragment.triangleScreenC;
-
-				// Compute denominator (twice the area of the triangle)
-				TriangleArea = (int32_t(B.y) - C.y) * (int32_t(A.x) - C.x) + (int32_t(C.x) - B.x) * (int32_t(A.y) - C.y);
-
-				if (TriangleArea < 0)
-				{
-					// Pre-calculate partials.
-					BmCy = B.y - C.y;
-					CmBx = C.x - B.x;
-					CmAy = C.y - A.y;
-					AmCx = A.x - C.x;
-
-					// Cache what's needed from the triangles.
-					Az = A.z;
-					Bz = B.z;
-					Cz = C.z;
-					Cx = C.x;
-					Cy = C.y;
-
-					return true;
-				}
-				else
-				{
-					return false;
-				}
-			}
 
 			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
 			{
@@ -375,7 +456,6 @@ namespace IntegerWorld
 			rasterizer.DrawPoint(Color, fragment.screen.x, fragment.screen.y);
 		}
 	};
-
 
 	struct EdgeFragmentShader : IFragmentShader<edge_fragment_t>
 	{
