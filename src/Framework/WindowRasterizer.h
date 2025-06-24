@@ -499,7 +499,7 @@ namespace IntegerWorld
 			else if (y2c == y1c)
 			{
 				// Horizontal line.
-				const int8_t sign = x1c <= x2c ? 1 : -1;
+				const int8_t xSign = x1c <= x2c ? 1 : -1;
 				int_fast16_t x = x1c;
 				do
 				{
@@ -507,13 +507,13 @@ namespace IntegerWorld
 					{
 						Surface->Pixel(color, x, y1c);
 					}
-					x += sign;
+					x += xSign;
 				} while (x != x2c);
 			}
 			else if (x2c == x1c)
 			{
 				// Vertical line.
-				const int8_t sign = y1c <= y2c ? 1 : -1;
+				const int8_t ySign = y1c <= y2c ? 1 : -1;
 				int_fast16_t y = y1c;
 				do
 				{
@@ -521,7 +521,7 @@ namespace IntegerWorld
 					{
 						Surface->Pixel(color, x1c, y);
 					}
-					y += sign;
+					y += ySign;
 				} while (y != y2c);
 			}
 			else
