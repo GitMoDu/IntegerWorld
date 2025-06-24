@@ -41,6 +41,8 @@ private:
 	Assets::Lights::TemplateOnOffLightSource<
 		Assets::Objects::ShadedLightSourceObject<
 		PointLightSource>> Light2{};
+
+	// Global light source.
 	Assets::Lights::TemplateOnOffLightSource<
 		DirectionalLightSource> GlobalLight{};
 
@@ -48,12 +50,8 @@ private:
 	Assets::Shaders::LightSourceFragmentShader LightSourceShader{};
 
 	// Shader for this scene.
-	LightsShader<3> SceneShader{};
-
-	// Shared mesh objects shaders.
-	TriangleFillFragmentShader MeshShader{};
-	TriangleFillZFragmentShader MeshZShader{};
-	TriangleFillNormalFragmentShader MeshNormalShader{};
+	static constexpr uint8_t LightsCount = 3;
+	LightsShader<LightsCount> SceneShader{};
 
 	// Sphere has a diffuse material.
 	Assets::Objects::SphereMeshObject ObjectSphere{};
@@ -64,17 +62,22 @@ private:
 	// Cube has a palleted diffuse color for each face.
 	Assets::Objects::CubeMeshObject ObjectCube{};
 
+	// Shared mesh objects shaders.
+	TriangleFillFragmentShader MeshShader{};
+	TriangleFillZFragmentShader MeshZShader{};
+	TriangleFillNormalFragmentShader MeshNormalShader{};
+
+	// Floor has a custom shader to draw the diffuse floor object.
+	Assets::Objects::FloorPointCloudObject ObjectFloor{};
+	Assets::Shaders::FloorFragmentShader FloorShader{};
+
+	// Simple screen fill background.
+	FlatBackgroundObject Background{};
+	BackgroundFlatFillShader BackgroundShader{};
+
 	// Shared point objects shaders.
 	PointZFragmentShader PointZShader{};
 	PointPixelFixedColorFragmentShader<> PointNormalShader{};
-
-	// Custom shader to draw the diffuse material floor object.
-	Assets::Shaders::FloorFragmentShader FloorShader{};
-	Assets::Objects::FloorPointCloudObject ObjectFloor{};
-
-	// Simple screen fill background.
-	ScreenFillShader BackgroundShader{};
-	FlatBackgroundObject Background{};
 
 	// Resumable animation trackers.
 	uint32_t AnimationStart = 0;
