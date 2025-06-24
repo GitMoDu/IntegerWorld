@@ -487,46 +487,47 @@ namespace IntegerWorld
 					return; // No visible segment after clipping.
 			}
 
-			const int16_t width = (x2c - x1c);
-			const int16_t height = (y2c - y1c);
-
-			if (width == 0 && height == 0)
+			color_fraction16_t color{};
+			if (x2c == x1c && y2c == y1c)
 			{
 				// Degenerate line, only draw a single pixel.
-				color_fraction16_t color{};
 				if (pixelShader(color, x1c, y1c))
 				{
 					Surface->Pixel(color, x1c, y1c);
 				}
 			}
-			else if (height == 0)
+			else if (y2c == y1c)
 			{
 				// Horizontal line.
-				color_fraction16_t color{};
-				for (int_fast16_t x = 0; x <= width; x++)
+				const int8_t sign = x1c <= x2c ? 1 : -1;
+				int_fast16_t x = x1c;
+				do
 				{
-					if (pixelShader(color, x + x1c, y1c))
+					if (pixelShader(color, x, y1c))
 					{
-						Surface->Pixel(color, x + x1c, y1c);
+						Surface->Pixel(color, x, y1c);
 					}
-				}
+					x += sign;
+				} while (x != x2c);
 			}
-			else if (width == 0)
+			else if (x2c == x1c)
 			{
 				// Vertical line.
-				color_fraction16_t color{};
-				for (int_fast16_t y = 0; y <= height; y++)
+				const int8_t sign = y1c <= y2c ? 1 : -1;
+				int_fast16_t y = y1c;
+				do
 				{
-					if (pixelShader(color, x1c, y + y1c))
+					if (pixelShader(color, x1c, y))
 					{
-						Surface->Pixel(color, x1c, y + y1c);
+						Surface->Pixel(color, x1c, y);
 					}
-				}
+					y += sign;
+				} while (y != y2c);
 			}
 			else
 			{
 				// Diagonal line. Unroll to appropriate Bresenham line rasterizer.
-				BresenhamLineShade(x1c, y1c, x2c, y2c, pixelShader);
+				BresenhamLineShade(color, x1c, y1c, x2c, y2c, pixelShader);
 			}
 		}
 
@@ -948,7 +949,7 @@ namespace IntegerWorld
 	private:
 		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
 		template<typename PixelShader>
-		void BresenhamLineShade(int16_t x1, int16_t y1,
+		void BresenhamLineShade(color_fraction16_t& color, int16_t x1, int16_t y1,
 			int16_t x2, int16_t y2,
 			PixelShader&& pixelShader)
 		{
@@ -957,7 +958,6 @@ namespace IntegerWorld
 			const int16_t dy = -AbsValue(y2 - y1);
 			const int8_t sy = y1 < y2 ? 1 : -1;
 			int16_t err = dx + dy;
-			color_fraction16_t color{};
 
 			while (true)
 			{
