@@ -42,8 +42,8 @@ namespace IntegerWorld
 		virtual bool PrimitiveWorldShade(const uint16_t index) { return true; }
 		virtual bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) { return true; }
 		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) { return true; }
-		virtual bool PrimitiveScreenShade(const uint16_t index) { return true; }
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight) {}
+		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) { return true; }
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector) {}
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) { }
 	};
 

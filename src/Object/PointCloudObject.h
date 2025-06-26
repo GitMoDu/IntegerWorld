@@ -242,51 +242,42 @@ namespace IntegerWorld
 
 		virtual bool PrimitiveWorldShade(const uint16_t index)
 		{
-			if (index < vertexCount)
-			{
-				//TODO: Check for world space frustum culling.
-				// Flag fragment to render.
-				Primitives[index].z = 0;
-				Primitives[index].worldPosition = Vertices[index];
+			//TODO: Check for world space frustum culling.
+			// Flag fragment to render.
+			Primitives[index].z = 0;
+			Primitives[index].worldPosition = Vertices[index];
 
-				return false;
-			}
-
-			return true;
+			return index >= vertexCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
-			if (index < vertexCount)
+			//TODO: Check for screen space frustum culling.
+			// Check flagged fragments.
+			if (Primitives[index].z != VERTEX16_RANGE
+				&& Vertices[index].z >= 0
+				&& Vertices[index].x >= 0
+				&& Vertices[index].y >= 0
+				&& Vertices[index].x < boundsWidth
+				&& Vertices[index].y < boundsHeight)
 			{
-				//TODO: Check for screen space frustum culling.
-				// Check flagged fragments.
-				if (Primitives[index].z != VERTEX16_RANGE
-					&& Vertices[index].z > 0)
-				{
-					Primitives[index].z = Vertices[index].z;
-				}
-				else
-				{
-					Primitives[index].z = VERTEX16_RANGE;
-				}
+				Primitives[index].z = Vertices[index].z;
+			}
+			else
+			{
+				Primitives[index].z = VERTEX16_RANGE;
 			}
 
 			return index >= vertexCount - 1;
 		}
 
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
 		{
 			for (uint16_t i = 0; i < vertexCount; i++)
 			{
-				const int16_t fragmentZ = Primitives[i].z;
-				if (fragmentZ != VERTEX16_RANGE
-					&& Vertices[i].x >= 0
-					&& Vertices[i].y >= 0
-					&& Vertices[i].x < boundsWidth
-					&& Vertices[i].y < boundsHeight)
+				if (Primitives[i].z != VERTEX16_RANGE)
 				{
-					fragmentCollector.AddFragment(i, fragmentZ);
+					fragmentCollector.AddFragment(i, Primitives[i].z);
 				}
 				else
 				{

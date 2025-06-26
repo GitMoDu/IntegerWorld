@@ -110,28 +110,59 @@ namespace IntegerWorld
 
 		virtual bool PrimitiveWorldShade(const uint16_t index)
 		{
-			if (index < edgeCount)
-			{
 #if defined(ARDUINO_ARCH_AVR)
-				const edge_line_t edge
-				{
-					(uint16_t)pgm_read_word(&EdgesSource[index].start),
-					(uint16_t)pgm_read_word(&EdgesSource[index].end)
-				};
+			const edge_line_t edge
+			{
+				(uint16_t)pgm_read_word(&EdgesSource[index].start),
+				(uint16_t)pgm_read_word(&EdgesSource[index].end)
+			};
 #else
-				const edge_line_t& edge = EdgesSource[index];
+			const edge_line_t& edge = EdgesSource[index];
 #endif
 
+			// Early cull based on edge cull mode.
+			bool renderFragment = true;
+			switch (EdgeDrawMode)
+			{
+			case EdgeDrawModeEnum::CullCenterZBehind:
+				renderFragment &= ObjectPosition.z >
+					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+						+ Vertices[edge.end].z), 1);
+				break;
+			case EdgeDrawModeEnum::CullCenterZFront:
+				renderFragment &= ObjectPosition.z <
+					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+						+ Vertices[edge.end].z), 1);
+				break;
+			case EdgeDrawModeEnum::CullAllBehind:
+				renderFragment &= (Vertices[edge.start].z <= ObjectPosition.z
+					|| Vertices[edge.end].z <= ObjectPosition.z);
+				break;
+			case EdgeDrawModeEnum::CullAnyBehind:
+				renderFragment &= (Vertices[edge.start].z <= ObjectPosition.z
+					&& Vertices[edge.end].z <= ObjectPosition.z);
+				break;
+			case EdgeDrawModeEnum::NoCulling:
+			default:
+				break;
+			}
+
+			if (renderFragment)
+			{
 				Primitives[index].z = 0;
 				Primitives[index].worldPosition.x = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].x + Vertices[edge.end].x), 1);
 				Primitives[index].worldPosition.y = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].y + Vertices[edge.end].y), 1);
 				Primitives[index].worldPosition.z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
 			}
+			else
+			{
+				Primitives[index].z = VERTEX16_RANGE;
+			}
 
 			return index >= edgeCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
 #if defined(ARDUINO_ARCH_AVR)
 			const edge_line_t edge
@@ -147,7 +178,11 @@ namespace IntegerWorld
 			{
 				// Quick check if triangle is behind screen.
 				if (Vertices[edge.start].z < 0
-					&& Vertices[edge.end].z < 0)
+					&& Vertices[edge.end].z < 0
+					|| (Vertices[edge.start].x < 0 && Vertices[edge.end].x < 0)
+					|| (Vertices[edge.start].x >= boundsWidth && Vertices[edge.end].x >= boundsWidth)
+					|| (Vertices[edge.start].y < 0 && Vertices[edge.end].y < 0)
+					|| (Vertices[edge.start].y >= boundsHeight && Vertices[edge.end].y >= boundsHeight))
 				{
 					// Whole edge is out of bounds.
 					Primitives[index].z = VERTEX16_RANGE;
@@ -157,10 +192,8 @@ namespace IntegerWorld
 			return index >= edgeCount - 1;
 		}
 
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
 		{
-			bool renderFragment = false;
-
 			for (uint16_t i = 0; i < edgeCount; i++)
 			{
 #if defined(ARDUINO_ARCH_AVR)
@@ -173,44 +206,10 @@ namespace IntegerWorld
 				const edge_line_t& edge = EdgesSource[i];
 #endif
 
-				switch (EdgeDrawMode)
-				{
-				case EdgeDrawModeEnum::CullCenterZBehind:
-					renderFragment = ObjectPosition.z >
-						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-							+ Vertices[edge.end].z), 1);
-					break;
-				case EdgeDrawModeEnum::CullCenterZFront:
-					renderFragment = ObjectPosition.z <
-						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-							+ Vertices[edge.end].z), 1);
-					break;
-				case EdgeDrawModeEnum::CullAllBehind:
-					renderFragment = (Vertices[edge.start].z <= ObjectPosition.z
-						|| Vertices[edge.end].z <= ObjectPosition.z);
-					break;
-				case EdgeDrawModeEnum::CullAnyBehind:
-					renderFragment = (Vertices[edge.start].z <= ObjectPosition.z
-						&& Vertices[edge.end].z <= ObjectPosition.z);
-					break;
-				case EdgeDrawModeEnum::NoCulling:
-				default:
-					renderFragment = true;
-					break;
-				}
-
-				// Extra check if both line points are outside window.
-				if (renderFragment
-					&& !(Vertices[edge.start].x < 0 && Vertices[edge.end].x < 0)
-					&& !(Vertices[edge.start].x >= boundsWidth && Vertices[edge.end].x >= boundsWidth)
-					&& !(Vertices[edge.start].y < 0 && Vertices[edge.end].y < 0)
-					&& !(Vertices[edge.start].y >= boundsHeight && Vertices[edge.end].y >= boundsHeight))
+				if (Primitives[i].z != VERTEX16_RANGE)
 				{
 					Primitives[i].z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
-					if (!fragmentCollector.AddFragment(i, Primitives[i].z))
-					{
-						return;
-					}
+					fragmentCollector.AddFragment(i, Primitives[i].z);
 				}
 			}
 		}

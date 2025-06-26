@@ -132,7 +132,7 @@ namespace IntegerWorld
 			return index >= triangleCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
 			if (index < triangleCount)
 			{
@@ -162,15 +162,9 @@ namespace IntegerWorld
 					{
 						// Back face culling after projection.
 						const int32_t signedArea = (int32_t(Vertices[triangle.v2].x - Vertices[triangle.v1].x) * (Vertices[triangle.v3].y - Vertices[triangle.v1].y)) - (int32_t(Vertices[triangle.v2].y - Vertices[triangle.v1].y) * (Vertices[triangle.v3].x - Vertices[triangle.v1].x));
-						if (signedArea <= 0)
+						if (signedArea < 0)
 						{
 							Primitives[index].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
-
-							if (Primitives[index].z < 0)
-							{
-								// Triangle centroid is behind the screen.
-								Primitives[index].z = VERTEX16_RANGE;
-							}
 						}
 						else
 						{
@@ -183,14 +177,13 @@ namespace IntegerWorld
 			return index >= triangleCount - 1;
 		}
 
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
 		{
 			for (uint16_t i = 0; i < triangleCount; i++)
 			{
-				const int16_t fragmentZ = Primitives[i].z;
-				if (fragmentZ != VERTEX16_RANGE)
+				if (Primitives[i].z != VERTEX16_RANGE)
 				{
-					fragmentCollector.AddFragment(i, fragmentZ);
+					fragmentCollector.AddFragment(i, Primitives[i].z);
 				}
 			}
 		}

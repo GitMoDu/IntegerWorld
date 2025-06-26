@@ -313,7 +313,7 @@ namespace IntegerWorld
 				Status.ScreenShades++;
 #endif
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex))
+				if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex, Rasterizer.Width(), Rasterizer.Height()))
 				{
 					ItemIndex = 0;
 					ObjectIndex++;
@@ -337,7 +337,7 @@ namespace IntegerWorld
 			case StateEnum::FragmentCollect:
 				MeasureStart = micros();
 				FragmentManager.PrepareForObject(ObjectIndex);
-				Objects[ObjectIndex]->FragmentCollect((FragmentCollector&)FragmentManager, Rasterizer.Width(), Rasterizer.Height());
+				Objects[ObjectIndex]->FragmentCollect((FragmentCollector&)FragmentManager);
 				ObjectIndex++;
 				if (ObjectIndex >= ObjectCount)
 				{
