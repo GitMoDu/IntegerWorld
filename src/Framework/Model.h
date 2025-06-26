@@ -86,66 +86,87 @@ namespace IntegerWorld
 		rotation_angle_t Rotation{};
 	};
 
+	struct ordered_fragment_t
+	{
+		uint16_t ObjectIndex;
+		uint16_t FragmentIndex;
+		int16_t Z;
+	};
+
+	/// <summary>
+	/// Minimal render information for each frame.
+	/// </summary>
 	struct render_status_struct
 	{
-		uint16_t VertexShades = 0;
-		uint32_t VertexShadeDuration = 0;
-
-		uint16_t PrimitiveWorldShades = 0;
-		uint32_t PrimitiveWorldShadeDuration = 0;
-
-		uint16_t PrimitiveScreenShades = 0;
-		uint32_t PrimitiveScreenShadeDuration = 0;
-
-		uint16_t CameraTransforms = 0;
-		uint32_t CameraTransformDuration = 0;
-
-		uint16_t ScreenProjects = 0;
-		uint32_t ScreenProjectDuration = 0;
-
-		uint32_t EngineSortDuration = 0;
-
-		uint16_t ItemSorts = 0;
-		uint32_t ItemSortDuration = 0;
-
-		uint32_t RasterizeWaitDuration = 0;
-
-		uint32_t EngineCameraDuration = 0;
-
-		uint16_t Rasterizes = 0;
-		uint32_t RasterizeDuration = 0;
+		uint32_t Render = 0;
+		uint32_t Rasterize = 0;
+		uint16_t FragmentsDrawn = 0;
 
 		uint32_t GetRenderDuration() const
 		{
-			return VertexShadeDuration +
-				PrimitiveWorldShadeDuration +
-				PrimitiveScreenShadeDuration +
-				CameraTransformDuration +
-				ScreenProjectDuration +
-				EngineSortDuration +
-				EngineCameraDuration +
-				ItemSortDuration;
+			return Render;
 		}
 
 		void Clear()
 		{
-			PrimitiveWorldShades = 0;
-			PrimitiveWorldShadeDuration = 0;
-			PrimitiveScreenShades = 0;
-			PrimitiveScreenShadeDuration = 0;
+			FragmentsDrawn = 0;
+			Rasterize = 0;
+			Render = 0;
+		}
+	};
+
+	/// <summary>
+	/// Full render information for each frame.
+	/// </summary>
+	struct render_debug_status_struct
+	{
+		uint32_t FramePreparation = 0;
+		uint32_t VertexShade = 0;
+		uint32_t WorldShade = 0;
+		uint32_t ScreenShade = 0;
+		uint32_t CameraTransform = 0;
+		uint32_t ScreenProject = 0;
+		uint32_t FragmentSort = 0;
+		uint32_t RasterizeWait = 0;
+		uint32_t Rasterize = 0;
+
+		uint16_t WorldShades = 0;
+		uint16_t VertexShades = 0;
+		uint16_t CameraTransforms = 0;
+		uint16_t ScreenProjects = 0;
+		uint16_t ScreenShades = 0;
+
+		uint16_t FragmentsDrawn = 0;
+
+		uint32_t GetRenderDuration() const
+		{
+			return FramePreparation +
+				VertexShade +
+				WorldShade +
+				CameraTransform +
+				ScreenShade +
+				ScreenProject +
+				FragmentSort;
+		}
+
+		void Clear()
+		{
+			FragmentsDrawn = 0;
 			VertexShades = 0;
-			VertexShadeDuration = 0;
+			WorldShades = 0;
 			CameraTransforms = 0;
-			CameraTransformDuration = 0;
 			ScreenProjects = 0;
-			ScreenProjectDuration = 0;
-			EngineSortDuration = 0;
-			EngineCameraDuration = 0;
-			ItemSorts = 0;
-			ItemSortDuration = 0;
-			RasterizeWaitDuration = 0;
-			Rasterizes = 0;
-			RasterizeDuration = 0;
+			ScreenShades = 0;
+
+			FramePreparation = 0;
+			VertexShade = 0;
+			WorldShade = 0;
+			CameraTransform = 0;
+			ScreenShade = 0;
+			ScreenProject = 0;
+			FragmentSort = 0;
+			RasterizeWait = 0;
+			Rasterize = 0;
 		}
 	};
 }

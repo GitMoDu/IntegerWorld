@@ -1,11 +1,14 @@
 #ifndef _INTEGER_WORLD_ENGINE_RENDER_TASK_h
 #define _INTEGER_WORLD_ENGINE_RENDER_TASK_h
 
+//#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enabled full render information.
+
 #define _TASK_OO_CALLBACKS
 #include <TSchedulerDeclarations.hpp>
 
 #include "../Framework/Interface.h"
 #include "../Framework/Viewport.h"
+#include "../Framework/FragmentManager.h"
 
 namespace IntegerWorld
 {
@@ -45,32 +48,10 @@ namespace IntegerWorld
 				return false;
 			}
 		}
-
-	protected:
-		void SortObjects()
-		{
-			// Insertion sort using the Compare method
-			for (uint16_t i = 1; i < ObjectCount; ++i)
-			{
-				RenderObjectType item = Objects[i];
-				uint16_t j = i;
-
-				// Move elements of Items[0..i-1] that are greater than key
-				// to one position ahead of their current position
-				for (; j > 0; --j)
-				{
-					if (!(Objects[j - 1]->GetZPosition() < item->GetZPosition()))
-					{
-						break;
-					}
-					Objects[j] = Objects[j - 1];
-				}
-				Objects[j] = item;
-			}
-		}
 	};
 
-	template<uint16_t MaxObjectCount>
+
+	template<uint16_t MaxObjectCount, uint16_t MaxOrderedPrimitives>
 	class EngineRenderTask : public AbstractObjectRenderTask<MaxObjectCount>
 	{
 	private:
@@ -79,7 +60,6 @@ namespace IntegerWorld
 	protected:
 		using Base::Objects;
 		using Base::ObjectCount;
-		using Base::SortObjects;
 
 	private:
 		enum class StateEnum : uint8_t
@@ -92,17 +72,20 @@ namespace IntegerWorld
 			CameraTransform,
 			ScreenProject,
 			PrimitiveScreenShade,
-			PrimitiveSort,
-			ObjectSort,
+			FragmentCollect,
+			FragmentSort,
 			WaitForSurface,
 			Rasterize
 		};
 
 	private:
+		ordered_fragment_t OrderedPrimitives[MaxOrderedPrimitives]{};
+
+	private:
 		// Viewport clipping planes and window for rasterizing.
 		ViewportProjector ViewProjector{};
 
-	private:
+
 		camera_state_t CameraControls{};
 		transform32_rotate_translate_t ReverseCameraTransform{};
 		StateEnum State = StateEnum::Disabled;
@@ -110,23 +93,41 @@ namespace IntegerWorld
 		uint16_t ObjectIndex = 0;
 		uint16_t ItemIndex = 0;
 
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+	private:
 		uint32_t MeasureStart = 0;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+		render_debug_status_struct Status{};
+		render_debug_status_struct StatusCopy{};
+#else
 		render_status_struct Status{};
 		render_status_struct StatusCopy{};
 #endif
 	private:
 		WindowRasterizer Rasterizer;
+		OrderedFragmentManager FragmentManager;
 
 
 	public:
 		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface* surface, const bool startFullscreen = true)
 			: Base(scheduler)
 			, Rasterizer(surface, startFullscreen)
+			, FragmentManager(OrderedPrimitives, MaxOrderedPrimitives)
 		{
 		}
 
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+		virtual void GetRendererStatus(render_debug_status_struct& rendererStatus) final
+		{
+			rendererStatus = StatusCopy;
+		}
+
+		virtual void GetRendererStatus(render_status_struct& rendererStatus) final
+		{
+			rendererStatus.Rasterize = StatusCopy.Rasterize;
+			rendererStatus.Render = StatusCopy.GetRenderDuration();
+			rendererStatus.FragmentsDrawn = StatusCopy.FragmentsDrawn;
+		}
+#else
 		virtual void GetRendererStatus(render_status_struct& rendererStatus) final
 		{
 			rendererStatus = StatusCopy;
@@ -171,23 +172,21 @@ namespace IntegerWorld
 				else
 				{
 					State = StateEnum::Disabled;
-					//Serial.println(F("Unable to start render engine"));
 				}
 				break;
 			case StateEnum::CycleStart:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				StatusCopy = Status;
-				Status.Clear();
 				MeasureStart = micros();
-#endif
+
+				Status.Clear();
 				ViewProjector.SetDimensions(Rasterizer.Width(), Rasterizer.Height());
+				FragmentManager.Clear();
 				ObjectIndex = 0;
 				ItemIndex = 0;
 				if (ObjectCount > 0)
 				{
-					ReverseCameraTransform.Translation.x = CameraControls.Position.x;
-					ReverseCameraTransform.Translation.y = CameraControls.Position.y;
-					ReverseCameraTransform.Translation.z = CameraControls.Position.z;
+					ReverseCameraTransform.Translation.x = -CameraControls.Position.x;
+					ReverseCameraTransform.Translation.y = -CameraControls.Position.y;
+					ReverseCameraTransform.Translation.z = -CameraControls.Position.z;
 
 					CalculateTransformRotation(ReverseCameraTransform,
 						ANGLE_RANGE - CameraControls.Rotation.x,
@@ -197,17 +196,19 @@ namespace IntegerWorld
 				}
 				else
 				{
-					State = StateEnum::Rasterize;
+					State = StateEnum::WaitForSurface;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.EngineCameraDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.FramePreparation += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
 			case StateEnum::VertexShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.VertexShades++;
-				MeasureStart = micros();
 #endif
+				MeasureStart = micros();
 				if (Objects[ObjectIndex]->VertexShade(ItemIndex))
 				{
 					ItemIndex = 0;
@@ -223,15 +224,17 @@ namespace IntegerWorld
 				{
 					ItemIndex++;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.VertexShadeDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.VertexShade += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
 			case StateEnum::PrimitiveWorldShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.PrimitiveWorldShades++;
-				MeasureStart = micros();
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.WorldShades++;
 #endif
+				MeasureStart = micros();
 				if (Objects[ObjectIndex]->PrimitiveWorldShade(ItemIndex))
 				{
 					ItemIndex = 0;
@@ -247,15 +250,17 @@ namespace IntegerWorld
 				{
 					ItemIndex++;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.PrimitiveWorldShadeDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.WorldShade += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
 			case StateEnum::CameraTransform:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.CameraTransforms++;
-				MeasureStart = micros();
 #endif
+				MeasureStart = micros();
 				if (Objects[ObjectIndex]->CameraTransform(ReverseCameraTransform, ItemIndex))
 				{
 					ItemIndex = 0;
@@ -271,15 +276,17 @@ namespace IntegerWorld
 				{
 					ItemIndex++;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.CameraTransformDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.CameraTransform += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
 			case StateEnum::ScreenProject:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.ScreenProjects++;
-				MeasureStart = micros();
 #endif
+				MeasureStart = micros();
 				if (Objects[ObjectIndex]->ScreenProject(ViewProjector, ItemIndex))
 				{
 					ItemIndex = 0;
@@ -295,17 +302,18 @@ namespace IntegerWorld
 				{
 					ItemIndex++;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.ScreenProjectDuration += micros() - MeasureStart + 1;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.ScreenProject += micros() - MeasureStart + 1;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
 			case StateEnum::PrimitiveScreenShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.PrimitiveScreenShades++;
-				MeasureStart = micros();
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.ScreenShades++;
 #endif
-
-				if (Objects[ObjectIndex]->PrimitiveScreenShade(Rasterizer.Width(), Rasterizer.Height(), ItemIndex))
+				MeasureStart = micros();
+				if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex))
 				{
 					ItemIndex = 0;
 					ObjectIndex++;
@@ -313,93 +321,79 @@ namespace IntegerWorld
 					{
 						ItemIndex = 0;
 						ObjectIndex = 0;
-						State = StateEnum::PrimitiveSort;
+						State = StateEnum::FragmentCollect;
 					}
 				}
 				else
 				{
 					ItemIndex++;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.PrimitiveScreenShadeDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.ScreenShade += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
-			case StateEnum::PrimitiveSort:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.ItemSorts++;
+			case StateEnum::FragmentCollect:
 				MeasureStart = micros();
-#endif
-				Objects[ObjectIndex]->PrimitiveSort();
+				FragmentManager.PrepareForObject(ObjectIndex);
+				Objects[ObjectIndex]->FragmentCollect((FragmentCollector&)FragmentManager, Rasterizer.Width(), Rasterizer.Height());
 				ObjectIndex++;
 				if (ObjectIndex >= ObjectCount)
 				{
-					ObjectIndex = 0;
-					State = StateEnum::ObjectSort;
+					State = StateEnum::FragmentSort;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.ItemSortDuration += micros() - MeasureStart;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.FragmentSort += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
 				break;
-			case StateEnum::ObjectSort: // Sort object render by camera distance.
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+			case StateEnum::FragmentSort:
 				MeasureStart = micros();
-#endif
-				SortObjects();
-				ObjectIndex = 0;
-				ItemIndex = 0;
+				FragmentManager.Sort();
+				Status.FragmentsDrawn = FragmentManager.Count();
 				State = StateEnum::WaitForSurface;
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.EngineSortDuration = micros() - MeasureStart;
-				Status.RasterizeWaitDuration = 0;
-				MeasureStart = micros();
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.FragmentSort = micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
 #endif
+				MeasureStart = micros();
 				break;
 			case StateEnum::WaitForSurface:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				MeasureStart = micros();
 #endif
 				// Poll layer to check if we can draw.
 				if (Rasterizer.Surface->IsSurfaceReady())
 				{
+					ObjectIndex = 0;
+					ItemIndex = 0;
 					State = StateEnum::Rasterize;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				else
 				{
-					Status.RasterizeWaitDuration += micros() - MeasureStart;
+					Status.RasterizeWait += micros() - MeasureStart;
 				}
 #endif
 				break;
 			case StateEnum::Rasterize:
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.Rasterizes++;
 				MeasureStart = micros();
-#endif
-				if (ObjectCount > 0)
+				if (ItemIndex < FragmentManager.Count())
 				{
-					if (Objects[ObjectIndex]->FragmentShade(Rasterizer, ItemIndex))
-					{
-						ItemIndex = 0;
-						ObjectIndex++;
-						if (ObjectIndex >= ObjectCount)
-						{
-							Rasterizer.Surface->FlipSurface();
-							State = StateEnum::CycleStart;
-						}
-					}
-					else
-					{
-						ItemIndex++;
-					}
+					Objects[OrderedPrimitives[ItemIndex].ObjectIndex]->FragmentShade(Rasterizer,
+						OrderedPrimitives[ItemIndex].FragmentIndex);
+					ItemIndex++;
+					Status.Rasterize += micros() - MeasureStart;
 				}
 				else
 				{
+					StatusCopy = Status;
 					Rasterizer.Surface->FlipSurface();
 					State = StateEnum::CycleStart;
 				}
-#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
-				Status.RasterizeDuration += micros() - MeasureStart;
-#endif
 				break;
 			default:
 				SetEnabled(false);

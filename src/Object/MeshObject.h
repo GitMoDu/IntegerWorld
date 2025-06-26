@@ -11,7 +11,6 @@ namespace IntegerWorld
 
 	struct mesh_primitive_t : base_primitive_t
 	{
-		int16_t z;
 		vertex16_t worldPosition;
 		vertex16_t worldNormal;
 	};
@@ -27,7 +26,6 @@ namespace IntegerWorld
 		using BaseObject::Vertices;
 		using BaseObject::Primitives;
 		using BaseObject::MeshTransform;
-		using BaseObject::OrderedPrimitives;
 
 	public:
 		IFragmentShader<triangle_fragment_t>* FragmentShader = nullptr;
@@ -134,11 +132,11 @@ namespace IntegerWorld
 			return index >= triangleCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index)
 		{
 			if (index < triangleCount)
 			{
-				OrderedPrimitives[index] = index;
+
 #if defined(ARDUINO_ARCH_AVR)
 				const triangle_face_t triangle
 				{
@@ -150,7 +148,6 @@ namespace IntegerWorld
 				const triangle_face_t& triangle = TrianglesSource[index];
 #endif
 
-				// Check flagged fragments.
 				if (Primitives[index].z != VERTEX16_RANGE)
 				{
 					// Quick check if triangle is behind screen.
@@ -186,13 +183,24 @@ namespace IntegerWorld
 			return index >= triangleCount - 1;
 		}
 
-		virtual bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
-			const uint16_t orderedIndex = OrderedPrimitives[index];
-			const mesh_primitive_t& primitive = Primitives[orderedIndex];
-
-			if (FragmentShader != nullptr && primitive.z != VERTEX16_RANGE)
+			for (uint16_t i = 0; i < triangleCount; i++)
 			{
+				const int16_t fragmentZ = Primitives[i].z;
+				if (fragmentZ != VERTEX16_RANGE)
+				{
+					fragmentCollector.AddFragment(i, fragmentZ);
+				}
+			}
+		}
+
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		{
+			if (FragmentShader != nullptr)
+			{
+				const mesh_primitive_t& primitive = Primitives[index];
+
 				TriangleFragment.normal.x = primitive.worldNormal.x;
 				TriangleFragment.normal.y = primitive.worldNormal.y;
 				TriangleFragment.normal.z = primitive.worldNormal.z;
@@ -201,12 +209,12 @@ namespace IntegerWorld
 #if defined(ARDUINO_ARCH_AVR)
 				const triangle_face_t triangle
 				{
-					(uint16_t)pgm_read_word(&TrianglesSource[orderedIndex].v1),
-					(uint16_t)pgm_read_word(&TrianglesSource[orderedIndex].v2),
-					(uint16_t)pgm_read_word(&TrianglesSource[orderedIndex].v3)
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v1),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v2),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v3)
 				};
 #else
-				const triangle_face_t& triangle = TrianglesSource[orderedIndex];
+				const triangle_face_t& triangle = TrianglesSource[index];
 #endif
 				TriangleFragment.triangleScreenA.x = Vertices[triangle.v1].x;
 				TriangleFragment.triangleScreenA.y = Vertices[triangle.v1].y;
@@ -218,7 +226,7 @@ namespace IntegerWorld
 				TriangleFragment.triangleScreenC.y = Vertices[triangle.v3].y;
 				TriangleFragment.triangleScreenC.z = Vertices[triangle.v3].z;
 
-				GetFragment(TriangleFragment, orderedIndex);
+				GetFragment(TriangleFragment, index);
 
 				if (SceneShader != nullptr)
 				{
@@ -229,8 +237,6 @@ namespace IntegerWorld
 					FragmentShader->FragmentShade(rasterizer, TriangleFragment);
 				}
 			}
-
-			return index >= triangleCount - 1;
 		}
 
 	protected:

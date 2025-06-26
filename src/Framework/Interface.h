@@ -5,6 +5,7 @@
 #include "IOutputSurface.h"
 #include "WindowRasterizer.h"
 #include "Viewport.h"
+#include "FragmentManager.h"
 
 
 namespace IntegerWorld
@@ -41,13 +42,12 @@ namespace IntegerWorld
 		virtual bool PrimitiveWorldShade(const uint16_t index) { return true; }
 		virtual bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) { return true; }
 		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) { return true; }
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index) { return true; }
-		virtual void PrimitiveSort() {}
-		virtual bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) { return true; }
-		virtual int16_t GetZPosition() const { return VERTEX16_RANGE; }
+		virtual bool PrimitiveScreenShade(const uint16_t index) { return true; }
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight) {}
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) { }
 	};
 
-	
+
 
 	struct IEngineRenderer
 	{
@@ -57,6 +57,7 @@ namespace IntegerWorld
 		virtual camera_state_t* GetCameraControls() { return nullptr; }
 		virtual void SetFov(const ufraction16_t fovFraction) {}
 		virtual void GetRendererStatus(render_status_struct& rendererStatus) {}
+		virtual void GetRendererStatus(render_debug_status_struct& rendererStatus) {}
 	};
 }
 #endif

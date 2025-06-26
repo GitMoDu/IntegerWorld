@@ -44,11 +44,6 @@ namespace IntegerWorld
 
 			return true;
 		}
-
-		virtual int16_t GetZPosition() const
-		{
-			return ObjectPosition.z;
-		}
 	};
 
 	/// <summary>
@@ -91,7 +86,7 @@ namespace IntegerWorld
 
 	struct base_primitive_t
 	{
-		
+		int16_t z;
 	};
 
 	template<uint16_t vertexCount,
@@ -152,11 +147,6 @@ namespace IntegerWorld
 
 			return index >= vertexCount;
 		}
-
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index)
-		{
-			return true;
-		}
 	};
 
 	template<uint16_t vertexCount,
@@ -171,9 +161,6 @@ namespace IntegerWorld
 	protected:
 		using BaseTransformObject::Primitives;
 
-	protected:
-		uint16_t OrderedPrimitives[primitiveCount]{};
-
 	public:
 		AbstractOrderedTransformObject() : BaseTransformObject() {}
 
@@ -186,42 +173,6 @@ namespace IntegerWorld
 			}
 
 			return index >= primitiveCount - 1;
-		}
-
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index)
-		{
-			if (index < primitiveCount)
-			{
-				OrderedPrimitives[index] = index;
-			}
-
-			return index >= primitiveCount - 1;
-		}
-
-		virtual void PrimitiveSort()
-		{
-			if (primitiveCount > 1)
-			{
-				for (uint16_t i = 1; i < primitiveCount; i++)
-				{
-					const uint16_t index = OrderedPrimitives[i];
-
-					uint16_t j = i;
-					for (; j > 0; j--)
-					{
-						if (Primitives[OrderedPrimitives[j - 1]].z < Primitives[index].z)
-						{
-							OrderedPrimitives[j] = OrderedPrimitives[j - 1];
-						}
-						else
-						{
-							break;
-						}
-
-					}
-					OrderedPrimitives[j] = index;
-				}
-			}
 		}
 	};
 }

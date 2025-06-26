@@ -1,7 +1,6 @@
 #ifndef _INTEGER_WORLD_ABSTRACT_OBJECT_h
 #define _INTEGER_WORLD_ABSTRACT_OBJECT_h
 
-#include "../Framework/Model.h"
 #include "../Framework/Interface.h"
 #include "Shader.h"
 

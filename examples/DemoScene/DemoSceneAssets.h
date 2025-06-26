@@ -437,19 +437,15 @@ namespace Assets
 
 		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount>
 		{
-			int16_t ZOffset = -1;
-
 			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount>(Grid8x8::Vertices) {}
-
-			int16_t GetZPosition() const final
-			{
-				return VERTEX16_RANGE + ZOffset;
-			}
 		};
 
 		template<typename LightSourceType, typename fragment_t = point_fragment_t>
 		struct ShadedLightSourceObject : public LightSourceType
 		{
+		private:
+			static constexpr int16_t WindowTolerance = 3;
+
 		protected:
 			using LightSourceType::ObjectPosition;
 			using LightSourceType::WorldPosition;
@@ -469,22 +465,35 @@ namespace Assets
 		public:
 			ShadedLightSourceObject() : LightSourceType() {}
 
-			virtual bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
+			virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+			{
+				if (FragmentShader != nullptr
+					&& ObjectPosition.z > 0
+					&& ObjectPosition.x > -WindowTolerance
+					&& ObjectPosition.y > -WindowTolerance
+					&& ObjectPosition.x < boundsWidth + WindowTolerance
+					&& ObjectPosition.y < boundsHeight + WindowTolerance
+					&& (Color.r > 0 || Color.g > 0 || Color.b > 0))
+				{
+					fragmentCollector.AddFragment(0, ObjectPosition.z);
+				}
+			}
+
+			void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
 			{
 				LightFragment.color = Color;
-				if (LightFragment.color.r > 0 || LightFragment.color.g > 0 || LightFragment.color.b > 0)
+				LightFragment.material = { UFRACTION8_1X , 0, 0, 0 };
+				LightFragment.screen = ObjectPosition;
+				LightFragment.world = WorldPosition;
+
+				if (SceneShader != nullptr)
 				{
-					LightFragment.material = { UFRACTION8_1X , 0, 0, 0 };
-					LightFragment.screen = ObjectPosition;
-					LightFragment.world = WorldPosition;
-
-					if (ObjectPosition.z > 0)
-					{
-						FragmentShader->FragmentShade(rasterizer, LightFragment, SceneShader);
-					}
+					FragmentShader->FragmentShade(rasterizer, LightFragment, SceneShader);
 				}
-
-				return true;
+				else
+				{
+					FragmentShader->FragmentShade(rasterizer, LightFragment);
+				}
 			}
 		};
 	}

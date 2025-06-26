@@ -7,7 +7,8 @@
 #define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
-#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine measuring and logging.
+#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
+#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
 #define _TASK_OO_CALLBACKS
 #include <TScheduler.hpp>
@@ -63,7 +64,7 @@ IntegerWorld::Adafruit::Sdd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, T
 TS::Scheduler SchedulerBase;
 
 // World engine renderer and drawer.
-IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount> EngineRenderer(SchedulerBase, &Driver);
+IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount, AnimatedDemoScene::MaxDrawCallCount> EngineRenderer(SchedulerBase, &Driver);
 
 // Objects animator for the world.
 AnimatedDemoScene DemoScene(SchedulerBase);

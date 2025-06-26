@@ -8,8 +8,8 @@
 #define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
-// Enable engine measuring and logging.
-#define INTEGER_WORLD_PERFORMANCE_LOG
+#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
+#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
 #define _TASK_OO_CALLBACKS
 #include <TScheduler.hpp>
@@ -62,7 +62,8 @@ TS::Scheduler SchedulerBase;
 
 // World engine renderer and drawer.
 IntegerWorld::EngineRenderTask<
-	AnimatedTinyScene::RenderObjectCount>
+	AnimatedTinyScene::RenderObjectCount,
+	AnimatedTinyScene::MaxDrawCallCount>
 	EngineRenderer(SchedulerBase, &Driver);
 
 // Scene manager and animator task.

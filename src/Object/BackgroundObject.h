@@ -31,28 +31,26 @@ namespace IntegerWorld
 		{
 		}
 
-		int16_t GetZPosition() const final
-		{
-			return VERTEX16_RANGE + ZOffset;
-		}
-
-		bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
 			if (FragmentShader != nullptr)
 			{
-				BackgroundFragment.color = Color;
-				BackgroundFragment.material = Material;
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, BackgroundFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, BackgroundFragment);
-				}
+				fragmentCollector.AddFragment(0, MinValue(int32_t(VERTEX16_RANGE), int32_t(VERTEX16_RANGE) + ZOffset));
 			}
+		}
 
-			return true;
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
+		{
+			BackgroundFragment.color = Color;
+			BackgroundFragment.material = Material;
+			if (SceneShader != nullptr)
+			{
+				FragmentShader->FragmentShade(rasterizer, BackgroundFragment, SceneShader);
+			}
+			else
+			{
+				FragmentShader->FragmentShade(rasterizer, BackgroundFragment);
+			}
 		}
 
 	protected:

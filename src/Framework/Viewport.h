@@ -71,8 +71,7 @@ namespace IntegerWorld
 			cameraToscreen.x = ViewWidthHalf + ix;
 			cameraToscreen.y = ViewHeightHalf + iy;
 			cameraToscreen.z = distanceDenum;
-
 		}
-	};
+	};	
 }
 #endif

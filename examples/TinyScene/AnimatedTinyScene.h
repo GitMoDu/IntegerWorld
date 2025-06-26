@@ -9,7 +9,8 @@ using namespace IntegerWorld;
 class AnimatedTinyScene : private TS::Task
 {
 public:
-	static constexpr uint8_t RenderObjectCount = 2;
+	static constexpr uint16_t RenderObjectCount = 2;
+	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Cube::EdgeCount + Assets::Shapes::Octahedron::EdgeCount;
 
 private:
 	static constexpr uint32_t ShapeColorPeriodMicros = 19000000;

@@ -11,7 +11,6 @@ namespace IntegerWorld
 
 	struct flat_point_primitive_t : base_primitive_t
 	{
-		int16_t z;
 		vertex16_t worldPosition;
 	};
 
@@ -38,8 +37,7 @@ namespace IntegerWorld
 	protected:
 		using BaseObject::Vertices;
 		using BaseObject::Primitives;
-		using BaseObject::MeshTransform;
-		using BaseObject::OrderedPrimitives;
+		using BaseObject::MeshTransform;;
 
 	public:
 		IFragmentShader<point_normal_fragment_t>* FragmentShader = nullptr;
@@ -102,14 +100,11 @@ namespace IntegerWorld
 			return index >= vertexCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index)
 		{
 			if (index < vertexCount)
 			{
-				OrderedPrimitives[index] = index;
-
 				//TODO: Check for screen space frustum culling.
-				// Check flagged fragments.
 				if (Primitives[index].z != VERTEX16_RANGE)
 				{
 					Primitives[index].z = Vertices[index].z;
@@ -132,36 +127,50 @@ namespace IntegerWorld
 			return index >= vertexCount - 1;
 		}
 
-		virtual bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
-			const uint16_t orderedIndex = OrderedPrimitives[index];
-			primitive_t& primitive = Primitives[orderedIndex];
-
-			if (primitive.z != VERTEX16_RANGE
-				&& !rasterizer.IsInsideWindow(Vertices[orderedIndex]))
+			for (uint16_t i = 0; i < vertexCount; i++)
 			{
-				primitive.z = VERTEX16_RANGE;
-			}
-
-			if (FragmentShader != nullptr && primitive.z != VERTEX16_RANGE)
-			{
-				GetFragment(PointFragment, orderedIndex);
-
-				PointFragment.world = primitive.worldPosition;
-				PointFragment.normal = primitive.worldNormal;
-				PointFragment.screen = Vertices[orderedIndex];
-
-				if (SceneShader != nullptr)
+				const int16_t fragmentZ = Primitives[i].z;
+				if (fragmentZ != VERTEX16_RANGE
+					&& Vertices[i].x >= 0
+					&& Vertices[i].y >= 0
+					&& Vertices[i].x < boundsWidth
+					&& Vertices[i].y < boundsHeight)
 				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
+					fragmentCollector.AddFragment(i, fragmentZ);
 				}
 				else
 				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment);
+					Primitives[i].z = VERTEX16_RANGE;
 				}
 			}
+		}
 
-			return index >= vertexCount - 1;
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		{
+			if (FragmentShader != nullptr)
+			{
+				primitive_t& primitive = Primitives[index];
+
+				if (primitive.z != VERTEX16_RANGE)
+				{
+					GetFragment(PointFragment, index);
+
+					PointFragment.world = primitive.worldPosition;
+					PointFragment.normal = primitive.worldNormal;
+					PointFragment.screen = Vertices[index];
+
+					if (SceneShader != nullptr)
+					{
+						FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
+					}
+					else
+					{
+						FragmentShader->FragmentShade(rasterizer, PointFragment);
+					}
+				}
+			}
 		}
 
 	protected:
@@ -246,7 +255,7 @@ namespace IntegerWorld
 			return true;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t boundsWidth, const uint16_t boundsHeight, const uint16_t index)
+		virtual bool PrimitiveScreenShade(const uint16_t index)
 		{
 			if (index < vertexCount)
 			{
@@ -266,23 +275,35 @@ namespace IntegerWorld
 			return index >= vertexCount - 1;
 		}
 
-		virtual bool FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
-			const uint16_t orderedIndex = index;
-			primitive_t& primitive = Primitives[orderedIndex];
-
-			if (primitive.z != VERTEX16_RANGE
-				&&
-				(primitive.z <= 0 || !rasterizer.IsInsideWindow(Vertices[orderedIndex])))
+			for (uint16_t i = 0; i < vertexCount; i++)
 			{
-				primitive.z = VERTEX16_RANGE;
+				const int16_t fragmentZ = Primitives[i].z;
+				if (fragmentZ != VERTEX16_RANGE
+					&& Vertices[i].x >= 0
+					&& Vertices[i].y >= 0
+					&& Vertices[i].x < boundsWidth
+					&& Vertices[i].y < boundsHeight)
+				{
+					fragmentCollector.AddFragment(i, fragmentZ);
+				}
+				else
+				{
+					Primitives[i].z = VERTEX16_RANGE;
+				}
 			}
+		}
 
-			if (FragmentShader != nullptr && primitive.z != VERTEX16_RANGE)
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		{
+			if (FragmentShader != nullptr)
 			{
-				GetFragment(PointFragment, orderedIndex);
+				primitive_t& primitive = Primitives[index];
+
+				GetFragment(PointFragment, index);
 				PointFragment.world = primitive.worldPosition;
-				PointFragment.screen = Vertices[orderedIndex];
+				PointFragment.screen = Vertices[index];
 
 				if (SceneShader != nullptr)
 				{
@@ -293,8 +314,6 @@ namespace IntegerWorld
 					FragmentShader->FragmentShade(rasterizer, PointFragment);
 				}
 			}
-
-			return index >= vertexCount - 1;
 		}
 
 	protected:

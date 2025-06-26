@@ -13,7 +13,11 @@ namespace IntegerWorld
 	{
 	private:
 		IEngineRenderer& Engine;
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+		render_debug_status_struct RendererStatus{};
+#else
 		render_status_struct RendererStatus{};
+#endif
 
 	public:
 		PerformanceLogTask(TS::Scheduler& scheduler, IEngineRenderer& engine)
@@ -26,65 +30,66 @@ namespace IntegerWorld
 		{
 			Engine.GetRendererStatus(RendererStatus);
 
-			Serial.println();
-			Serial.println(F("Integer World Renderer"));
-			Serial.print(F("\tVertexShade("));
-			Serial.print(RendererStatus.VertexShades);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.VertexShadeDuration);
-			Serial.println(F("us"));
-			Serial.print(F("\tPrimitiveWorldShade("));
-			Serial.print(RendererStatus.PrimitiveWorldShades);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.PrimitiveWorldShadeDuration);
-			Serial.println(F("us"));
-			Serial.print(F("\tCameraTransform("));
-			Serial.print(RendererStatus.CameraTransforms);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.CameraTransformDuration);
-			Serial.println(F("us"));
-			Serial.print(F("\tScreenProject("));
-			Serial.print(RendererStatus.ScreenProjects);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.ScreenProjectDuration);
-			Serial.println(F("us"));
-			Serial.print(F("\tPrimitiveScreenShade("));
-			Serial.print(RendererStatus.PrimitiveScreenShades);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.PrimitiveScreenShadeDuration);
-			Serial.println(F("us"));
-
-
-
-			Serial.print(F("\tEngineSort "));
-			Serial.print(RendererStatus.EngineSortDuration);
-			Serial.println(F("us"));
-
-			Serial.print(F("\tItemSort("));
-			Serial.print(RendererStatus.ItemSorts);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.ItemSortDuration);
-			Serial.println(F("us"));
-
-			if (RendererStatus.RasterizeWaitDuration >= 0)
+			if (RendererStatus.GetRenderDuration() > 0)
 			{
-				Serial.print(F("\tRasterWait: "));
-				Serial.print(RendererStatus.RasterizeWaitDuration);
+				Serial.println();
+				Serial.println(F("Integer World Renderer"));
+
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Serial.print(F("\tFramePreparation "));
+				Serial.print(RendererStatus.FramePreparation);
 				Serial.println(F("us"));
+				Serial.print(F("\tVertexShade("));
+				Serial.print(RendererStatus.VertexShades);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.VertexShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tWorldShade("));
+				Serial.print(RendererStatus.WorldShades);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.WorldShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tCameraTransform("));
+				Serial.print(RendererStatus.CameraTransforms);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.CameraTransform);
+				Serial.println(F("us"));
+				Serial.print(F("\tScreenProject("));
+				Serial.print(RendererStatus.ScreenProjects);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.ScreenProject);
+				Serial.println(F("us"));
+				Serial.print(F("\tScreenShade("));
+				Serial.print(RendererStatus.ScreenShades);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.ScreenShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tFragmentSort "));
+				Serial.print(RendererStatus.FragmentSort);
+				Serial.println(F("us"));
+
+				if (RendererStatus.RasterizeWait >= 0)
+				{
+					Serial.print(F("\tRasterWait: "));
+					Serial.print(RendererStatus.RasterizeWait);
+					Serial.println(F("us"));
+				}
+#else
+#endif
+
+				Serial.print(F("\tRaster("));
+				Serial.print(RendererStatus.FragmentsDrawn);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.Rasterize);
+				Serial.println(F("us"));
+
+				Serial.print(F("\tRender Total: "));
+				Serial.print(RendererStatus.GetRenderDuration());
+				Serial.println(F("us"));
+
+				Serial.println();
+				Serial.println();
 			}
-
-			Serial.print(F("\tRaster("));
-			Serial.print(RendererStatus.Rasterizes);
-			Serial.print(F(") "));
-			Serial.print(RendererStatus.RasterizeDuration);
-			Serial.println(F("us"));
-
-			Serial.print(F("\tRender Total: "));
-			Serial.print(RendererStatus.GetRenderDuration());
-			Serial.println(F("us"));
-
-			Serial.println();
-			Serial.println();
 
 
 			return true;

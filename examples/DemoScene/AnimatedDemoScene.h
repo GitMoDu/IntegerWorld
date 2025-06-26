@@ -15,6 +15,13 @@ class AnimatedDemoScene : private TS::Task
 public:
 	static constexpr uint16_t ObjectsCount = 7;
 
+	// Worst case scenario for all objects, with minimal back-face culling there's more than enough room for the few extra calls (lights).
+	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Sphere::TriangleCount
+		+ Assets::Shapes::Star::TriangleCount
+		+ Assets::Shapes::Cube::TriangleCount
+		+ Assets::Shapes::Grid8x8::VertexCount
+		;
+
 private:
 	static constexpr uint32_t FloorColorPeriodMicros = 3000000000;
 	static constexpr uint32_t FlickerPeriodMicros = 6400000;
@@ -118,7 +125,6 @@ public:
 		ObjectFloor.Translation.y = DistanceUnit * 1;
 		ObjectFloor.Translation.z = BaseDistance + Scale(ObjectFloor.Resize, int16_t(-DistanceUnit / 4));
 		ObjectFloor.Rotation.x = Trigonometry::ANGLE_90;
-		ObjectFloor.ZOffset = -1;
 
 		// Set the ambient color.
 		SceneShader.AmbientLight = ColorFraction::RgbToColorFraction((uint32_t)0x18232D);
