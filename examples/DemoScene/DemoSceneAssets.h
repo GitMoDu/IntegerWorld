@@ -250,18 +250,18 @@ namespace Assets
 
 			public:
 				color_fraction16_t outerColor{};
-				color_fraction16_t innerColor{};
 				uint32_t radiusPower = 0;
-				uint16_t radius = 0;
+				int16_t centerX = 0;
+				int16_t centerY = 0;
 
 				RaysShaderFunctor() {}
 
 				bool operator()(color_fraction16_t& color, const int16_t x, int16_t y)
 				{
 					// Calculate point properties.
-					const int16_t xShifted = x - radius;
-					const int16_t yShifted = y - radius;
-					const uint32_t distancePower = ((uint32_t(xShifted) * xShifted) + (uint32_t(yShifted) * yShifted));
+					const int16_t xShifted = x - centerX;
+					const int16_t yShifted = y - centerY;
+					const uint32_t distancePower = ((int32_t(xShifted) * xShifted) + (int32_t(yShifted) * yShifted));
 
 					// Rng update every pixel, regardles of draw to keep entropy high.
 					rng ^= rng << 7;
@@ -283,12 +283,11 @@ namespace Assets
 							const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
 
 							// Interpolate between outer and inner color.
-							color.r = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.r) + Fraction::Scale(proximityFraction, innerColor.r));
-							color.g = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.g) + Fraction::Scale(proximityFraction, innerColor.g));
-							color.b = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.b) + Fraction::Scale(proximityFraction, innerColor.b));
+							color.r = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.r) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.r));
+							color.g = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.g) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.g));
+							color.b = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.b) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.b));
 
-							// Don't draw black pixels.
-							return color.r > 0 || color.g > 0 || color.b > 0;
+							return true;
 						}
 					}
 					return false;
@@ -311,19 +310,19 @@ namespace Assets
 				if (sceneShader != nullptr)
 				{
 					// Pass along the fragment properties.
-					RaysShader.radius = radius;
+					RaysShader.centerX = fragment.screen.x;
+					RaysShader.centerY = fragment.screen.y;
 					RaysShader.radiusPower = radiusPower;
 
-					// Apply shading to both colors.
-					color_fraction16_t color(fragment.color);
-					sceneShader->Shade(color, fragment.material);
-					RaysShader.outerColor = color;
-					color = ColorFraction::COLOR_WHITE;
-					sceneShader->Shade(color, fragment.material);
-					RaysShader.innerColor = color;
+					// Apply shading to light color. This serves as an intensity dial with emissive the property.
+					RaysShader.outerColor = fragment.color;
+					sceneShader->Shade(RaysShader.outerColor, fragment.material);
 
-					// Draw light source fragment with RaysShader.
-					rasterizer.RasterRectangle(fragment.screen.x - radius, fragment.screen.y - radius, fragment.screen.x + radius, fragment.screen.y + radius, RaysShader);
+					if (RaysShader.outerColor.r > 0 || RaysShader.outerColor.g > 0 || RaysShader.outerColor.b > 0)
+					{
+						// Draw light source fragment with RaysShader.
+						rasterizer.RasterRectangle(fragment.screen.x - radius, fragment.screen.y - radius, fragment.screen.x + radius, fragment.screen.y + radius, RaysShader);
+					}
 				}
 				else
 				{
