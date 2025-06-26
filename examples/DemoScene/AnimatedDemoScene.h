@@ -122,7 +122,7 @@ public:
 		ObjectFloor.Resize = Resize::GetResize16(uint8_t(22), uint8_t(1));
 		ObjectFloor.Resize = Resize::GetResize16(uint8_t(25), uint8_t(1));
 		ObjectFloor.Translation.x = Scale(ObjectFloor.Resize, int16_t(-DistanceUnit / 5));
-		ObjectFloor.Translation.y = DistanceUnit * 1;
+		ObjectFloor.Translation.y = (DistanceUnit * 3) / 5;
 		ObjectFloor.Translation.z = BaseDistance + Scale(ObjectFloor.Resize, int16_t(-DistanceUnit / 4));
 		ObjectFloor.Rotation.x = Trigonometry::ANGLE_90;
 
