@@ -9,6 +9,7 @@
 
 ### 3D Engine
 - [Co-operative scheduler](https://github.com/arkhipenko/TaskScheduler) compatible render engine.
+- Rendering is done with Z-ordered painter's algorithm, with fragment collection and sorting approach.
 - Scene shading based on fragment color, position, normal, material and lights.
 - Material properties include Emissive, Diffuse, Specular and Metallic.
 - Included light sources: Point, Directional and Spotlight.
