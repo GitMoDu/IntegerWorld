@@ -16,7 +16,7 @@ namespace IntegerWorld
 	};
 
 	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename BaseObject = AbstractOrderedTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
+		typename BaseObject = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
 		class MeshObject : public BaseObject
 	{
 	public:
@@ -245,8 +245,9 @@ namespace IntegerWorld
 		}
 	};
 
+
 	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename BaseObject = AbstractOrderedTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
+		typename BaseObject = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
 		class MeshSingleColorSingleMaterialObject : public MeshObject<vertexCount, triangleCount, BaseObject>
 	{
 	private:

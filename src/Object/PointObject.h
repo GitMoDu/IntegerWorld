@@ -148,32 +148,5 @@ namespace IntegerWorld
 			return index >= vertexCount;
 		}
 	};
-
-	template<uint16_t vertexCount,
-		uint16_t primitiveCount,
-		typename vertex_t = base_vertex_t,
-		typename primitive_t = base_primitive_t>
-	class AbstractOrderedTransformObject : public AbstractTransformObject<vertexCount, primitiveCount, vertex_t, primitive_t>
-	{
-	private:
-		using BaseTransformObject = AbstractTransformObject<vertexCount, primitiveCount, vertex_t, primitive_t>;
-
-	protected:
-		using BaseTransformObject::Primitives;
-
-	public:
-		AbstractOrderedTransformObject() : BaseTransformObject() {}
-
-	public:
-		virtual bool PrimitiveWorldShade(const uint16_t index)
-		{
-			if (index < primitiveCount)
-			{
-				Primitives[index].z = 0;
-			}
-
-			return index >= primitiveCount - 1;
-		}
-	};
 }
 #endif

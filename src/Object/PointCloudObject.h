@@ -22,10 +22,10 @@ namespace IntegerWorld
 	template<uint16_t vertexCount,
 		typename vertex_t = point_cloud_vertex_t,
 		typename primitive_t = lit_point_primitive_t>
-	class LitPointCloudObject : public AbstractOrderedTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>
+	class LitPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>
 	{
 	private:
-		using BaseObject = AbstractOrderedTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
+		using BaseObject = AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
 
 	public:
 		using BaseObject::SceneShader;
