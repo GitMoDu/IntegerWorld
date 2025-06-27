@@ -1,6 +1,8 @@
 #ifndef _ANIMATED_TINY_SCENE_h
 #define _ANIMATED_TINY_SCENE_h
 
+//#define DEMO_SCENE_EDGE_OBJECT // Enable for monochrome and low RAM devices.
+
 #include "TinyAssets.h"
 #include <IntegerWorld.h>
 
@@ -10,8 +12,11 @@ class AnimatedTinyScene : private TS::Task
 {
 public:
 	static constexpr uint16_t RenderObjectCount = 2;
-	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Cube::EdgeCount + Assets::Shapes::Octahedron::EdgeCount;
-
+#if defined(DEMO_SCENE_EDGE_OBJECT)
+	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Cube::TriangleCount + Assets::Shapes::Octahedron::EdgeCount;
+#else
+	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Cube::TriangleCount + Assets::Shapes::Octahedron::TriangleCount;
+#endif
 private:
 	static constexpr uint32_t ShapeColorPeriodMicros = 19000000;
 	static constexpr uint32_t ShapeRotatePeriodMicros = 65000000;
@@ -23,12 +28,21 @@ private:
 	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
 
 private:
+#if defined(DEMO_SCENE_EDGE_OBJECT)
 	// Shared shader for objects.
 	EdgeFragmentShader ObjectsShader{};
 
 	// Edge line objects.
 	Assets::Objects::CubeEdgeObject ObjectCube{};
 	Assets::Objects::OctahedronEdgeObject ObjectOctahedron{};
+#else
+	// Shared shader for objects.
+	TriangleFillFragmentShader ObjectsShader{};
+
+	// Mesh triangle objects.
+	Assets::Objects::CubeMeshObject ObjectCube{};
+	Assets::Objects::OctahedronMeshObject ObjectOctahedron{};
+#endif
 
 	// Track animation color style.
 	uint8_t ColorDepth = 1;
@@ -48,6 +62,11 @@ public:
 
 	void Start(IEngineRenderer& engineRenderer, const uint8_t colorDepth)
 	{
+		// Attach shaders to objects for rendering.
+		ObjectCube.FragmentShader = &ObjectsShader;
+		ObjectOctahedron.FragmentShader = &ObjectsShader;
+
+#if defined(DEMO_SCENE_EDGE_OBJECT)
 		// Adjust animation on 1 bit color output.
 		ColorDepth = colorDepth;
 		if (ColorDepth <= 1)
@@ -56,13 +75,17 @@ public:
 			ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
 		}
 
-		// Attach shaders to objects for rendering.
-		ObjectCube.FragmentShader = &ObjectsShader;
-		ObjectOctahedron.FragmentShader = &ObjectsShader;
-
 		// Set edge draw mode for each object.
 		ObjectCube.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
 		ObjectOctahedron.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
+#else
+		// Adjust animation on 1 bit color output.
+		ColorDepth = colorDepth;
+		if (ColorDepth <= 1)
+		{
+			ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
+		}
+#endif	
 
 		// Add all render objects to the pipeline.
 		engineRenderer.ClearObjects();
@@ -79,7 +102,9 @@ private:
 		{
 			// Rainbow color pattern with HSV color.
 			const ufraction16_t colorFraction = GetUFraction16((uint32_t)(timestamp % (ShapeColorPeriodMicros + 1)), ShapeColorPeriodMicros);
+#if defined(DEMO_SCENE_EDGE_OBJECT)
 			ObjectCube.Color = ColorFraction::HsvToColorFraction(colorFraction, UFRACTION16_1X, UFRACTION16_1X);
+#endif
 			ObjectOctahedron.Color = ColorFraction::HsvToColorFraction(UFRACTION16_1X - colorFraction, UFRACTION16_1X, UFRACTION16_1X);
 		}
 

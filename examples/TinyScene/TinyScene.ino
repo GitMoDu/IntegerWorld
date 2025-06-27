@@ -2,12 +2,14 @@
 * Direct Draw Tiny Scene.
 * Includes configurations for multiple screens (uncomment screen driver).
 * Drivers draw directly to screen (no framebuffer).
-* Tiny scene that fits in an AVR328 (Arduino OG): 2 edge objects and no lights.
+* Tiny scene with no light or scene shader that fits in an AVR328 (Arduino OG).
+* With DEMO_SCENE_EDGE_OBJECT: 2 edge objects. Without: 2 mesh objects.
 */
 
 #define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
+#define DEMO_SCENE_EDGE_OBJECT // Enable for monochrome and low RAM devices.
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
 #define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
@@ -50,7 +52,7 @@ SPIClass& SpiInstance(SPI);
 //IntegerWorld::Lexus2k::Ssd1306I2c::DirectDrawSurface Driver{}; // https://github.com/lexus2k/ssd1306
 //IntegerWorld::Adafruit::St7789::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST, TFT_BKL); // https://github.com/adafruit/Adafruit-ST7735-Library
 //IntegerWorld::Adafruit::St7735::DirectDrawSurface Driver(IntegerWorld::Adafruit::St7735::VariantEnum::Mini160x80Plugin, SpiInstance, TFT_CS, TFT_DC, TFT_RST, TFT_BKL); // https://github.com/adafruit/Adafruit-ST7735-Library
-IntegerWorld::Adafruit::Sdd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
+IntegerWorld::Adafruit::Sdd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST, true, 0); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
 //IntegerWorld::Adafruit::Sdd1306I2c::FramebufferSurface Driver(Wire); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Sdd1306Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Sh1106Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SH110X
