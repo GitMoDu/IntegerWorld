@@ -100,9 +100,9 @@ namespace IntegerWorld
 				Primitives[index].worldPosition.y = AverageApproximate(Vertices[triangle.v1].y, Vertices[triangle.v2].y, Vertices[triangle.v3].y);
 				Primitives[index].worldPosition.z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
 
-				// Rotating a pre-computed normal is slower than computing the normal from the triangle.
 				if (NormalsSource != nullptr)
 				{
+					// Rotate a pre-computed normal.
 #if defined(ARDUINO_ARCH_AVR)
 					Primitives[index].worldNormal =
 					{
@@ -114,7 +114,6 @@ namespace IntegerWorld
 					Primitives[index].worldNormal = NormalsSource[index];
 #endif
 					ApplyRotate(MeshTransform, Primitives[index].worldNormal);
-					NormalizeVertex16(Primitives[index].worldNormal);
 				}
 				else
 				{
