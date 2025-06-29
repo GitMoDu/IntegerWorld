@@ -66,7 +66,7 @@ TS::Scheduler SchedulerBase;
 IntegerWorld::EngineRenderTask<
 	AnimatedTinyScene::RenderObjectCount,
 	AnimatedTinyScene::MaxDrawCallCount>
-	EngineRenderer(SchedulerBase, &Driver);
+	EngineRenderer(SchedulerBase, Driver);
 
 // Scene manager and animator task.
 AnimatedTinyScene Scene(SchedulerBase);

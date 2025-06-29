@@ -1,7 +1,6 @@
 /*
 * Integer World Demo Scene.
 * Includes configurations for multiple screens (uncomment screen driver).
-
 */
 
 #define DEBUG
@@ -61,10 +60,10 @@ IntegerWorld::Adafruit::Sdd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, T
 
 
 // Process scheduler.
-TS::Scheduler SchedulerBase;
+TS::Scheduler SchedulerBase{};
 
 // World engine renderer and drawer.
-IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount, AnimatedDemoScene::MaxDrawCallCount> EngineRenderer(SchedulerBase, &Driver);
+IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount, AnimatedDemoScene::MaxDrawCallCount> EngineRenderer(SchedulerBase, Driver);
 
 // Objects animator for the world.
 AnimatedDemoScene DemoScene(SchedulerBase);
