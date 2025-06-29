@@ -106,7 +106,7 @@ namespace IntegerWorld
 		OrderedFragmentManager FragmentManager;
 
 	public:
-		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface& surface, const bool startFullscreen = true)
+		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface& surface)
 			: Base(scheduler)
 			, Rasterizer(surface)
 			, FragmentManager(OrderedPrimitives, MaxOrderedPrimitives)

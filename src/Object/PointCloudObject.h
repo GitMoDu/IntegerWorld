@@ -140,10 +140,6 @@ namespace IntegerWorld
 				{
 					fragmentCollector.AddFragment(i, fragmentZ);
 				}
-				else
-				{
-					Primitives[i].z = VERTEX16_RANGE;
-				}
 			}
 		}
 
@@ -278,10 +274,6 @@ namespace IntegerWorld
 				if (Primitives[i].z != VERTEX16_RANGE)
 				{
 					fragmentCollector.AddFragment(i, Primitives[i].z);
-				}
-				else
-				{
-					Primitives[i].z = VERTEX16_RANGE;
 				}
 			}
 		}
