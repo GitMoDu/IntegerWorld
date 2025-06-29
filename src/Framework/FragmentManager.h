@@ -2,6 +2,9 @@
 #define _INTEGER_WORLD_FRAGMENT_MANAGER_h
 
 #include "../Framework/Model.h"
+#if __has_include(<algorithm>) && !defined(SKIP_STD)
+#include <algorithm>
+#endif
 
 namespace IntegerWorld
 {
@@ -11,6 +14,8 @@ namespace IntegerWorld
 		ordered_fragment_t* Fragments;
 		const uint16_t MaxFragments;
 		uint16_t FragmentCount = 0;
+
+	protected:
 		uint16_t ObjectIndex = 0;
 
 	public:
@@ -35,11 +40,12 @@ namespace IntegerWorld
 		}
 	};
 
+	template<uint16_t MaxOrderedFragments>
 	class OrderedFragmentManager : FragmentCollector
 	{
 	public:
-		OrderedFragmentManager(ordered_fragment_t* fragments, const uint16_t maxFragments)
-			: FragmentCollector(fragments, maxFragments)
+		OrderedFragmentManager(ordered_fragment_t* fragments)
+			: FragmentCollector(fragments, MaxOrderedFragments)
 		{
 		}
 
@@ -61,27 +67,30 @@ namespace IntegerWorld
 
 		void Sort()
 		{
-			// Insertion sort using the Compare method
-			for (uint16_t i = 1; i < FragmentCount; ++i)
-			{
-				ordered_fragment_t item = Fragments[i];
-				uint16_t j = i;
-
-				// Move elements of Items[0..i-1] that are greater than key
-				// to one position ahead of their current position
-				for (; j > 0; --j)
+#if __has_include(<algorithm>) && !defined(SKIP_STD)
+			std::sort(Fragments, Fragments + FragmentCount,
+				[](const ordered_fragment_t& a, const ordered_fragment_t& b)
 				{
-					if (!(Fragments[j - 1].Z < item.Z))
+					return a.Z > b.Z;
+				});
+#else
+			ordered_fragment_t temp{};
+			for (uint_fast16_t gap = FragmentCount >> 1; gap > 0; gap >>= 1)
+			{
+				for (uint_fast16_t i = gap; i < FragmentCount; ++i)
+				{
+					temp = Fragments[i];
+					uint_fast16_t j = i;
+					while (j >= gap && Fragments[j - gap].Z < temp.Z)
 					{
-						break;
+						Fragments[j] = Fragments[j - gap];
+						j -= gap;
 					}
-					Fragments[j] = Fragments[j - 1];
+					Fragments[j] = temp;
 				}
-				Fragments[j] = item;
 			}
+#endif
 		}
 	};
-
-
 }
 #endif

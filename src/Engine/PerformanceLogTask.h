@@ -64,6 +64,9 @@ namespace IntegerWorld
 				Serial.print(F(") "));
 				Serial.print(RendererStatus.ScreenShade);
 				Serial.println(F("us"));
+				Serial.print(F("\tFragmentCollect "));
+				Serial.print(RendererStatus.FragmentCollect);
+				Serial.println(F("us"));
 				Serial.print(F("\tFragmentSort "));
 				Serial.print(RendererStatus.FragmentSort);
 				Serial.println(F("us"));

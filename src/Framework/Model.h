@@ -126,6 +126,7 @@ namespace IntegerWorld
 		uint32_t ScreenShade = 0;
 		uint32_t CameraTransform = 0;
 		uint32_t ScreenProject = 0;
+		uint32_t FragmentCollect = 0;
 		uint32_t FragmentSort = 0;
 		uint32_t RasterizeWait = 0;
 		uint32_t Rasterize = 0;
@@ -146,6 +147,7 @@ namespace IntegerWorld
 				CameraTransform +
 				ScreenShade +
 				ScreenProject +
+				FragmentCollect +
 				FragmentSort;
 		}
 
@@ -164,6 +166,7 @@ namespace IntegerWorld
 			CameraTransform = 0;
 			ScreenShade = 0;
 			ScreenProject = 0;
+			FragmentCollect = 0;
 			FragmentSort = 0;
 			RasterizeWait = 0;
 			Rasterize = 0;

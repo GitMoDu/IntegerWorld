@@ -103,13 +103,14 @@ namespace IntegerWorld
 #endif
 	private:
 		SurfacedWindowRasterizer Rasterizer;
-		OrderedFragmentManager FragmentManager;
+
+		OrderedFragmentManager<MaxOrderedPrimitives> FragmentManager;
 
 	public:
 		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface& surface)
 			: Base(scheduler)
 			, Rasterizer(surface)
-			, FragmentManager(OrderedPrimitives, MaxOrderedPrimitives)
+			, FragmentManager(OrderedPrimitives)
 		{
 		}
 
@@ -336,7 +337,7 @@ namespace IntegerWorld
 					State = StateEnum::FragmentSort;
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.FragmentSort += micros() - MeasureStart;
+				Status.FragmentCollect += micros() - MeasureStart;
 #else
 				Status.Render += micros() - MeasureStart;
 #endif
