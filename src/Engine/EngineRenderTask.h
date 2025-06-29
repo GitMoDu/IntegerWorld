@@ -134,11 +134,6 @@ namespace IntegerWorld
 		}
 #endif
 
-		void SetSize(const int16_t width, const int16_t height)
-		{
-			Rasterizer.SetSize(width, height);
-		}
-
 		void Start()
 		{
 			SetEnabled(true);

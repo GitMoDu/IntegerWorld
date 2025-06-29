@@ -12,12 +12,12 @@ namespace IntegerWorld
 		static constexpr uint8_t BRESENHAM_SCALE = 16;
 
 	protected:
-		int16_t SurfaceWidth;
-		int16_t SurfaceHeight;
+		int16_t SurfaceWidth = 1;
+		int16_t SurfaceHeight = 1;
+
+		IOutputSurface& Surface;
 
 	public:
-		IOutputSurface* Surface;
-
 		uint16_t Width() const
 		{
 			return SurfaceWidth;
@@ -33,28 +33,13 @@ namespace IntegerWorld
 		/// Features:
 		/// - Direct Mode 2D/3D Drawing API.
 		/// - Draws to generic IOutputSurface
-		/// - Clipped Draw Window. 
+		/// - Clipped Draw Window.
+		/// - Window defined by Surface.
 		/// </summary>
 		/// <param name="framebufferDrawer">IOutputSurface instance.</param>
-		/// <param name="startFullscreen">Set the window to fullscreen by default. Requires framebufferDrawer at constructor.</param>
-		WindowRasterizer(IOutputSurface* framebufferDrawer, const bool startFullscreen = true)
-			: Surface(framebufferDrawer)
+		WindowRasterizer(IOutputSurface& surface)
+			: Surface(surface)
 		{
-			if (startFullscreen && Surface != nullptr)
-			{
-				int16_t width, height;
-				uint8_t colorDepth;
-				Surface->GetSurfaceDimensions(width, height, colorDepth);
-
-				SetSize(width, height);
-			}
-		}
-
-	public:
-		void SetSize(const int16_t width, const int16_t height)
-		{
-			SurfaceWidth = width;
-			SurfaceHeight = height;
 		}
 
 	public:// Screen drawing interface.
@@ -68,7 +53,7 @@ namespace IntegerWorld
 		{
 			if (IsInsideWindow(x, y))
 			{
-				Surface->Pixel(color, x, y);
+				Surface.Pixel(color, x, y);
 			}
 		}
 
@@ -142,11 +127,11 @@ namespace IntegerWorld
 
 			if (x1c == x2c && y1c == y2c)
 			{
-				Surface->Pixel(color, x1c, y1c);
+				Surface.Pixel(color, x1c, y1c);
 			}
 			else
 			{
-				Surface->Line(color, x1c, y1c, x2c, y2c);
+				Surface.Line(color, x1c, y1c, x2c, y2c);
 			}
 		}
 
@@ -243,7 +228,7 @@ namespace IntegerWorld
 			if (insideCount == 3)
 			{
 				// The whole triangle fits in the window.
-				Surface->TriangleFill(color,
+				Surface.TriangleFill(color,
 					x1, y1,
 					x2, y2,
 					x3, y3);
@@ -278,13 +263,13 @@ namespace IntegerWorld
 
 				// The clipped polygon is a quad: A, B, pcx2/pcy2, pcx1/pcy1
 				// Split into two triangles: (A, B, pcx2/pcy2) and (A, pcx2/pcy2, pcx1/pcy1)
-				Surface->TriangleFill(
+				Surface.TriangleFill(
 					color,
 					ax, ay,
 					bx, by,
 					pcx2, pcy2
 				);
-				Surface->TriangleFill(
+				Surface.TriangleFill(
 					color,
 					ax, ay,
 					pcx2, pcy2,
@@ -317,7 +302,7 @@ namespace IntegerWorld
 				ClipEndpointToWindow(pcx, pcy, ax, ay);
 
 				// Draw the clipped triangle
-				Surface->TriangleFill(color,
+				Surface.TriangleFill(color,
 					ax, ay,
 					pbx, pby,
 					pcx, pcy);
@@ -402,23 +387,23 @@ namespace IntegerWorld
 					if (y1c == y2c)
 					{
 						// Degenerate rectangle, only draw a single pixel.
-						Surface->Pixel(color, x1c, y1c);
+						Surface.Pixel(color, x1c, y1c);
 					}
 					else
 					{
 						// Degenerate rectangle, only draw a line.
-						Surface->Line(color, x1c, y1c, x1c, y2c);
+						Surface.Line(color, x1c, y1c, x1c, y2c);
 					}
 				}
 				else if (y1c == y2c)
 				{
 					// Degenerate rectangle, only draw a line.
-					Surface->Line(color, x1c, y1c, x2c, y1c);
+					Surface.Line(color, x1c, y1c, x2c, y1c);
 				}
 				else
 				{
 					// Cropped rectangle.
-					Surface->RectangleFill(color, x1c, y1c, x2c, y2c);
+					Surface.RectangleFill(color, x1c, y1c, x2c, y2c);
 				}
 			}
 			else
@@ -433,7 +418,7 @@ namespace IntegerWorld
 		/// <param name="color">The color to use for filling surface</param>
 		void FillSurface(const color_fraction16_t color)
 		{
-			Surface->RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
+			Surface.RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
 		}
 
 	public: // Screen raster interface.
@@ -493,7 +478,7 @@ namespace IntegerWorld
 				// Degenerate line, only draw a single pixel.
 				if (pixelShader(color, x1c, y1c))
 				{
-					Surface->Pixel(color, x1c, y1c);
+					Surface.Pixel(color, x1c, y1c);
 				}
 			}
 			else if (y2c == y1c)
@@ -505,7 +490,7 @@ namespace IntegerWorld
 				{
 					if (pixelShader(color, x, y1c))
 					{
-						Surface->Pixel(color, x, y1c);
+						Surface.Pixel(color, x, y1c);
 					}
 					x += xSign;
 				} while (x != x2c);
@@ -519,7 +504,7 @@ namespace IntegerWorld
 				{
 					if (pixelShader(color, x1c, y))
 					{
-						Surface->Pixel(color, x1c, y);
+						Surface.Pixel(color, x1c, y);
 					}
 					y += ySign;
 				} while (y != y2c);
@@ -663,7 +648,7 @@ namespace IntegerWorld
 						// Degenerate rectangle, only draw a single pixel.
 						if (pixelShader(color, x1c, y1c))
 						{
-							Surface->Pixel(color, x1c, y1c);
+							Surface.Pixel(color, x1c, y1c);
 						}
 					}
 					else
@@ -675,7 +660,7 @@ namespace IntegerWorld
 						{
 							if (pixelShader(color, x1c, y))
 							{
-								Surface->Pixel(color, x1c, y);
+								Surface.Pixel(color, x1c, y);
 							}
 							y += ySign;
 						} while (y != y2c);
@@ -690,7 +675,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y1c))
 						{
-							Surface->Pixel(color, x, y1c);
+							Surface.Pixel(color, x, y1c);
 						}
 						x += xSign;
 					} while (x != x2c);
@@ -709,7 +694,7 @@ namespace IntegerWorld
 						{
 							if (pixelShader(color, x, y))
 							{
-								Surface->Pixel(color, x, y);
+								Surface.Pixel(color, x, y);
 							}
 							x += xSign;
 						} while (x != x2c);
@@ -971,7 +956,7 @@ namespace IntegerWorld
 			{
 				if (pixelShader(color, x1, y1))
 				{
-					Surface->Pixel(color, x1, y1);
+					Surface.Pixel(color, x1, y1);
 				}
 				if (x1 == x2 && y1 == y2)
 					break;
@@ -1004,7 +989,7 @@ namespace IntegerWorld
 					// Degenerate triangle, point only.
 					if (pixelShader(color, x1, y1))
 					{
-						Surface->Pixel(color, x1, y1);
+						Surface.Pixel(color, x1, y1);
 					}
 				}
 				else
@@ -1016,7 +1001,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y1))
 						{
-							Surface->Pixel(color, x, y1);
+							Surface.Pixel(color, x, y1);
 						}
 						x += xSign;
 					} while (x != x3);
@@ -1047,7 +1032,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y))
 						{
-							Surface->Pixel(color, x, y);
+							Surface.Pixel(color, x, y);
 						}
 						x += xSign;
 					} while (x != xEnd);
@@ -1071,7 +1056,7 @@ namespace IntegerWorld
 					// Degenerate triangle, point only.
 					if (pixelShader(color, x2, y2))
 					{
-						Surface->Pixel(color, x2, y2);
+						Surface.Pixel(color, x2, y2);
 					}
 				}
 				else
@@ -1083,7 +1068,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y2))
 						{
-							Surface->Pixel(color, x, y2);
+							Surface.Pixel(color, x, y2);
 						}
 						x += xSign;
 					} while (x != x2);
@@ -1113,7 +1098,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y))
 						{
-							Surface->Pixel(color, x, y);
+							Surface.Pixel(color, x, y);
 						}
 						x += xSign;
 					} while (x != xEnd);
@@ -1185,7 +1170,7 @@ namespace IntegerWorld
 					// Degenerate triangle, point only.
 					if (pixelShader(color, x1, y1))
 					{
-						Surface->Pixel(color, x1, y1);
+						Surface.Pixel(color, x1, y1);
 					}
 				}
 				else
@@ -1197,7 +1182,7 @@ namespace IntegerWorld
 					{
 						if (pixelShader(color, x, y1))
 						{
-							Surface->Pixel(color, x, y1);
+							Surface.Pixel(color, x, y1);
 						}
 						x += xSign;
 					} while (x != x3);
@@ -1217,6 +1202,48 @@ namespace IntegerWorld
 				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, y2, pixelShader);
 				BresenhamFlatTopFill(x2, y2, Vi_x, y2, x3, y3, pixelShader);
 			}
+		}
+	};
+
+	struct SurfacedWindowRasterizer : WindowRasterizer
+	{
+		SurfacedWindowRasterizer(IOutputSurface& surface)
+			: WindowRasterizer(surface)
+		{
+		}
+
+	public:
+		bool UpdateDimensions()
+		{
+			int16_t width, height;
+			uint8_t colorDepth;
+			Surface.GetSurfaceDimensions(width, height, colorDepth);
+
+			SurfaceWidth = width;
+			SurfaceHeight = height;
+
+			return true;
+		}
+
+
+		void StartSurface()
+		{
+			Surface.StartSurface();
+		}
+
+		void StopSurface()
+		{
+			Surface.StopSurface();
+		}
+
+		bool IsSurfaceReady()
+		{
+			return Surface.IsSurfaceReady();
+		}
+
+		void FlipSurface()
+		{
+			Surface.FlipSurface();
 		}
 	};
 }
