@@ -1225,10 +1225,9 @@ namespace IntegerWorld
 			return true;
 		}
 
-
-		void StartSurface()
+		bool StartSurface()
 		{
-			Surface.StartSurface();
+			return Surface.StartSurface();
 		}
 
 		void StopSurface()

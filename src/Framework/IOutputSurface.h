@@ -14,7 +14,7 @@ namespace IntegerWorld
 	struct IOutputSurface
 	{
 	public:// Buffer managment interface.
-		virtual void StartSurface() {}
+		virtual bool StartSurface() { return false; }
 		virtual void StopSurface() {}
 
 		virtual void FlipSurface() {}

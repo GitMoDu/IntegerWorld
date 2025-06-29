@@ -85,7 +85,6 @@ namespace IntegerWorld
 		// Viewport clipping planes and window for rasterizing.
 		ViewportProjector ViewProjector{};
 
-
 		camera_state_t CameraControls{};
 		transform32_rotate_translate_t ReverseCameraTransform{};
 		StateEnum State = StateEnum::Disabled;
@@ -103,14 +102,13 @@ namespace IntegerWorld
 		render_status_struct StatusCopy{};
 #endif
 	private:
-		WindowRasterizer Rasterizer;
+		SurfacedWindowRasterizer Rasterizer;
 		OrderedFragmentManager FragmentManager;
 
-
 	public:
-		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface* surface, const bool startFullscreen = true)
+		EngineRenderTask(TS::Scheduler& scheduler, IOutputSurface& surface, const bool startFullscreen = true)
 			: Base(scheduler)
-			, Rasterizer(surface, startFullscreen)
+			, Rasterizer(surface)
 			, FragmentManager(OrderedPrimitives, MaxOrderedPrimitives)
 		{
 		}
@@ -159,9 +157,8 @@ namespace IntegerWorld
 			switch (State)
 			{
 			case StateEnum::EngineStart:
-				if (Rasterizer.Surface != nullptr)
+				if (Rasterizer.StartSurface())
 				{
-					Rasterizer.Surface->StartSurface();
 					State = StateEnum::CycleStart;
 				}
 				else
@@ -171,8 +168,8 @@ namespace IntegerWorld
 				break;
 			case StateEnum::CycleStart:
 				MeasureStart = micros();
-
 				Status.Clear();
+				Rasterizer.UpdateDimensions();
 				ViewProjector.SetDimensions(Rasterizer.Width(), Rasterizer.Height());
 				FragmentManager.Clear();
 				ObjectIndex = 0;
@@ -361,7 +358,7 @@ namespace IntegerWorld
 				MeasureStart = micros();
 #endif
 				// Poll layer to check if we can draw.
-				if (Rasterizer.Surface->IsSurfaceReady())
+				if (Rasterizer.IsSurfaceReady())
 				{
 					ObjectIndex = 0;
 					ItemIndex = 0;
@@ -386,7 +383,7 @@ namespace IntegerWorld
 				else
 				{
 					StatusCopy = Status;
-					Rasterizer.Surface->FlipSurface();
+					Rasterizer.FlipSurface();
 					State = StateEnum::CycleStart;
 				}
 				break;
@@ -407,10 +404,7 @@ namespace IntegerWorld
 			}
 			else
 			{
-				if (Rasterizer.Surface != nullptr)
-				{
-					Rasterizer.Surface->StopSurface();
-				}
+				Rasterizer.StopSurface();
 				State = StateEnum::Disabled;
 				TS::Task::disable();
 			}

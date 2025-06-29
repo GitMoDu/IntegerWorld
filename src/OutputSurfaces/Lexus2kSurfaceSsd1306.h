@@ -49,7 +49,7 @@ namespace IntegerWorld
 				}
 
 			public:
-				void StartSurface() final
+				bool StartSurface() final
 				{
 					ssd1306_128x64_i2c_init();
 					ssd1306_clearScreen();
@@ -58,6 +58,8 @@ namespace IntegerWorld
 #endif
 					LastPush = micros() - TargetPeriod;
 					State = StateEnum::WaitingForDraw;
+
+					return true;
 				}
 
 				void StopSurface() final

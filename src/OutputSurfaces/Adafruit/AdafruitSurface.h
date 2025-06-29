@@ -143,16 +143,19 @@ namespace IntegerWorld
 			virtual void OnDrawEnd() {}
 
 		public:
-			void StartSurface() final
+			bool StartSurface() final
 			{
-				if (!StartScreen()) {
-					for (;;); // Don't proceed, loop forever
+				if (!StartScreen()) 
+				{
+					return false;
 				}
 
 				Display.clearDisplay();
 				Display.display();
 				LastPush = micros() - TargetPeriod;
 				State = SurfaceStateEnum::WaitingForDraw;
+
+				return true;
 			}
 
 			void StopSurface() final
@@ -218,10 +221,11 @@ namespace IntegerWorld
 			virtual void OnDrawEnd() {}
 
 		public:
-			void StartSurface() final
+			bool StartSurface() final
 			{
-				if (!StartScreen()) {
-					for (;;); // Don't proceed, loop forever
+				if (!StartScreen()) 
+				{
+					return false;
 				}
 
 				Display.startWrite();
@@ -229,6 +233,8 @@ namespace IntegerWorld
 				Display.endWrite();
 				LastPush = micros() - TargetPeriod;
 				State = SurfaceStateEnum::WaitingForDraw;
+
+				return true;
 			}
 
 		public:
