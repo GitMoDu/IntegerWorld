@@ -43,10 +43,12 @@ namespace IntegerWorld
 			{
 			}
 
+#if defined(ARDUINO)
 			void PrintName(Print& serial)
 			{
 				serial.print(F("EGFX Framebuffer"));
 			}
+#endif
 
 		public:
 			bool StartSurface() final
