@@ -149,12 +149,23 @@ namespace IntegerWorld
 
 				if (Primitives[index].z != VERTEX16_RANGE)
 				{
-					// Quick check if triangle is behind screen.
-					if (Vertices[triangle.v1].z <= 0
+					// Check if triangle is entirely out of bounds.
+					if ((Vertices[triangle.v1].z <= 0
 						&& Vertices[triangle.v1].z <= 0
 						&& Vertices[triangle.v1].z <= 0)
+						|| (Vertices[triangle.v1].x <= 0
+							&& Vertices[triangle.v2].x <= 0
+							&& Vertices[triangle.v3].x <= 0)
+						|| (Vertices[triangle.v1].x > boundsWidth
+							&& Vertices[triangle.v2].x > boundsWidth
+							&& Vertices[triangle.v3].x > boundsWidth)
+						|| (Vertices[triangle.v1].y <= 0
+							&& Vertices[triangle.v2].y <= 0
+							&& Vertices[triangle.v3].y <= 0)
+						|| (Vertices[triangle.v1].y > boundsHeight
+							&& Vertices[triangle.v2].y > boundsHeight
+							&& Vertices[triangle.v3].y > boundsHeight))
 					{
-						// Whole triangle is out of bounds.
 						Primitives[index].z = VERTEX16_RANGE;
 					}
 					else
