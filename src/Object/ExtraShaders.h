@@ -5,11 +5,73 @@
 
 namespace IntegerWorld
 {
+	struct TriangleDitherFragmentShader : IFragmentShader<triangle_fragment_t>
+	{
+	private:
+		struct MonochromeDitherShaderFunctor
+		{
+		private:
+			static constexpr uint8_t bayer4x4[4][4] = {
+										   { 0, 8, 2, 10 },
+										   { 12, 4, 14, 6 },
+										   { 3, 11, 1, 9 },
+										   { 15, 7, 13, 5 } };
+
+		private:
+			uint8_t Intensity = 0;
+
+		public:
+			void SetColor(const color_fraction16_t& color)
+			{
+				const ufraction16_t gray = ((uint32_t(color.r) * 299) + (uint32_t(color.g) * 587) + (uint32_t(color.b) * 114)) / 1000;
+				Intensity = Fraction::Scale(gray, uint8_t(15));
+			}
+
+		public:
+			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			{
+				const uint8_t threshold = bayer4x4[y & 3][x & 3];
+
+				if (Intensity >= threshold)
+				{
+					color = ColorFraction::COLOR_WHITE;
+				}
+				else
+				{
+					color = ColorFraction::COLOR_BLACK;
+				}
+
+				return true;
+			}
+		} MonochromeDitherShader{};
+
+		color_fraction16_t FragmentColor{};
+
+	public:
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		{
+			FragmentColor = fragment.color;
+			sceneShader->Shade(FragmentColor, fragment.material);
+			MonochromeDitherShader.SetColor(FragmentColor);
+			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
+		{
+			MonochromeDitherShader.SetColor(fragment.color);
+			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
+		}
+	};
+
 	struct TriangleGradientFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
 	private:
 		struct GradientShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
+			world_position_normal_shade_t Shade{};
+			const material_t* material= nullptr;
+			//const triangle_fragment_t* fragment = nullptr;
+			ISceneShader* sceneShader = nullptr;
 			color_fraction16_t ColorA{ UFRACTION16_1X, 0, 0 }; // Vertex A color (red)
 			color_fraction16_t ColorB{ 0, UFRACTION16_1X, 0 }; // Vertex B color (green)
 			color_fraction16_t ColorC{ 0, 0, UFRACTION16_1X }; // Vertex C color (blue)
@@ -32,6 +94,11 @@ namespace IntegerWorld
 				color.g = ((w0 * ColorA.g) + (w1 * ColorB.g) + (w2 * ColorC.g)) / TriangleArea;
 				color.b = ((w0 * ColorA.b) + (w1 * ColorB.b) + (w2 * ColorC.b)) / TriangleArea;
 
+				if (sceneShader != nullptr)
+				{				
+					sceneShader->Shade(color, *material, Shade);
+				}
+
 				return true;
 			}
 		} GradientShader{};
@@ -46,11 +113,22 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
-			FragmentShade(rasterizer, fragment);
+			GradientShader.material = &fragment.material;
+			GradientShader.Shade.normalWorld = fragment.normal;
+			GradientShader.Shade.positionWorld = fragment.world;
+			GradientShader.sceneShader = sceneShader;
+			if (GradientShader.SetFragmentData(fragment))
+			{
+				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
+			}
 		}
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
+			GradientShader.material = &fragment.material;
+			GradientShader.Shade.normalWorld = fragment.normal;
+			GradientShader.Shade.positionWorld = fragment.world;
+			GradientShader.sceneShader = nullptr;
 			if (GradientShader.SetFragmentData(fragment))
 			{
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
@@ -70,8 +148,6 @@ namespace IntegerWorld
 			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
-				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
-				const int32_t w2 = TriangleArea - w0 - w1;
 
 				// Use w0 for stripes, quantized to StripeCount bands
 				int32_t band = ((w0 * StripeCount) / TriangleArea) & 1;
@@ -138,7 +214,7 @@ namespace IntegerWorld
 			color_fraction16_t ColorA = ColorFraction::COLOR_WHITE;
 			color_fraction16_t ColorB = ColorFraction::COLOR_BLACK;
 
-			uint8_t CheckerSize = 6;
+			uint8_t CheckerSize = 2;
 
 			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
 			{
@@ -162,7 +238,7 @@ namespace IntegerWorld
 			}
 		};
 
-		DistortedShaderFunctor CheckerShader{};
+		SquareShaderFunctor CheckerShader{};
 
 	public:
 		color_fraction16_t ColorA{ UFRACTION16_1X, UFRACTION16_1X, UFRACTION16_1X };

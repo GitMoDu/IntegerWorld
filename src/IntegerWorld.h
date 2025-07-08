@@ -9,6 +9,7 @@
 #include "Object/EdgeObject.h"
 #include "Object/BackgroundObject.h"
 #include "Object/Shader.h"
+#include "Object/ExtraShaders.h"
 
 #include "Scene/LightsShader.h"
 
