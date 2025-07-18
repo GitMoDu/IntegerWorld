@@ -8,7 +8,7 @@ namespace IntegerWorld
 {
 	namespace Adafruit
 	{
-		namespace Sdd1331
+		namespace Ssd1331
 		{
 			/// <summary>
 			/// Direct Draw 96x64 Display with 16 bit color.

@@ -13,7 +13,7 @@ namespace IntegerWorld
 {
 	namespace Adafruit
 	{
-		namespace Sdd1306I2c
+		namespace Ssd1306I2c
 		{
 			class FramebufferSurface : public TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>
 			{
@@ -58,7 +58,7 @@ namespace IntegerWorld
 			};
 		}
 
-		namespace Sdd1306Spi
+		namespace Ssd1306Spi
 		{
 			class FramebufferSurface : public TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>
 			{
