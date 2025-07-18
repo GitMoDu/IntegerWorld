@@ -300,7 +300,11 @@ namespace Assets
 		public:
 			LightSourceFragmentShader() {}
 
-			virtual void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
+			void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment)
+			{
+			}
+
+			void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
 			{
 				// Calculate fragment properties.
 				const ufraction16_t proximity = AbstractPixelShader::GetZFraction(fragment.screen.z, 1, VERTEX16_RANGE / 2);

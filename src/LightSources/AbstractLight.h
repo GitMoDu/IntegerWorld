@@ -22,6 +22,13 @@ namespace IntegerWorld
 			RangeMax = MaxValue((uint32_t)rangeMax * rangeMax, RangeMin);
 		}
 
+	public:
+		bool PrimitiveWorldShade(const uint16_t index) { return true; }
+		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) { return true; }
+		void FragmentCollect(FragmentCollector& fragmentCollector) {}
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) {}
+
+
 	protected:
 		ufraction16_t GetProximityFraction(const vertex32_t& vector) const
 		{

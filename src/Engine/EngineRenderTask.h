@@ -115,19 +115,19 @@ namespace IntegerWorld
 		}
 
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-		virtual void GetRendererStatus(render_debug_status_struct& rendererStatus) final
+		void GetRendererStatus(render_debug_status_struct& rendererStatus) final
 		{
 			rendererStatus = StatusCopy;
 		}
 
-		virtual void GetRendererStatus(render_status_struct& rendererStatus) final
+		void GetRendererStatus(render_status_struct& rendererStatus) final
 		{
 			rendererStatus.Rasterize = StatusCopy.Rasterize;
 			rendererStatus.Render = StatusCopy.GetRenderDuration();
 			rendererStatus.FragmentsDrawn = StatusCopy.FragmentsDrawn;
 		}
 #else
-		virtual void GetRendererStatus(render_status_struct& rendererStatus) final
+		void GetRendererStatus(render_status_struct& rendererStatus) final
 		{
 			rendererStatus = StatusCopy;
 		}
@@ -143,12 +143,12 @@ namespace IntegerWorld
 			SetEnabled(false);
 		}
 
-		virtual camera_state_t* GetCameraControls()
+		camera_state_t* GetCameraControls() final
 		{
 			return &CameraControls;
 		}
 
-		virtual void SetFov(const ufraction16_t fovFraction)
+		void SetFov(const ufraction16_t fovFraction) final
 		{
 			ViewProjector.SetFov(fovFraction);
 		}
@@ -411,7 +411,7 @@ namespace IntegerWorld
 			}
 		}
 
-		virtual void ClearObjects()
+		void ClearObjects() final
 		{
 			Base::ClearObjects();
 			if (State != StateEnum::Disabled
@@ -421,7 +421,7 @@ namespace IntegerWorld
 			}
 		}
 
-		virtual bool AddObject(IRenderObject* renderObject)
+		bool AddObject(IRenderObject* renderObject) final
 		{
 			if (Base::AddObject(renderObject))
 			{

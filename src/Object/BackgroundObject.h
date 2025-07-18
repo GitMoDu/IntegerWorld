@@ -31,7 +31,14 @@ namespace IntegerWorld
 		{
 		}
 
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+		bool VertexShade(const uint16_t index) { return true; }
+		bool PrimitiveWorldShade(const uint16_t index) { return true; }
+		bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) { return true; }
+		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) { return true; }
+
+		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) { return true; }
+
+		void FragmentCollect(FragmentCollector& fragmentCollector)
 		{
 			if (FragmentShader != nullptr)
 			{
@@ -54,7 +61,7 @@ namespace IntegerWorld
 		}
 
 	protected:
-		virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
+		void GetFragment(point_fragment_t& fragment, const uint16_t index)
 		{
 			fragment.color.r = UFRACTION16_1X;
 			fragment.color.g = UFRACTION16_1X;
