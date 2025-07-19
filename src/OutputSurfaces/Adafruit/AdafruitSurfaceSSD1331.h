@@ -42,7 +42,11 @@ namespace IntegerWorld
 				bool StartScreen() final
 				{
 					Display.begin();
+#if defined(F_CPU)
 					Display.setSPISpeed(MinValue(uint32_t(20000000), uint32_t(F_CPU / 2)));
+#else
+					Display.setSPISpeed(20000000);
+#endif
 
 					return true;
 				}
