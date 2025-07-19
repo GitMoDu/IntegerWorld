@@ -22,26 +22,26 @@ namespace IntegerWorld
 			private:
 				Adafruit_SH1106G Display;
 
-			protected:
-				bool StartScreen() final
-				{
-					return Display.begin(0, true);
-				}
-
 			public:
 				FramebufferSurface(SpiType& spi, int8_t cs, int8_t dc, int8_t rst, const uint32_t pushPauseDuration = 10000)
 					: Base(Display, pushPauseDuration)
-//#if defined(ARDUINO_ARCH_STM32F1)
+#if defined(ARDUINO_ARCH_STM32F1)
 					, Display(DisplayWidth, DisplayHeight, &spi, dc, rst, cs)
-//#else
-					//, Display(DisplayWidth, DisplayHeight, &spi, dc, rst, cs)
-//#endif
+#else
+					, Display(DisplayWidth, DisplayHeight, &spi, dc, rst, cs)
+#endif
 				{
 				}
 
 				void PrintName(Print& serial)
 				{
 					serial.print(F("SSD1306 SPI Adafruit"));
+				}
+
+			protected:
+				bool StartScreen() final
+				{
+					return Display.begin(0, true);
 				}
 			};
 		}

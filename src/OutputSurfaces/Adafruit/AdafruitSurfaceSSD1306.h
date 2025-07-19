@@ -72,18 +72,6 @@ namespace IntegerWorld
 			private:
 				Adafruit_SSD1306 Display;
 
-			protected:
-				bool StartScreen() final
-				{
-#if defined(ARDUINO_ARCH_STM32F1)
-					Display.begin(0, true);
-					return true;
-#else
-					return Display.begin(0, true);
-#endif
-				}
-
-
 			public:
 				FramebufferSurface(SpiType& spi, int8_t cs, int8_t dc, int8_t rst, const uint32_t pushPauseDuration = 10000)
 					: Base(Display, pushPauseDuration)
@@ -98,6 +86,18 @@ namespace IntegerWorld
 				void PrintName(Print& serial)
 				{
 					serial.print(F("SSD1306 SPI Adafruit"));
+				}
+
+
+			protected:
+				bool StartScreen() final
+				{
+#if defined(ARDUINO_ARCH_STM32F1)
+					Display.begin(0, true);
+					return true;
+#else
+					return Display.begin(SSD1306_EXTERNALVCC, 0, true, true);
+#endif
 				}
 			};
 		}
