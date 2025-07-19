@@ -11,13 +11,18 @@ namespace IntegerWorld
 
 	struct mesh_primitive_t : base_primitive_t
 	{
+	};
+
+	struct mesh_world_primitive_t : base_primitive_t
+	{
 		vertex16_t worldPosition;
 		vertex16_t worldNormal;
 	};
 
+
 	template<uint16_t vertexCount, uint16_t triangleCount,
 		typename BaseObject = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
-		class MeshObject : public BaseObject
+		class AbstractMeshObject : public BaseObject
 	{
 	public:
 		using BaseObject::SceneShader;
@@ -30,19 +35,19 @@ namespace IntegerWorld
 	public:
 		IFragmentShader<triangle_fragment_t>* FragmentShader = nullptr;
 
-	private:
+	protected:
 		const vertex16_t* VerticesSource;
 		const triangle_face_t* TrianglesSource;
 		const vertex16_t* NormalsSource;
 
-	private:
+	protected:
 		triangle_fragment_t TriangleFragment{};
 
 	protected:
 		virtual void GeometryShade(const uint16_t index) {}
 
 	public:
-		MeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
+		AbstractMeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
 			: BaseObject()
 			, VerticesSource(vertices)
 			, TrianglesSource(triangles)
@@ -51,7 +56,7 @@ namespace IntegerWorld
 		}
 
 	public:
-		virtual bool VertexShade(const uint16_t index)
+		bool VertexShade(const uint16_t index) final
 		{
 			switch (index)
 			{
@@ -77,7 +82,111 @@ namespace IntegerWorld
 			return index >= vertexCount;
 		}
 
-		virtual bool PrimitiveWorldShade(const uint16_t index)
+		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
+		{
+			if (index < triangleCount)
+			{
+#if defined(ARDUINO_ARCH_AVR)
+				const triangle_face_t triangle
+				{
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v1),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v2),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v3)
+				};
+#else
+				const triangle_face_t& triangle = TrianglesSource[index];
+#endif
+
+				if (Primitives[index].z != VERTEX16_RANGE)
+				{
+					// Check if triangle is entirely out of bounds.
+					if ((Vertices[triangle.v1].z <= 0
+						&& Vertices[triangle.v1].z <= 0
+						&& Vertices[triangle.v1].z <= 0)
+						|| (Vertices[triangle.v1].x <= 0
+							&& Vertices[triangle.v2].x <= 0
+							&& Vertices[triangle.v3].x <= 0)
+						|| (Vertices[triangle.v1].x > boundsWidth
+							&& Vertices[triangle.v2].x > boundsWidth
+							&& Vertices[triangle.v3].x > boundsWidth)
+						|| (Vertices[triangle.v1].y <= 0
+							&& Vertices[triangle.v2].y <= 0
+							&& Vertices[triangle.v3].y <= 0)
+						|| (Vertices[triangle.v1].y > boundsHeight
+							&& Vertices[triangle.v2].y > boundsHeight
+							&& Vertices[triangle.v3].y > boundsHeight))
+					{
+						Primitives[index].z = VERTEX16_RANGE;
+					}
+					else
+					{
+						// Back face culling after projection.
+						const int32_t signedArea = (int32_t(Vertices[triangle.v2].x - Vertices[triangle.v1].x) * (Vertices[triangle.v3].y - Vertices[triangle.v1].y)) - (int32_t(Vertices[triangle.v2].y - Vertices[triangle.v1].y) * (Vertices[triangle.v3].x - Vertices[triangle.v1].x));
+						if (signedArea < 0)
+						{
+							Primitives[index].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
+						}
+						else
+						{
+							Primitives[index].z = VERTEX16_RANGE;
+						}
+					}
+				}
+			}
+
+			return index >= triangleCount - 1;
+		}
+
+		void FragmentCollect(FragmentCollector& fragmentCollector) final
+		{
+			for (uint16_t i = 0; i < triangleCount; i++)
+			{
+				if (Primitives[i].z != VERTEX16_RANGE)
+				{
+					fragmentCollector.AddFragment(i, Primitives[i].z);
+				}
+			}
+		}
+
+	protected:
+		virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
+		{
+			fragment.color.r = UFRACTION16_1X;
+			fragment.color.g = UFRACTION16_1X;
+			fragment.color.b = UFRACTION16_1X;
+			fragment.material.Emissive = 0;
+			fragment.material.Diffuse = UFRACTION8_1X;
+			fragment.material.Specular = 0;
+			fragment.material.Metallic = 0;
+		}
+	};
+
+	template<uint16_t vertexCount, uint16_t triangleCount>
+	class MeshWorldObject : public AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>>
+	{
+	private:
+		using Base = AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>>;
+
+	public:
+		using Base::FragmentShader;
+		using Base::SceneShader;
+
+	protected:
+		using Base::TrianglesSource;
+		using Base::NormalsSource;
+		using Base::Vertices;
+		using Base::Primitives;
+		using Base::MeshTransform;
+		using Base::TriangleFragment;
+		using Base::GetFragment;
+
+	public:
+		MeshWorldObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
+			: Base(vertices, triangles, normals)
+		{
+		}
+
+		bool PrimitiveWorldShade(const uint16_t index) final
 		{
 			if (index < triangleCount)
 			{
@@ -131,82 +240,15 @@ namespace IntegerWorld
 			return index >= triangleCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
-		{
-			if (index < triangleCount)
-			{
-
-#if defined(ARDUINO_ARCH_AVR)
-				const triangle_face_t triangle
-				{
-					(uint16_t)pgm_read_word(&TrianglesSource[index].v1),
-					(uint16_t)pgm_read_word(&TrianglesSource[index].v2),
-					(uint16_t)pgm_read_word(&TrianglesSource[index].v3)
-				};
-#else
-				const triangle_face_t& triangle = TrianglesSource[index];
-#endif
-
-				if (Primitives[index].z != VERTEX16_RANGE)
-				{
-					// Check if triangle is entirely out of bounds.
-					if ((Vertices[triangle.v1].z <= 0
-						&& Vertices[triangle.v1].z <= 0
-						&& Vertices[triangle.v1].z <= 0)
-						|| (Vertices[triangle.v1].x <= 0
-							&& Vertices[triangle.v2].x <= 0
-							&& Vertices[triangle.v3].x <= 0)
-						|| (Vertices[triangle.v1].x > boundsWidth
-							&& Vertices[triangle.v2].x > boundsWidth
-							&& Vertices[triangle.v3].x > boundsWidth)
-						|| (Vertices[triangle.v1].y <= 0
-							&& Vertices[triangle.v2].y <= 0
-							&& Vertices[triangle.v3].y <= 0)
-						|| (Vertices[triangle.v1].y > boundsHeight
-							&& Vertices[triangle.v2].y > boundsHeight
-							&& Vertices[triangle.v3].y > boundsHeight))
-					{
-						Primitives[index].z = VERTEX16_RANGE;
-					}
-					else
-					{
-						// Back face culling after projection.
-						const int32_t signedArea = (int32_t(Vertices[triangle.v2].x - Vertices[triangle.v1].x) * (Vertices[triangle.v3].y - Vertices[triangle.v1].y)) - (int32_t(Vertices[triangle.v2].y - Vertices[triangle.v1].y) * (Vertices[triangle.v3].x - Vertices[triangle.v1].x));
-						if (signedArea < 0)
-						{
-							Primitives[index].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
-						}
-						else
-						{
-							Primitives[index].z = VERTEX16_RANGE;
-						}
-					}
-				}
-			}
-
-			return index >= triangleCount - 1;
-		}
-
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
-		{
-			for (uint16_t i = 0; i < triangleCount; i++)
-			{
-				if (Primitives[i].z != VERTEX16_RANGE)
-				{
-					fragmentCollector.AddFragment(i, Primitives[i].z);
-				}
-			}
-		}
-
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
 		{
 			if (FragmentShader != nullptr)
 			{
-				const mesh_primitive_t& primitive = Primitives[index];
+				const mesh_world_primitive_t& primitive = Primitives[index];
 
-				TriangleFragment.normal.x = primitive.worldNormal.x;
-				TriangleFragment.normal.y = primitive.worldNormal.y;
-				TriangleFragment.normal.z = primitive.worldNormal.z;
+				TriangleFragment.normalWorld.x = primitive.worldNormal.x;
+				TriangleFragment.normalWorld.y = primitive.worldNormal.y;
+				TriangleFragment.normalWorld.z = primitive.worldNormal.z;
 				TriangleFragment.world = primitive.worldPosition;
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -241,35 +283,107 @@ namespace IntegerWorld
 				}
 			}
 		}
+	};
+
+	template<uint16_t vertexCount, uint16_t triangleCount>
+	class MeshObject : public AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
+	{
+	private:
+		using Base = AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>;
+
+	public:
+		using Base::FragmentShader;
+		using Base::SceneShader;
 
 	protected:
-		virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
+		using Base::TrianglesSource;
+		using Base::Vertices;
+		using Base::Primitives;
+		using Base::MeshTransform;
+		using Base::TriangleFragment;
+		using Base::WorldPosition;
+
+	public:
+		MeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount])
+			: Base(vertices, triangles, nullptr)
 		{
-			fragment.color.r = UFRACTION16_1X;
-			fragment.color.g = UFRACTION16_1X;
-			fragment.color.b = UFRACTION16_1X;
-			fragment.material.Emissive = 0;
-			fragment.material.Diffuse = UFRACTION8_1X;
-			fragment.material.Specular = 0;
-			fragment.material.Metallic = 0;
+		}
+
+		bool PrimitiveWorldShade(const uint16_t index) final
+		{
+			for (uint16_t i = 0; i < triangleCount; i++)
+			{
+				//TODO: Check for world space frustum culling.
+				// Flag fragment to render.
+				Primitives[i].z = 0;
+			}
+
+			return true;
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		{
+			if (FragmentShader != nullptr)
+			{
+#if defined(ARDUINO_ARCH_AVR)
+				const triangle_face_t triangle
+				{
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v1),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v2),
+					(uint16_t)pgm_read_word(&TrianglesSource[index].v3)
+				};
+#else
+				const triangle_face_t& triangle = TrianglesSource[index];
+#endif
+
+				TriangleFragment.triangleScreenA.x = Vertices[triangle.v1].x;
+				TriangleFragment.triangleScreenA.y = Vertices[triangle.v1].y;
+				TriangleFragment.triangleScreenA.z = Vertices[triangle.v1].z;
+				TriangleFragment.triangleScreenB.x = Vertices[triangle.v2].x;
+				TriangleFragment.triangleScreenB.y = Vertices[triangle.v2].y;
+				TriangleFragment.triangleScreenB.z = Vertices[triangle.v2].z;
+				TriangleFragment.triangleScreenC.x = Vertices[triangle.v3].x;
+				TriangleFragment.triangleScreenC.y = Vertices[triangle.v3].y;
+				TriangleFragment.triangleScreenC.z = Vertices[triangle.v3].z;
+
+				// All primitives share the same Object world position.
+				TriangleFragment.world = WorldPosition;
+				TriangleFragment.normalWorld.x = 0;
+				TriangleFragment.normalWorld.y = VERTEX16_UNIT;
+				TriangleFragment.normalWorld.z = 0;
+
+				this->GetFragment(TriangleFragment, index);
+
+				if (SceneShader != nullptr)
+				{
+					// Calculate triangle normal.
+					vertex32_t normal{};
+					GetNormal16(Vertices[triangle.v1], Vertices[triangle.v2], Vertices[triangle.v3], normal);
+					NormalizeVertex32Fast(normal);
+
+					FragmentShader->FragmentShade(rasterizer, TriangleFragment, SceneShader);
+				}
+				else
+				{
+					FragmentShader->FragmentShade(rasterizer, TriangleFragment);
+				}
+			}
 		}
 	};
 
-
-	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename BaseObject = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
-		class MeshSingleColorSingleMaterialObject : public MeshObject<vertexCount, triangleCount, BaseObject>
+	template<uint16_t vertexCount, uint16_t triangleCount>
+	class MeshWorldSingleColorSingleMaterialObject : public MeshWorldObject<vertexCount, triangleCount>
 	{
-	private:
-		using Base = MeshObject<vertexCount, triangleCount, BaseObject>;
-
 	public:
 		color_fraction16_t Color{ UFRACTION16_1X, UFRACTION16_1X ,UFRACTION16_1X };
 		material_t Material{ UFRACTION8_1X, 0, 0, 0 };
 
 	public:
-		MeshSingleColorSingleMaterialObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
-			: Base(vertices, triangles, normals)
+		MeshWorldSingleColorSingleMaterialObject(
+			const vertex16_t vertices[vertexCount],
+			const triangle_face_t triangles[triangleCount],
+			const vertex16_t normals[triangleCount] = nullptr)
+			: MeshWorldObject<vertexCount, triangleCount>(vertices, triangles, normals)
 		{
 		}
 

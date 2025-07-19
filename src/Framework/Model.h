@@ -70,7 +70,7 @@ namespace IntegerWorld
 	struct triangle_fragment_t : base_fragment_t
 	{
 		vertex16_t world;
-		vertex16_t normal;
+		vertex16_t normalWorld;
 		vertex16_t triangleScreenA;
 		vertex16_t triangleScreenB;
 		vertex16_t triangleScreenC;

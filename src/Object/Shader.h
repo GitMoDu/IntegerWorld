@@ -248,7 +248,7 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			FragmentColor = fragment.color;
-			Shade.normalWorld = fragment.normal;
+			Shade.normalWorld = fragment.normalWorld;
 			Shade.positionWorld = fragment.world;
 
 			sceneShader->Shade(FragmentColor, fragment.material, Shade);
@@ -272,7 +272,7 @@ namespace IntegerWorld
 		{
 			FragmentColor = fragment.color;
 			Shade.positionWorld = fragment.world;
-			Shade.normalWorld = fragment.normal;
+			Shade.normalWorld = fragment.normalWorld;
 			sceneShader->Shade(FragmentColor, fragment.material, Shade);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenC);
@@ -283,7 +283,7 @@ namespace IntegerWorld
 		{
 			FragmentColor = fragment.color;
 			Shade.positionWorld = fragment.world;
-			Shade.normalWorld = fragment.normal;
+			Shade.normalWorld = fragment.normalWorld;
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenC);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenB, fragment.triangleScreenC);
@@ -424,9 +424,9 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
-			FragmentColor = { AbstractPixelShader::GetNormalFraction((int16_t)fragment.normal.x),
-								AbstractPixelShader::GetNormalFraction((int16_t)fragment.normal.y),
-								AbstractPixelShader::GetNormalFraction((int16_t)fragment.normal.z) };
+			FragmentColor = { AbstractPixelShader::GetNormalFraction((int16_t)fragment.normalWorld.x),
+								AbstractPixelShader::GetNormalFraction((int16_t)fragment.normalWorld.y),
+								AbstractPixelShader::GetNormalFraction((int16_t)fragment.normalWorld.z) };
 			rasterizer.DrawTriangle(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
 	};

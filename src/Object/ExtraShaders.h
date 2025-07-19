@@ -114,7 +114,7 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			GradientShader.material = &fragment.material;
-			GradientShader.Shade.normalWorld = fragment.normal;
+			GradientShader.Shade.normalWorld = fragment.normalWorld;
 			GradientShader.Shade.positionWorld = fragment.world;
 			GradientShader.sceneShader = sceneShader;
 			if (GradientShader.SetFragmentData(fragment))
@@ -126,7 +126,7 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			GradientShader.material = &fragment.material;
-			GradientShader.Shade.normalWorld = fragment.normal;
+			GradientShader.Shade.normalWorld = fragment.normalWorld;
 			GradientShader.Shade.positionWorld = fragment.world;
 			GradientShader.sceneShader = nullptr;
 			if (GradientShader.SetFragmentData(fragment))
@@ -166,7 +166,7 @@ namespace IntegerWorld
 		{
 			StripeShader.ColorA = fragment.color;
 			StripeShader.ColorB = fragment.color;
-			Shade.normalWorld = fragment.normal;
+			Shade.normalWorld = fragment.normalWorld;
 			Shade.positionWorld = fragment.world;
 			sceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
 			sceneShader->Shade(StripeShader.ColorB, shine, Shade);
