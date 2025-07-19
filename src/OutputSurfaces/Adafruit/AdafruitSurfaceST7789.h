@@ -22,13 +22,18 @@ namespace IntegerWorld
 			private:
 				Adafruit_ST7789 Display;
 				int8_t Bkl;
+				bool BfiEnabled;
 
 			public:
-				DirectDrawSurface(SpiType& spi, const  int8_t cs, const int8_t dc, const int8_t rst, const int8_t bkl = -1,
+				DirectDrawSurface(SpiType& spi,
+					const  int8_t cs, const int8_t dc, const int8_t rst,
+					const int8_t bkl = -1,
+					const bool bfiEnabled = false,
 					const uint32_t targetPeriod = 50000)
 					: Base(Display, targetPeriod)
 					, Display(&spi, cs, dc, rst)
 					, Bkl(bkl)
+					, BfiEnabled(bfiEnabled)
 				{
 				}
 
@@ -66,18 +71,26 @@ namespace IntegerWorld
 
 				void OnDrawStart() final
 				{
+					// Blank screen before clearing buffer and starting drawing.
+					if (BfiEnabled)
+					{
+						Display.enableDisplay(false);
+					}
 					if (Bkl != -1)
 					{
-						// Blank screen before clearing buffer and starting drawing.
 						digitalWrite(Bkl, LOW);
 					}
 				}
 
 				void OnDrawEnd() final
 				{
+					// Show drawn content.
+					if (BfiEnabled)
+					{
+						Display.enableDisplay(true);
+					}
 					if (Bkl != -1)
 					{
-						// Show drawn content.
 						digitalWrite(Bkl, HIGH);
 					}
 				}

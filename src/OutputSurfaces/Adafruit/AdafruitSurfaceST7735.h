@@ -35,15 +35,19 @@ namespace IntegerWorld
 				Adafruit_ST7735 Display;
 				VariantEnum DisplayType;
 				int8_t Bkl;
+				bool BfiEnabled;
 
 			public:
-				DirectDrawSurface(const VariantEnum displayType,
-					SpiType& spi, const  int8_t cs, const int8_t dc, const int8_t rst, const int8_t bkl = -1,
+				DirectDrawSurface(const VariantEnum displayType, SpiType& spi,
+					const  int8_t cs, const int8_t dc, const int8_t rst,
+					const int8_t bkl = -1, 
+					const bool bfiEnabled = false,
 					const uint32_t targetPeriod = 0000)
 					: Base(Display, targetPeriod)
 					, Display(&spi, cs, dc, rst)
 					, DisplayType(displayType)
 					, Bkl(bkl)
+					, BfiEnabled(bfiEnabled)
 				{
 				}
 
@@ -101,14 +105,28 @@ namespace IntegerWorld
 				void OnDrawStart() final
 				{
 					// Blank screen before clearing buffer and starting drawing.
-					digitalWrite(Bkl, LOW);
+					if (BfiEnabled)
+					{
+						Display.enableDisplay(false);
+					}
+					if (Bkl != -1)
+					{
+						digitalWrite(Bkl, LOW);
+					}
 
 				}
 
 				void OnDrawEnd() final
 				{
 					// Show drawn content.
-					digitalWrite(Bkl, HIGH);
+					if (BfiEnabled)
+					{
+						Display.enableDisplay(true);
+					}
+					if (Bkl != -1)
+					{
+						digitalWrite(Bkl, HIGH);
+					}
 				}
 			};
 		}
