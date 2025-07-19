@@ -237,6 +237,11 @@ namespace IntegerWorld
 				return true;
 			}
 
+			void StopSurface() final
+			{
+				Display.endWrite();
+			}
+
 		public:
 			bool IsSurfaceReady() final
 			{

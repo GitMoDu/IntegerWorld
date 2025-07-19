@@ -14,21 +14,21 @@ namespace IntegerWorld
 	struct IOutputSurface
 	{
 	public:// Buffer managment interface.
-		virtual bool StartSurface() { return false; }
-		virtual void StopSurface() {}
+		virtual bool StartSurface() = 0;
+		virtual void StopSurface() = 0;
 
-		virtual void FlipSurface() {}
-		virtual bool IsSurfaceReady() { return false; }
+		virtual void FlipSurface() = 0;
+		virtual bool IsSurfaceReady() = 0;
 
 
 	public:// Buffer window interface.
-		virtual void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) { width = 0; height = 0; colorDepth = 0; }
+		virtual void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) = 0;
 
 	public:// Buffer drawing interface.
-		virtual void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) {}
-		virtual void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) {}
-		virtual void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) {}
-		virtual void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) {}
+		virtual void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) = 0;
+		virtual void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
+		virtual void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) = 0;
+		virtual void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
 	};
 }
 #endif
