@@ -2,6 +2,7 @@
 #define _DEMO_SCENE_ASSETS_h
 
 #include <IntegerWorld.h>
+#include <ArduinoGraphicsDrawer.h>
 
 namespace Assets
 {
@@ -340,19 +341,19 @@ namespace Assets
 	{
 		using namespace Shapes;
 
-		struct StarMeshObject : public MeshSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
+		struct StarMeshObject : public MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
 		{
-			StarMeshObject() : MeshSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
+			StarMeshObject() : MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
 				Star::Vertices,
 				Star::Triangles) {
 			}
 		};
 
-		struct CubeMeshObject : public MeshObject<Cube::VertexCount, Cube::TriangleCount>
+		struct CubeMeshObject : public MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>
 		{
 			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
 
-			CubeMeshObject() : MeshObject<Cube::VertexCount, Cube::TriangleCount>(
+			CubeMeshObject() : MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>(
 				Cube::Vertices,
 				Cube::Triangles,
 				Cube::Normals) {
@@ -375,9 +376,9 @@ namespace Assets
 			}
 		};
 
-		struct OctahedronMeshObject : public MeshSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
+		struct OctahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
 		{
-			OctahedronMeshObject() : MeshSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
+			OctahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
 				Octahedron::Vertices,
 				Octahedron::Triangles,
 				Octahedron::Normals) {
@@ -393,9 +394,9 @@ namespace Assets
 			}
 		};
 
-		struct IcosahedronMeshObject : public MeshSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
+		struct IcosahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
 		{
-			IcosahedronMeshObject() : MeshSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
+			IcosahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
 				Icosahedron::Vertices,
 				Icosahedron::Triangles,
 				Icosahedron::Normals) {
@@ -410,9 +411,9 @@ namespace Assets
 			}
 		};
 
-		struct SphereMeshObject : public MeshSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
+		struct SphereMeshObject : public MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
 		{
-			SphereMeshObject() : MeshSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
+			SphereMeshObject() : MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
 				Sphere::Vertices,
 				Sphere::Triangles,
 				Sphere::Normals
@@ -468,15 +469,32 @@ namespace Assets
 		public:
 			ShadedLightSourceObject() : LightSourceType() {}
 
-			virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
+			bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
 			{
-				if (FragmentShader != nullptr
-					&& ObjectPosition.z > 0
-					&& ObjectPosition.x > -WindowTolerance
-					&& ObjectPosition.y > -WindowTolerance
-					&& ObjectPosition.x < boundsWidth + WindowTolerance
-					&& ObjectPosition.y < boundsHeight + WindowTolerance
-					&& (Color.r > 0 || Color.g > 0 || Color.b > 0))
+				if (LightSourceType::PrimitiveScreenShade(index, boundsWidth, boundsHeight))
+				{
+					if (ObjectPosition.z < 0
+						|| ObjectPosition.x < -WindowTolerance
+						|| ObjectPosition.y < -WindowTolerance
+						|| ObjectPosition.x > boundsWidth + WindowTolerance
+						|| ObjectPosition.y > boundsHeight + WindowTolerance
+						|| (Color.r == 0 && Color.g == 0 && Color.b == 0)
+						)
+					{
+						ObjectPosition.z = -VERTEX16_RANGE;
+					}
+
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			void FragmentCollect(FragmentCollector& fragmentCollector) final
+			{
+				if (ObjectPosition.z > 0)
 				{
 					fragmentCollector.AddFragment(0, ObjectPosition.z);
 				}
@@ -484,18 +502,21 @@ namespace Assets
 
 			void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
 			{
-				LightFragment.color = Color;
-				LightFragment.material = { UFRACTION8_1X , 0, 0, 0 };
-				LightFragment.screen = ObjectPosition;
-				LightFragment.world = WorldPosition;
+				if (FragmentShader != nullptr)
+				{
+					LightFragment.color = Color;
+					LightFragment.material = { UFRACTION8_1X , 0, 0, 0 };
+					LightFragment.screen = ObjectPosition;
+					LightFragment.world = WorldPosition;
 
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, LightFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, LightFragment);
+					if (SceneShader != nullptr)
+					{
+						FragmentShader->FragmentShade(rasterizer, LightFragment, SceneShader);
+					}
+					else
+					{
+						
+					}
 				}
 			}
 		};

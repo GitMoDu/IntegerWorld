@@ -375,15 +375,15 @@ namespace Assets
 	{
 		using namespace Shapes;
 
-		struct StarMeshObject : public MeshTemplateSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
+		struct StarMeshObject : public MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
 		{
-			StarMeshObject() : MeshTemplateSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
+			StarMeshObject() : MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
 				Star::Vertices,
 				Star::Triangles) {
 			}
 		};
 
-		struct CubeMeshObject : public MeshWorldObject <Cube::VertexCount, Cube::TriangleCount>
+		struct CubeMeshObject : public MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>
 		{
 			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
 
@@ -410,9 +410,9 @@ namespace Assets
 			}
 		};
 
-		struct OctahedronMeshObject : public MeshTemplateSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
+		struct OctahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
 		{
-			OctahedronMeshObject() : MeshTemplateSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
+			OctahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
 				Octahedron::Vertices,
 				Octahedron::Triangles,
 				Octahedron::Normals) {
@@ -428,9 +428,9 @@ namespace Assets
 			}
 		};
 
-		struct IcosahedronMeshObject : public MeshTemplateSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
+		struct IcosahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
 		{
-			IcosahedronMeshObject() : MeshTemplateSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
+			IcosahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
 				Icosahedron::Vertices,
 				Icosahedron::Triangles,
 				Icosahedron::Normals) {
@@ -445,9 +445,9 @@ namespace Assets
 			}
 		};
 
-		struct SphereMeshObject : public MeshTemplateSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
+		struct SphereMeshObject : public MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
 		{
-			SphereMeshObject() : MeshTemplateSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
+			SphereMeshObject() : MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
 				Sphere::Vertices,
 				Sphere::Triangles,
 				Sphere::Normals
@@ -503,7 +503,7 @@ namespace Assets
 		public:
 			ShadedLightSourceObject() : LightSourceType() {}
 
-			virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
+			bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
 			{
 				if (LightSourceType::PrimitiveScreenShade(index, boundsWidth, boundsHeight))
 				{
@@ -526,7 +526,7 @@ namespace Assets
 				}
 			}
 
-			virtual void FragmentCollect(FragmentCollector& fragmentCollector)
+			void FragmentCollect(FragmentCollector& fragmentCollector) final
 			{
 				if (ObjectPosition.z > 0)
 				{

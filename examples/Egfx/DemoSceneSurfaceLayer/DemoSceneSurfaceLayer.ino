@@ -71,7 +71,7 @@ TS::Scheduler SchedulerBase{};
 // Forward declare the used communications hardware.
 using namespace Egfx;
 TwoWire& WireInstance(Wire);
-#if defined(ARDUINO_ARCH_STM32) || defined(STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(STM32F4)
 Egfx::SpiType SpiInstance(3);
 #else
 Egfx::SpiType& SpiInstance(SPI);

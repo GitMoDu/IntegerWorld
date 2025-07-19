@@ -33,31 +33,47 @@
 #include "DemoSceneAssets.h"
 
 // Forward declare the used communications hardware.
-#if defined(ARDUINO_MAPLE_MINI)
-SPIClass SpiInstance(1);
+#if defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(STM32F4)
+SPIClass SpiInstance(3);
 #elif defined(ARDUINO_ARCH_RP2040)
 SPIClassRP2040& SpiInstance(SPI);
 #else
 SPIClass& SpiInstance(SPI);
 #endif
 
-#if defined(ARDUINO_MAPLE_MINI)
+// Preset of SPI pin definitions for various platforms.
+#if defined(STM32H7xx) 
+#define TFT_DC		PE13
+#define TFT_RST     UINT8_MAX
+#define TFT_CS		PE11
+#elif defined(STM32F4)
+#define TFT_CS		PA15
+#define TFT_DC		PB9
+#define TFT_RST     PB8
+#elif defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1)
 #define TFT_CS		7
 #define TFT_DC		10
 #define TFT_RST     11
-#define TFT_BKL     -1
-#elif defined(ARDUINO_ARCH_RP2040)
-#define TFT_CS		D3
-#define TFT_DC		D7
-#define TFT_RST     D6
-#elif defined(ARDUINO_ARCH_ESP32)
-#define TFT_CS		5
-#define TFT_DC		16
-#define TFT_RST     23
-#else
+#elif defined(ARDUINO_ARCH_AVR)
 #define TFT_CS		10
 #define TFT_DC		9
-#define TFT_RST     8
+#define TFT_RST		8
+#elif defined(ARDUINO_ARCH_ESP32)
+#define TFT_CS		19
+#define TFT_DC		20
+#define TFT_RST		21
+#elif defined(ARDUINO_SEEED_XIAO_RP2350)
+#define TFT_CS		D3
+#define TFT_DC		D7
+#define TFT_RST		D6
+#elif defined(ARDUINO_ARCH_RP2040)
+#define TFT_CS		19
+#define TFT_DC		20
+#define TFT_RST		21
+#elif defined(ARDUINO_ARCH_NRF52)
+#define TFT_CS		D3
+#define TFT_DC		D7
+#define TFT_RST		D6
 #endif
 
 

@@ -134,7 +134,7 @@ public:
 		Light1.Color = ColorFraction::COLOR_RED;
 		Light2.Color = ColorFraction::COLOR_GREEN;
 		GlobalLight.Color = ColorFraction::RgbToColorFraction((uint32_t)0x9E8C76);
-		LightSourceShader.MaxSize = MaxValue(4, MinValue(width, height) / 9);
+		LightSourceShader.MaxSize = MaxValue(6, MinValue(width, height) / 9);
 
 		// Short range for a small scene.
 		Light1.SetLightRange(LightMinDistance, LightMaxDistance);

@@ -1,6 +1,6 @@
 /*
-* Direct Draw Tiny Scene.
-* Tiny scene with no light or scene shader that fits in an AVR328 (Arduino OG).
+* Integer Wrold Tiny Scene that fits in an AVR328 (Arduino OG).
+* Scene has no lights or scene shader.
 * Includes configurations for multiple screen drivers (uncomment driver and required include).
 * With DEMO_SCENE_EDGE_OBJECT: 2 edge objects. Without: 2 mesh objects.
 */
@@ -10,8 +10,8 @@
 
 
 //#define DEMO_SCENE_EDGE_OBJECT // Enable for monochrome and low RAM devices.
-#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
-#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
+//#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
+//#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
 
 #define _TASK_OO_CALLBACKS
@@ -23,6 +23,7 @@
 #include <IntegerWorld.h>
 #include <IntegerWorldTasks.h>
 #include <IntegerWorldOutputs.h>
+#include "AnimatedTinyScene.h"
 
 // Include used output drivers. 
 // Each driver has its own dependencies, so you may need to install them.
@@ -34,7 +35,6 @@
 //#include <IntegerWorldLexus2kSsd1306.h>
 //#include <IntegerWorldSumotoySsd1331.h>
 
-#include "AnimatedTinyScene.h"
 
 // Forward declare the used communications hardware.
 #if defined(ARDUINO_MAPLE_MINI)
@@ -56,7 +56,7 @@
 #define TFT_RST     8
 #endif
 
-#if defined(ARDUINO_ARCH_STM32F1) || defined(ARDUINO_ARCH_STM32F4)
+#if defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(STM32F4)
 SPIClass SpiInstance(1);
 #elif defined(ARDUINO_ARCH_RP2040)
 SPIClassRP2040& SpiInstance(SPI);

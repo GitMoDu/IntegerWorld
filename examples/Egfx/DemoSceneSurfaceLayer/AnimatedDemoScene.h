@@ -31,7 +31,7 @@ private:
 	static constexpr uint32_t ShapeMovePeriodMicros = 15111111;
 
 	static constexpr int16_t DistanceUnit = Assets::Shapes::SHAPE_UNIT;
-	static constexpr int16_t BaseDistance = -(VERTEX16_UNIT * 8) / 10;
+	static constexpr int16_t BaseDistance = -(VERTEX16_UNIT * 5) / 10;
 	static constexpr int16_t ShapeMove = (DistanceUnit * 30) / 10;
 	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
 
@@ -118,7 +118,7 @@ public:
 		Light1.Color = ColorFraction::COLOR_RED;
 		Light2.Color = ColorFraction::COLOR_GREEN;
 		GlobalLight.Color = ColorFraction::RgbToColorFraction((uint32_t)0x9E8C76);
-		LightSourceShader.MaxSize = MaxValue(2, MinValue(width, height) / 16);
+		LightSourceShader.MaxSize = MaxValue(8, MinValue(width, height) / 8);
 
 		// Short range for a small scene.
 		Light1.SetLightRange(LightMinDistance, LightMaxDistance);

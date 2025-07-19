@@ -22,8 +22,8 @@ private:
 	static constexpr uint32_t ShapeRotatePeriodMicros = 65000000;
 	static constexpr uint32_t ShapeMovePeriodMicros = 15111111;
 
-	static constexpr int16_t BaseDistance = -((int32_t)VERTEX16_UNIT * 5) / 10;
-	static constexpr int16_t ShapeMove = ((int32_t)Assets::Shapes::SHAPE_UNIT * 30) / 10;
+	static constexpr int16_t BaseDistance = -((int32_t)VERTEX16_UNIT * 10) / 10;
+	static constexpr int16_t ShapeMove = ((int32_t)Assets::Shapes::SHAPE_UNIT * 20) / 10;
 	static constexpr int16_t ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * 128) / 64;
 	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
 
@@ -41,7 +41,7 @@ private:
 
 	// Mesh triangle objects.
 	Assets::Objects::CubeMeshObject ObjectCube{};
-	Assets::Objects::OctahedronMeshObject ObjectOctahedron{};
+	Assets::Objects::TemplateFakeYShadeMeshObject<16, Assets::Objects::OctahedronMeshObject> ObjectOctahedron{};
 #endif
 
 	// Track animation color style.
@@ -83,7 +83,7 @@ public:
 		ColorDepth = colorDepth;
 		if (ColorDepth <= 1)
 		{
-			ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
+			//ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
 		}
 #endif	
 
@@ -98,15 +98,14 @@ public:
 private:
 	void AnimateObjects(const uint32_t timestamp)
 	{
+#if defined(DEMO_SCENE_EDGE_OBJECT)
 		if (ColorDepth > 1)
 		{
 			// Rainbow color pattern with HSV color.
 			const ufraction16_t colorFraction = GetUFraction16((uint32_t)(timestamp % (ShapeColorPeriodMicros + 1)), ShapeColorPeriodMicros);
-#if defined(DEMO_SCENE_EDGE_OBJECT)
-			ObjectCube.Color = ColorFraction::HsvToColorFraction(colorFraction, UFRACTION16_1X, UFRACTION16_1X);
-#endif
-			ObjectOctahedron.Color = ColorFraction::HsvToColorFraction(UFRACTION16_1X - colorFraction, UFRACTION16_1X, UFRACTION16_1X);
+			ObjectOctahedron.Color = ColorFraction::HsvToColorFraction(colorFraction, UFRACTION16_1X, UFRACTION16_1X);
 		}
+#endif
 
 		// Continuous rotation on all 3 axis.
 		const ufraction16_t xRotateFraction = GetUFraction16((uint32_t)(timestamp % (ShapeRotatePeriodMicros + 1)), ShapeRotatePeriodMicros);
