@@ -2,6 +2,10 @@
 
 **IntegerWorld** is a C++11 embedded graphics framework for efficient 2D and 3D rendering using integer math. It provides APIs for drawing and shading window-clipped points, lines, triangles, and rectangles, and interfaces with platform-independent targets such as framebuffers and direct draw.
 
+![Tiny demo scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/tiny_demo_scene_avr.gif)
+
+*Tiny Demo Scene running at ~24 fps on an Arduino AVR328 @ 16 Mhz*
+
 
 ## Library
 - Arduino compatible.
