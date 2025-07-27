@@ -57,7 +57,7 @@ namespace Assets
 		protected:
 			void GetFragment(triangle_fragment_t& fragment, const uint16_t index) final
 			{
-				fragment.color = Shapes::Cube::Pallete[(index / 2) % Shapes::Cube::PalleteSize];
+				fragment.color = Shapes::Cube::Pallete[(index >> 1) % Shapes::Cube::PalleteSize];
 				fragment.material = Material;
 			}
 		};
