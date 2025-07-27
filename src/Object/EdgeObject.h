@@ -83,7 +83,7 @@ namespace IntegerWorld
 		}
 
 	public:
-		virtual bool VertexShade(const uint16_t index)
+		bool VertexShade(const uint16_t index) final
 		{
 			switch (index)
 			{
@@ -108,7 +108,7 @@ namespace IntegerWorld
 			return index >= vertexCount;
 		}
 
-		virtual bool PrimitiveWorldShade(const uint16_t index)
+		bool PrimitiveWorldShade(const uint16_t index) final
 		{
 #if defined(ARDUINO_ARCH_AVR)
 			const edge_line_t edge
@@ -156,13 +156,13 @@ namespace IntegerWorld
 			}
 			else
 			{
-				Primitives[index].z = VERTEX16_RANGE;
+				Primitives[index].z = -VERTEX16_RANGE;
 			}
 
 			return index >= edgeCount - 1;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
+		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
 		{
 #if defined(ARDUINO_ARCH_AVR)
 			const edge_line_t edge
@@ -174,7 +174,7 @@ namespace IntegerWorld
 			const edge_line_t& edge = EdgesSource[index];
 #endif
 
-			if (Primitives[index].z != VERTEX16_RANGE)
+			if (Primitives[index].z != -VERTEX16_RANGE)
 			{
 				// Quick check if triangle is behind screen.
 				if (Vertices[edge.start].z < 0
@@ -185,14 +185,14 @@ namespace IntegerWorld
 					|| (Vertices[edge.start].y >= boundsHeight && Vertices[edge.end].y >= boundsHeight))
 				{
 					// Whole edge is out of bounds.
-					Primitives[index].z = VERTEX16_RANGE;
+					Primitives[index].z = -VERTEX16_RANGE;
 				}
 			}
 
 			return index >= edgeCount - 1;
 		}
 
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
+		void FragmentCollect(FragmentCollector& fragmentCollector) final
 		{
 			for (uint16_t i = 0; i < edgeCount; i++)
 			{
@@ -206,7 +206,7 @@ namespace IntegerWorld
 				const edge_line_t& edge = EdgesSource[i];
 #endif
 
-				if (Primitives[i].z != VERTEX16_RANGE)
+				if (Primitives[i].z != -VERTEX16_RANGE)
 				{
 					Primitives[i].z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
 					fragmentCollector.AddFragment(i, Primitives[i].z);
@@ -214,7 +214,7 @@ namespace IntegerWorld
 			}
 		}
 
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
 		{
 			if (FragmentShader != nullptr)
 			{

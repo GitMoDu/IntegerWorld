@@ -21,37 +21,31 @@ namespace IntegerWorld
 
 
 	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename BaseObject = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
-		class AbstractMeshObject : public BaseObject
+		typename vertex_t = mesh_vertex_t,
+		typename primitive_t = mesh_primitive_t>
+	class AbstractMeshObject : public TransformObject
 	{
-	public:
-		using BaseObject::SceneShader;
-
-	protected:
-		using BaseObject::Vertices;
-		using BaseObject::Primitives;
-		using BaseObject::MeshTransform;
-
 	public:
 		IFragmentShader<triangle_fragment_t>* FragmentShader = nullptr;
 
 	protected:
 		const vertex16_t* VerticesSource;
 		const triangle_face_t* TrianglesSource;
-		const vertex16_t* NormalsSource;
 
 	protected:
+		vertex_t Vertices[vertexCount]{};
+		primitive_t Primitives[triangleCount]{};
+
 		triangle_fragment_t TriangleFragment{};
 
 	protected:
 		virtual void GeometryShade(const uint16_t index) {}
 
 	public:
-		AbstractMeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
-			: BaseObject()
+		AbstractMeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount])
+			: TransformObject()
 			, VerticesSource(vertices)
 			, TrianglesSource(triangles)
-			, NormalsSource(normals)
 		{
 		}
 
@@ -61,13 +55,13 @@ namespace IntegerWorld
 			switch (index)
 			{
 			case 0:
-				BaseObject::VertexShade(0);
+				TransformObject::VertexShade(0);
 				break;
 			default:
 #if defined(ARDUINO_ARCH_AVR)
-				Vertices[index - 1].x = pgm_read_word(&VerticesSource[index - 1].x);
-				Vertices[index - 1].y = pgm_read_word(&VerticesSource[index - 1].y);
-				Vertices[index - 1].z = pgm_read_word(&VerticesSource[index - 1].z);
+				Vertices[index - 1].x = (int16_t)pgm_read_word(&VerticesSource[index - 1].x);
+				Vertices[index - 1].y = (int16_t)pgm_read_word(&VerticesSource[index - 1].y);
+				Vertices[index - 1].z = (int16_t)pgm_read_word(&VerticesSource[index - 1].z);
 #else
 				Vertices[index - 1].x = VerticesSource[index - 1].x;
 				Vertices[index - 1].y = VerticesSource[index - 1].y;
@@ -76,6 +70,36 @@ namespace IntegerWorld
 				GeometryShade(index - 1);
 
 				ApplyTransform(MeshTransform, Vertices[index - 1]);
+				break;
+			}
+
+			return index >= vertexCount;
+		}
+
+		bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) final
+		{
+			switch (index)
+			{
+			case 0:
+				ApplyCameraTransform(transform, ObjectPosition);
+				break;
+			default:
+				ApplyCameraTransform(transform, Vertices[index - 1]);
+				break;
+			}
+
+			return index >= vertexCount;
+		}
+
+		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) final
+		{
+			switch (index)
+			{
+			case 0:
+				screenProjector.Project(ObjectPosition);
+				break;
+			default:
+				screenProjector.Project(Vertices[index - 1]);
 				break;
 			}
 
@@ -97,7 +121,7 @@ namespace IntegerWorld
 				const triangle_face_t& triangle = TrianglesSource[index];
 #endif
 
-				if (Primitives[index].z != VERTEX16_RANGE)
+				if (Primitives[index].z != -VERTEX16_RANGE)
 				{
 					// Check if triangle is entirely out of bounds.
 					if ((Vertices[triangle.v1].z <= 0
@@ -116,7 +140,7 @@ namespace IntegerWorld
 							&& Vertices[triangle.v2].y > boundsHeight
 							&& Vertices[triangle.v3].y > boundsHeight))
 					{
-						Primitives[index].z = VERTEX16_RANGE;
+						Primitives[index].z = -VERTEX16_RANGE;
 					}
 					else
 					{
@@ -128,7 +152,7 @@ namespace IntegerWorld
 						}
 						else
 						{
-							Primitives[index].z = VERTEX16_RANGE;
+							Primitives[index].z = -VERTEX16_RANGE;
 						}
 					}
 				}
@@ -141,7 +165,7 @@ namespace IntegerWorld
 		{
 			for (uint16_t i = 0; i < triangleCount; i++)
 			{
-				if (Primitives[i].z != VERTEX16_RANGE)
+				if (Primitives[i].z != -VERTEX16_RANGE)
 				{
 					fragmentCollector.AddFragment(i, Primitives[i].z);
 				}
@@ -162,10 +186,10 @@ namespace IntegerWorld
 	};
 
 	template<uint16_t vertexCount, uint16_t triangleCount>
-	class MeshWorldObject : public AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>>
+	class MeshWorldObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>
 	{
 	private:
-		using Base = AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>>;
+		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>;
 
 	public:
 		using Base::FragmentShader;
@@ -173,16 +197,19 @@ namespace IntegerWorld
 
 	protected:
 		using Base::TrianglesSource;
-		using Base::NormalsSource;
 		using Base::Vertices;
 		using Base::Primitives;
 		using Base::MeshTransform;
 		using Base::TriangleFragment;
 		using Base::GetFragment;
 
+	protected:
+		const vertex16_t* NormalsSource;
+
 	public:
 		MeshWorldObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t normals[triangleCount] = nullptr)
-			: Base(vertices, triangles, normals)
+			: Base(vertices, triangles)
+			, NormalsSource(normals)
 		{
 		}
 
@@ -286,26 +313,26 @@ namespace IntegerWorld
 	};
 
 	template<uint16_t vertexCount, uint16_t triangleCount>
-	class MeshObject : public AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>
+	class MeshObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>
 	{
 	private:
-		using Base = AbstractMeshObject<vertexCount, triangleCount, AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>>;
+		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>;
 
 	public:
 		using Base::FragmentShader;
 		using Base::SceneShader;
 
 	protected:
+		using Base::WorldPosition;
+		using Base::MeshTransform;
 		using Base::TrianglesSource;
 		using Base::Vertices;
 		using Base::Primitives;
-		using Base::MeshTransform;
 		using Base::TriangleFragment;
-		using Base::WorldPosition;
 
 	public:
-		MeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount])
-			: Base(vertices, triangles, nullptr)
+		MeshObject(const vertex16_t vertices[vertexCount], const triangle_face_t triangles[triangleCount], const vertex16_t* normals = nullptr)
+			: Base(vertices, triangles)
 		{
 		}
 
@@ -352,7 +379,7 @@ namespace IntegerWorld
 				TriangleFragment.normalWorld.y = VERTEX16_UNIT;
 				TriangleFragment.normalWorld.z = 0;
 
-				this->GetFragment(TriangleFragment, index);
+				GetFragment(TriangleFragment, index);
 
 				if (SceneShader != nullptr)
 				{
