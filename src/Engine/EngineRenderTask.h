@@ -51,7 +51,7 @@ namespace IntegerWorld
 	};
 
 
-	template<uint16_t MaxObjectCount, uint16_t MaxOrderedPrimitives>
+	template<uint16_t MaxObjectCount, uint16_t MaxOrderedPrimitives, uint8_t BatchSize = 1>
 	class EngineRenderTask : public AbstractObjectRenderTask<MaxObjectCount>
 	{
 	private:
@@ -198,24 +198,28 @@ namespace IntegerWorld
 #endif
 				break;
 			case StateEnum::VertexShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.VertexShades++;
-#endif
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->VertexShade(ItemIndex))
+				for (uint_fast8_t i = 0; i < BatchSize; i++)
 				{
-					ItemIndex = 0;
-					ObjectIndex++;
-					if (ObjectIndex >= ObjectCount)
+					if (Objects[ObjectIndex]->VertexShade(ItemIndex))
 					{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+						Status.VertexShades += ItemIndex;
+#endif
 						ItemIndex = 0;
-						ObjectIndex = 0;
-						State = StateEnum::PrimitiveWorldShade;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::PrimitiveWorldShade;
+							break;
+						}
 					}
-				}
-				else
-				{
-					ItemIndex++;
+					else
+					{
+						ItemIndex++;
+					}
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.VertexShade += micros() - MeasureStart;
@@ -224,24 +228,28 @@ namespace IntegerWorld
 #endif
 				break;
 			case StateEnum::PrimitiveWorldShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.WorldShades++;
-#endif
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->PrimitiveWorldShade(ItemIndex))
+				for (uint_fast8_t i = 0; i < BatchSize; i++)
 				{
-					ItemIndex = 0;
-					ObjectIndex++;
-					if (ObjectIndex >= ObjectCount)
+					if (Objects[ObjectIndex]->PrimitiveWorldShade(ItemIndex))
 					{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+						Status.WorldShades += ItemIndex;
+#endif
 						ItemIndex = 0;
-						ObjectIndex = 0;
-						State = StateEnum::CameraTransform;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::CameraTransform;
+							break;
+						}
 					}
-				}
-				else
-				{
-					ItemIndex++;
+					else
+					{
+						ItemIndex++;
+					}
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.WorldShade += micros() - MeasureStart;
@@ -250,24 +258,29 @@ namespace IntegerWorld
 #endif
 				break;
 			case StateEnum::CameraTransform:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.CameraTransforms++;
-#endif
+
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->CameraTransform(ReverseCameraTransform, ItemIndex))
+				for (uint_fast8_t i = 0; i < BatchSize; i++)
 				{
-					ItemIndex = 0;
-					ObjectIndex++;
-					if (ObjectIndex >= ObjectCount)
+					if (Objects[ObjectIndex]->CameraTransform(ReverseCameraTransform, ItemIndex))
 					{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+						Status.CameraTransforms += ItemIndex;
+#endif
 						ItemIndex = 0;
-						ObjectIndex = 0;
-						State = StateEnum::ScreenProject;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::ScreenProject;
+							break;
+						}
 					}
-				}
-				else
-				{
-					ItemIndex++;
+					else
+					{
+						ItemIndex++;
+					}
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.CameraTransform += micros() - MeasureStart;
@@ -276,24 +289,28 @@ namespace IntegerWorld
 #endif
 				break;
 			case StateEnum::ScreenProject:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.ScreenProjects++;
-#endif
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->ScreenProject(ViewProjector, ItemIndex))
+				for (uint_fast8_t i = 0; i < BatchSize; i++)
 				{
-					ItemIndex = 0;
-					ObjectIndex++;
-					if (ObjectIndex >= ObjectCount)
+					if (Objects[ObjectIndex]->ScreenProject(ViewProjector, ItemIndex))
 					{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+						Status.ScreenProjects += ItemIndex;
+#endif
 						ItemIndex = 0;
-						ObjectIndex = 0;
-						State = StateEnum::PrimitiveScreenShade;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::PrimitiveScreenShade;
+							break;
+						}
 					}
-				}
-				else
-				{
-					ItemIndex++;
+					else
+					{
+						ItemIndex++;
+					}
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.ScreenProject += micros() - MeasureStart + 1;
@@ -302,24 +319,28 @@ namespace IntegerWorld
 #endif
 				break;
 			case StateEnum::PrimitiveScreenShade:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Status.ScreenShades++;
-#endif
 				MeasureStart = micros();
-				if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex, Rasterizer.Width(), Rasterizer.Height()))
+				for (uint_fast8_t i = 0; i < BatchSize; i++)
 				{
-					ItemIndex = 0;
-					ObjectIndex++;
-					if (ObjectIndex >= ObjectCount)
+					if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex, Rasterizer.Width(), Rasterizer.Height()))
 					{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+						Status.ScreenShades += ItemIndex;
+#endif
 						ItemIndex = 0;
-						ObjectIndex = 0;
-						State = StateEnum::FragmentCollect;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::FragmentCollect;
+							break;
+						}
 					}
-				}
-				else
-				{
-					ItemIndex++;
+					else
+					{
+						ItemIndex++;
+					}
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.ScreenShade += micros() - MeasureStart;
