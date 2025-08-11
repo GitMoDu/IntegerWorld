@@ -5,12 +5,16 @@
 
 namespace IntegerWorld
 {
+	enum class MeshCullingEnum : uint8_t
 	{
+		BackfaceCullling,
+		NoBackfaceCullling
 	};
 
 	template<uint16_t vertexCount, uint16_t triangleCount,
 		typename vertex_t = mesh_vertex_t,
-		typename primitive_t = mesh_primitive_t>
+		typename primitive_t = mesh_primitive_t,
+		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class AbstractMeshObject : public TransformObject
 	{
 	public:
@@ -130,7 +134,7 @@ namespace IntegerWorld
 					{
 						Primitives[index].z = -VERTEX16_RANGE;
 					}
-					else
+					else if (meshCulling == MeshCullingEnum::BackfaceCullling)
 					{
 						// Back face culling after projection.
 						const int32_t signedArea = (int32_t(Vertices[triangle.v2].x - Vertices[triangle.v1].x) * (Vertices[triangle.v3].y - Vertices[triangle.v1].y)) - (int32_t(Vertices[triangle.v2].y - Vertices[triangle.v1].y) * (Vertices[triangle.v3].x - Vertices[triangle.v1].x));
@@ -142,6 +146,10 @@ namespace IntegerWorld
 						{
 							Primitives[index].z = -VERTEX16_RANGE;
 						}
+					}
+					else
+					{
+						Primitives[index].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
 					}
 				}
 			}
@@ -171,11 +179,11 @@ namespace IntegerWorld
 		}
 	};
 
-	template<uint16_t vertexCount, uint16_t triangleCount>
-	class MeshWorldObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>
+	template<uint16_t vertexCount, uint16_t triangleCount, MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+	class MeshWorldObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t, meshCulling>
 	{
 	private:
-		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>;
+		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t, meshCulling>;
 
 	public:
 		using Base::FragmentShader;
@@ -298,11 +306,11 @@ namespace IntegerWorld
 		}
 	};
 
-	template<uint16_t vertexCount, uint16_t triangleCount>
-	class MeshObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>
+	template<uint16_t vertexCount, uint16_t triangleCount, MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+	class MeshObject : public AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t, meshCulling>
 	{
 	private:
-		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t>;
+		using Base = AbstractMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_primitive_t, meshCulling>;
 
 	public:
 		using Base::FragmentShader;
