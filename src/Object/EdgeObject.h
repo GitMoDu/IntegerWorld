@@ -177,8 +177,8 @@ namespace IntegerWorld
 			if (Primitives[index].z != -VERTEX16_RANGE)
 			{
 				// Quick check if triangle is behind screen.
-				if (Vertices[edge.start].z < 0
-					&& Vertices[edge.end].z < 0
+				if ((Vertices[edge.start].z < 0
+					&& Vertices[edge.end].z < 0)
 					|| (Vertices[edge.start].x < 0 && Vertices[edge.end].x < 0)
 					|| (Vertices[edge.start].x >= boundsWidth && Vertices[edge.end].x >= boundsWidth)
 					|| (Vertices[edge.start].y < 0 && Vertices[edge.end].y < 0)
