@@ -80,6 +80,11 @@ namespace IntegerWorld
 						Framebuffer = frame;
 						State = StateEnum::DrawLocked; // Surface can now be drawn to.
 					}
+					else
+					{
+						Framebuffer = nullptr;
+						State = StateEnum::WaitingForDraw;// Engine is done and renderer can move on to the next layer/frame.
+					}
 					return false;
 				case StateEnum::DrawLocked:
 					return false; // Still doing 3d rendering/rasterizing.
