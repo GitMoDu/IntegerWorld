@@ -31,6 +31,7 @@ namespace IntegerWorld
 				uint32_t TargetPeriod;
 
 			private:
+				AlphaRandomDitherer AlphaDitherer{};
 				uint32_t LastPush = 0;
 				SurfaceStateEnum State = SurfaceStateEnum::Disabled;
 
@@ -77,7 +78,6 @@ namespace IntegerWorld
 						{
 							// Blank screen before clearing buffer and starting drawing.
 							Display.changeMode(SSD_13XX_modes::ALL_OFF);
-							//Display.changeMode(SSD_13XX_modes::DISP_OFF);
 						}
 						Display.fillScreen(0);
 						State = SurfaceStateEnum::DrawLocked;
@@ -107,8 +107,8 @@ namespace IntegerWorld
 			public:// Buffer window interface.
 				void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) final
 				{
-					width = Display.width();
-					height = Display.height();
+					width = 96;// Display.width();
+					height = 64;// Display.height();
 					colorDepth = 16; // 16 bit color.
 				}
 
@@ -148,41 +148,51 @@ namespace IntegerWorld
 					Display.fillRect(x1, y1, x2 - x1 + 1, y2 - y1 + 1, GetNativeColor(color));
 				}
 
-			protected:
-				//bool StartScreen() final
-				//{
-				//	Display.begin();
-				//	Display.setSPISpeed(MinValue(uint32_t(20000000), uint32_t(F_CPU / 1)));
+				void PixelBlendAlpha(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use dithering to decide whether to draw the pixel based on its alpha value.
+					if (AlphaDitherer.Dither(Rgb8::Alpha(color)))
+					{
+						Display.drawPixel(x, y, GetNativeColor(color));
+					}
+				}
 
-				//	return true;
-				//}
+				void PixelBlendAdd(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use Multiply blend mode for add in direct draw mode.
+					PixelBlendMultiply(color, x, y);
+				}
 
-				//void OnDrawStart() final
-				//{
-				//	if (BfiEnabled)
-				//	{
-				//		// Blank screen before clearing buffer and starting drawing.
-				//		Display.sendCommand(SSD1331_CMD_DISPLAYALLOFF);
-				//	}
-				//	digitalWrite(3, 0);
-				//}
+				void PixelBlendSubtract(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Approximate subtract blend mode by inverting the color and using reversed dithering.
+					if (!AlphaDitherer.Dither(INT8_MAX))
+					{
+						Display.drawPixel(x, y, ~GetNativeColor(color));
+					}
+				}
 
-				//void OnDrawEnd() final
-				//{
-				//	if (BfiEnabled)
-				//	{
-				//		// Show drawn content.
-				//		Display.sendCommand(SSD1331_CMD_NORMALDISPLAY);
-				//	}
-				//	digitalWrite(3, HIGH);
-				//}
+				void PixelBlendMultiply(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use 50/50 dithering to decide whether to draw the pixel based on its alpha value.
+					if (AlphaDitherer.Dither(INT8_MAX))
+					{
+						Display.drawPixel(x, y, GetNativeColor(color));
+					}
+				}
+
+				void PixelBlendScreen(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use Multiply blend mode for screen in direct draw mode.
+					PixelBlendMultiply(color, x, y);
+				}
 
 			private:
 				static constexpr uint16_t GetNativeColor(const Rgb8::color_t shaderColor)
 				{
-					return ((uint16_t)(Rgb8::R(shaderColor) >> 3) << 11)
-						| ((uint16_t)(Rgb8::G(shaderColor) >> 2) << 5)
-						| ((Rgb8::B(shaderColor) >> 3));
+					return ((uint16_t)(Rgb8::Red(shaderColor) >> 3) << 11)
+						| ((uint16_t)(Rgb8::Green(shaderColor) >> 2) << 5)
+						| ((Rgb8::Blue(shaderColor) >> 3));
 				}
 
 			};

@@ -1,6 +1,8 @@
 #ifndef _INTEGER_WORLD_ADAFRUIT_SURFACE_SSD1306_h
 #define _INTEGER_WORLD_ADAFRUIT_SURFACE_SSD1306_h
 
+#define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+
 #include "AdafruitSurface.h"
 #if defined(ARDUINO_ARCH_STM32F1)
 #include <Adafruit_SSD1306_STM32.h>
@@ -8,17 +10,16 @@
 #include <Adafruit_SSD1306.h>
 #endif
 
-
 namespace IntegerWorld
 {
 	namespace Adafruit
 	{
 		namespace Ssd1306I2c
 		{
-			class FramebufferSurface : public TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>
+			class FramebufferSurface : public TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SSD1306>
 			{
 			private:
-				using Base = TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>;
+				using Base = TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SSD1306>;
 
 			public:
 				static constexpr uint8_t DisplayWidth = 128;
@@ -60,10 +61,10 @@ namespace IntegerWorld
 
 		namespace Ssd1306Spi
 		{
-			class FramebufferSurface : public TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>
+			class FramebufferSurface : public TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SSD1306>
 			{
 			private:
-				using Base = TemplateAdafruitFramebufferSurface<Adafruit_SSD1306, AdafruitMonochromeColorConverter>;
+				using Base = TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SSD1306>;
 
 			public:
 				static constexpr uint8_t DisplayWidth = 128;

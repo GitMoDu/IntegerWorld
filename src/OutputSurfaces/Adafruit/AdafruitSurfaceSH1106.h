@@ -10,10 +10,10 @@ namespace IntegerWorld
 	{
 		namespace Sh1106Spi
 		{
-			class FramebufferSurface : public TemplateAdafruitFramebufferSurface<Adafruit_SH1106G, AdafruitMonochromeColorConverter>
+			class FramebufferSurface : public TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SH1106G>
 			{
 			private:
-				using Base = TemplateAdafruitFramebufferSurface<Adafruit_SH1106G, AdafruitMonochromeColorConverter>;
+				using Base = TemplateAdafruitFramebufferMonochromeSurface<Adafruit_SH1106G>;
 
 			public:
 				static constexpr uint8_t DisplayWidth = 128;

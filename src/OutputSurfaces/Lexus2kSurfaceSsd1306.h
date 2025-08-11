@@ -32,6 +32,7 @@ namespace IntegerWorld
 				uint32_t TargetPeriod;
 
 			private:
+				AlphaRandomDitherer AlphaDitherer{};
 				uint32_t LastPush = 0;
 				uint16_t LastColor = 0;
 				StateEnum State = StateEnum::Disabled;
@@ -125,6 +126,48 @@ namespace IntegerWorld
 					ssd1306_fillRect(x1, y1, x2, y2);
 				}
 
+				void PixelBlendAlpha(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use dithering to decide whether to draw the pixel based on its alpha value.
+					if (AlphaDitherer.Dither(Rgb8::Alpha(color)))
+					{
+						SetColor(GetNativeColor(color));
+						ssd1306_putPixel(x, y);
+					}
+				}
+
+				void PixelBlendAdd(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use Multiply blend mode for add in direct draw mode.
+					PixelBlendMultiply(color, x, y);
+				}
+
+				void PixelBlendSubtract(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Approximate subtract blend mode by inverting the color and using reversed dithering.
+					if (!AlphaDitherer.Dither(INT8_MAX))
+					{
+						SetColor(GetNativeColor(~color));
+						ssd1306_putPixel(x, y);
+					}
+				}
+
+				void PixelBlendMultiply(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use 50/50 dithering to decide whether to draw the pixel based on its alpha value.
+					if (AlphaDitherer.Dither(INT8_MAX))
+					{
+						SetColor(GetNativeColor(color));
+						ssd1306_putPixel(x, y);
+					}
+				}
+
+				void PixelBlendScreen(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+				{
+					// Use Multiply blend mode for screen in direct draw mode.
+					PixelBlendMultiply(color, x, y);
+				}
+
 			private:
 				void SetColor(const uint16_t color)
 				{
@@ -137,9 +180,9 @@ namespace IntegerWorld
 
 				static constexpr uint16_t GetNativeColor(const Rgb8::color_t shaderColor)
 				{
-					return UINT16_MAX * (Rgb8::R(shaderColor) >= ColorThreshold
-						|| Rgb8::G(shaderColor) >= ColorThreshold
-						|| Rgb8::B(shaderColor) >= ColorThreshold);
+					return UINT16_MAX * (Rgb8::Red(shaderColor) >= ColorThreshold
+						|| Rgb8::Green(shaderColor) >= ColorThreshold
+						|| Rgb8::Blue(shaderColor) >= ColorThreshold);
 				}
 			};
 		}

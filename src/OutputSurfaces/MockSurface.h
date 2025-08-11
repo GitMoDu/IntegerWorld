@@ -32,6 +32,11 @@ namespace IntegerWorld
 			void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final {}
 			void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final {}
 
+			void PixelBlendAlpha(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
+			void PixelBlendAdd(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
+			void PixelBlendSubtract(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
+			void PixelBlendMultiply(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
+			void PixelBlendScreen(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
 		};
 	}
 }

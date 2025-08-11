@@ -5,6 +5,25 @@
 
 namespace IntegerWorld
 {
+	/// <summary>
+	/// Implements a random dithering algorithm for alpha values using a simple pseudo-random number generator.
+	/// </summary>
+	class AlphaRandomDitherer
+	{
+	private:
+		uint16_t rng = 42;
+
+	public:
+		bool Dither(const uint8_t alpha)
+		{
+			rng ^= rng << 7;
+			rng ^= rng >> 9;
+			rng ^= rng << 8;
+
+			return alpha > uint8_t(rng);
+		}
+	};
+
 	class WindowRasterizer
 	{
 	private:
@@ -418,6 +437,61 @@ namespace IntegerWorld
 		void Fill(const Rgb8::color_t color)
 		{
 			Surface.RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
+		}
+
+		void BlendPixel(const Rgb8::color_t color, const int16_t x, const int16_t y, pixel_blend_mode_t blendMode)
+		{
+			if (IsInsideWindow(x, y))
+			{
+				switch (blendMode)
+				{
+				case pixel_blend_mode_t::Alpha:
+					Surface.PixelBlendAlpha(color, x, y);
+					break;
+				case pixel_blend_mode_t::Add:
+					Surface.PixelBlendAdd(color, x, y);
+					break;
+				case pixel_blend_mode_t::Subtract:
+					Surface.PixelBlendSubtract(color, x, y);
+					break;
+				case pixel_blend_mode_t::Multiply:
+					Surface.PixelBlendMultiply(color, x, y);
+					break;
+				case pixel_blend_mode_t::Screen:
+					Surface.PixelBlendScreen(color, x, y);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		template<pixel_blend_mode_t blendMode = pixel_blend_mode_t::Alpha>
+		void BlendPixel(const Rgb8::color_t color, const int16_t x, const int16_t y)
+		{
+			if (IsInsideWindow(x, y))
+			{
+				switch (blendMode)
+				{
+				case pixel_blend_mode_t::Alpha:
+					Surface.PixelBlendAlpha(color, x, y);
+					break;
+				case pixel_blend_mode_t::Add:
+					Surface.PixelBlendAdd(color, x, y);
+					break;
+				case pixel_blend_mode_t::Subtract:
+					Surface.PixelBlendSubtract(color, x, y);
+					break;
+				case pixel_blend_mode_t::Multiply:
+					Surface.PixelBlendMultiply(color, x, y);
+					break;
+				case pixel_blend_mode_t::Screen:
+					Surface.PixelBlendScreen(color, x, y);
+					break;
+				default:
+					break;
+				}
+			}
 		}
 
 	public: // Screen raster interface.
@@ -846,8 +920,8 @@ namespace IntegerWorld
 		/// <param name="y">Reference to the y-coordinate to clamp. Modified in place if out of bounds.</param>
 		void LimitToWindow(int16_t& x, int16_t& y) const
 		{
-			x = LimitValue(x, int16_t(0), int16_t(SurfaceWidth - 1));
-			y = LimitValue(y, int16_t(0), int16_t(SurfaceHeight - 1));
+			x = LimitValue<int16_t>(x, 0, SurfaceWidth - 1);
+			y = LimitValue<int16_t>(y, 0, SurfaceHeight - 1);
 		}
 
 	private:
@@ -870,7 +944,7 @@ namespace IntegerWorld
 				x1 = 0;
 			}
 			// Right
-			else if (x1 >= SurfaceWidth && dx != 0)
+			else if (x1 >= (SurfaceWidth - 1) && dx != 0)
 			{
 				y1 += (int16_t)(((int32_t)(SurfaceWidth - 1 - x1) * (int32_t)dy) / (int32_t)dx);
 				x1 = SurfaceWidth - 1;
@@ -883,7 +957,7 @@ namespace IntegerWorld
 				y1 = 0;
 			}
 			// Bottom
-			else if (y1 >= SurfaceHeight && dy != 0)
+			else if (y1 >= (SurfaceHeight - 1) && dy != 0)
 			{
 				x1 += (int16_t)(((int32_t)(SurfaceHeight - 1 - y1) * (int32_t)dx) / (int32_t)dy);
 				y1 = SurfaceHeight - 1;

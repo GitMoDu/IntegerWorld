@@ -204,6 +204,31 @@ namespace IntegerWorld
 				GetSurfaceDimensions(Framebuffer, width, height, colorDepth);
 			}
 
+			void PixelBlendAlpha(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+			{
+				Framebuffer->PixelBlendAlpha(GetNativeColor(color), x + OffsetX, y + OffsetY, Rgb8::Alpha(color));
+			}
+
+			void PixelBlendAdd(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+			{
+				Framebuffer->PixelBlendAdd(GetNativeColor(color), x + OffsetX, y + OffsetY);
+			}
+
+			void PixelBlendSubtract(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+			{
+				Framebuffer->PixelBlendSubtract(GetNativeColor(color), x + OffsetX, y + OffsetY);
+			}
+
+			void PixelBlendMultiply(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+			{
+				Framebuffer->PixelBlendMultiply(GetNativeColor(color), x + OffsetX, y + OffsetY);
+			}
+
+			void PixelBlendScreen(const Rgb8::color_t color, const int16_t x, const int16_t y) final
+			{
+				Framebuffer->PixelBlendScreen(GetNativeColor(color), x + OffsetX, y + OffsetY);
+			}
+
 			void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) final
 			{
 				Framebuffer->Pixel(GetNativeColor(color), x + OffsetX, y + OffsetY);
