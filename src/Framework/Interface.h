@@ -15,15 +15,16 @@ namespace IntegerWorld
 	/// </summary>
 	struct ISceneShader
 	{
-		virtual void Shade(color_fraction16_t& color, const material_t& material) = 0;
-		virtual void Shade(color_fraction16_t& color, const material_t& material, const world_position_shade_t& shade) = 0;
-		virtual void Shade(color_fraction16_t& color, const material_t& material, const world_position_normal_shade_t& shade) = 0;
+		virtual void Shade(Rgb8::color_t& color, const material_t& material) = 0;
+		virtual void Shade(Rgb8::color_t& color, const material_t& material, const world_position_shade_t& shade) = 0;
+		virtual void Shade(Rgb8::color_t& color, const material_t& material, const world_position_normal_shade_t& shade) = 0;
 	};
 
 	struct ILightSource
 	{
-		virtual void GetLighting(color_fraction16_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_shade_t& shade) = 0;
-		virtual void GetLighting(color_fraction16_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_normal_shade_t& shade) = 0;
+		virtual void GetLightColor(Rgb8::color_t& color) = 0;
+		virtual void GetLighting(Rgb8::color_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_shade_t& shade) = 0;
+		virtual void GetLighting(Rgb8::color_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_normal_shade_t& shade) = 0;
 	};
 
 	template<typename fragment_t>

@@ -27,10 +27,11 @@ namespace IntegerWorld
 			}
 #endif
 
-			void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) final {}
-			void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final {}
-			void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final {}
-			void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final {}
+			void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) final {}
+			void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final {}
+			void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final {}
+			void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final {}
+
 		};
 	}
 }

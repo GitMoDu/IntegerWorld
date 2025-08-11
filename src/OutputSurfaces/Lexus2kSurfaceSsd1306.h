@@ -26,7 +26,7 @@ namespace IntegerWorld
 					DrawLocked
 				};
 
-				static constexpr ufraction16_t ColorThreshold = UFRACTION16_1X / 2;
+				static constexpr uint8_t ColorThreshold = UINT8_MAX / 2;
 
 			public:
 				uint32_t TargetPeriod;
@@ -102,24 +102,24 @@ namespace IntegerWorld
 					colorDepth = 1;
 				}
 
-				void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) final
+				void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) final
 				{
 					SetColor(GetNativeColor(color));
 					ssd1306_putPixel(x, y);
 				}
 
-				void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+				void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 				{
 					SetColor(GetNativeColor(color));
 					ssd1306_drawLine(x1, y1, x2, y2);
 				}
 
-				void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
+				void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
 				{
 					//TODO:
 				}
 
-				void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+				void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 				{
 					SetColor(GetNativeColor(color));
 					ssd1306_fillRect(x1, y1, x2, y2);
@@ -135,9 +135,11 @@ namespace IntegerWorld
 					}
 				}
 
-				static constexpr uint16_t GetNativeColor(const color_fraction16_t shaderColor)
+				static constexpr uint16_t GetNativeColor(const Rgb8::color_t shaderColor)
 				{
-					return (shaderColor.r >= ColorThreshold || shaderColor.g >= ColorThreshold || shaderColor.b >= ColorThreshold) * UINT16_MAX;
+					return UINT16_MAX * (Rgb8::R(shaderColor) >= ColorThreshold
+						|| Rgb8::G(shaderColor) >= ColorThreshold
+						|| Rgb8::B(shaderColor) >= ColorThreshold);
 				}
 			};
 		}

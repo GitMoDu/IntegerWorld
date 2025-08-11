@@ -4,14 +4,11 @@
 #include <IntegerSignal.h>
 #include <IntegerTrigonometry16.h>
 
-#include "ColorFraction.h"
 #include "Vertex.h"
 #include "Transform.h"
 
 namespace IntegerWorld
 {
-	using namespace ColorFraction;
-
 	struct edge_line_t
 	{
 		uint16_t start;
@@ -46,7 +43,7 @@ namespace IntegerWorld
 	struct base_fragment_t
 	{
 		material_t material;
-		color_fraction16_t color;
+		Rgb8::color_t color;
 	};
 
 	struct point_fragment_t : base_fragment_t

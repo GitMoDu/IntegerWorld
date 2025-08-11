@@ -6,7 +6,6 @@
 
 namespace IntegerWorld
 {
-	using namespace ColorFraction;
 
 	/// <summary>
 	/// Interface for output framebuffer/screen.
@@ -25,10 +24,10 @@ namespace IntegerWorld
 		virtual void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) = 0;
 
 	public:// Buffer drawing interface.
-		virtual void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) = 0;
-		virtual void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
-		virtual void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) = 0;
-		virtual void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
+		virtual void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) = 0;
+		virtual void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
+		virtual void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) = 0;
+		virtual void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) = 0;
 	};
 }
 #endif

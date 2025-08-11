@@ -175,9 +175,7 @@ namespace IntegerWorld
 	protected:
 		virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
 		{
-			fragment.color.r = UFRACTION16_1X;
-			fragment.color.g = UFRACTION16_1X;
-			fragment.color.b = UFRACTION16_1X;
+			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
 			fragment.material.Diffuse = UFRACTION8_1X;
 			fragment.material.Specular = 0;
@@ -402,7 +400,7 @@ namespace IntegerWorld
 	class MeshWorldSingleColorSingleMaterialObject : public MeshWorldObject<vertexCount, triangleCount>
 	{
 	public:
-		color_fraction16_t Color{ UFRACTION16_1X, UFRACTION16_1X ,UFRACTION16_1X };
+		Rgb8::color_t Color = Rgb8::WHITE;
 		material_t Material{ UFRACTION8_1X, 0, 0, 0 };
 
 	public:

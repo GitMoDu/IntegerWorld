@@ -21,31 +21,32 @@ namespace IntegerWorld
 			uint8_t Intensity = 0;
 
 		public:
-			void SetColor(const color_fraction16_t& color)
+			void SetColor(const Rgb8::color_t color)
 			{
-				const ufraction16_t gray = ((uint32_t(color.r) * 299) + (uint32_t(color.g) * 587) + (uint32_t(color.b) * 114)) / 1000;
+
+				const ufraction16_t gray = ((uint32_t(Rgb8::Red(color)) * 299) + (uint32_t(Rgb8::Green(color)) * 587) + (uint32_t(Rgb8::Blue(color)) * 114)) / 1000;
 				Intensity = Fraction::Scale(gray, uint8_t(15));
 			}
 
 		public:
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const uint8_t threshold = bayer4x4[y & 3][x & 3];
 
 				if (Intensity >= threshold)
 				{
-					color = ColorFraction::COLOR_WHITE;
+					color = Rgb8::WHITE;
 				}
 				else
 				{
-					color = ColorFraction::COLOR_BLACK;
+					color = Rgb8::BLACK;
 				}
 
 				return true;
 			}
 		} MonochromeDitherShader{};
 
-		color_fraction16_t FragmentColor{};
+		Rgb8::color_t FragmentColor{};
 
 	public:
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
@@ -69,14 +70,14 @@ namespace IntegerWorld
 		struct GradientShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
 			world_position_normal_shade_t Shade{};
-			const material_t* material= nullptr;
+			const material_t* material = nullptr;
 			//const triangle_fragment_t* fragment = nullptr;
 			ISceneShader* sceneShader = nullptr;
-			color_fraction16_t ColorA{ UFRACTION16_1X, 0, 0 }; // Vertex A color (red)
-			color_fraction16_t ColorB{ 0, UFRACTION16_1X, 0 }; // Vertex B color (green)
-			color_fraction16_t ColorC{ 0, 0, UFRACTION16_1X }; // Vertex C color (blue)
+			Rgb8::color_t ColorA = Rgb8::RED; // Vertex A color (red)
+			Rgb8::color_t ColorB = Rgb8::GREEN; // Vertex B color (green)
+			Rgb8::color_t ColorC = Rgb8::BLUE; // Vertex C color (blue)
 
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				// Barycentric coordinates
 				int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
@@ -88,14 +89,14 @@ namespace IntegerWorld
 				if (w1 < 0) w1 = 0; else if (w1 > TriangleArea) w1 = TriangleArea;
 				if (w2 < 0) w2 = 0; else if (w2 > TriangleArea) w2 = TriangleArea;
 
-
 				// Interpolate each color channel.
-				color.r = ((w0 * ColorA.r) + (w1 * ColorB.r) + (w2 * ColorC.r)) / TriangleArea;
-				color.g = ((w0 * ColorA.g) + (w1 * ColorB.g) + (w2 * ColorC.g)) / TriangleArea;
-				color.b = ((w0 * ColorA.b) + (w1 * ColorB.b) + (w2 * ColorC.b)) / TriangleArea;
+				color = Rgb8::Color(
+					((w0 * Rgb8::Red(ColorA)) + (w1 * Rgb8::Red(ColorB)) + (w2 * Rgb8::Red(ColorC))) / TriangleArea,
+					((w0 * Rgb8::Green(ColorA)) + (w1 * Rgb8::Green(ColorB)) + (w2 * Rgb8::Green(ColorC))) / TriangleArea,
+					((w0 * Rgb8::Blue(ColorA)) + (w1 * Rgb8::Blue(ColorB)) + (w2 * Rgb8::Blue(ColorC))) / TriangleArea);
 
 				if (sceneShader != nullptr)
-				{				
+				{
 					sceneShader->Shade(color, *material, Shade);
 				}
 
@@ -104,7 +105,7 @@ namespace IntegerWorld
 		} GradientShader{};
 
 	public:
-		void SetColors(const color_fraction16_t& colorA, const color_fraction16_t& colorB, const color_fraction16_t& colorC)
+		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, const Rgb8::color_t colorC)
 		{
 			GradientShader.ColorA = colorA;
 			GradientShader.ColorB = colorB;
@@ -141,11 +142,11 @@ namespace IntegerWorld
 	private:
 		struct StripeShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			color_fraction16_t ColorA = ColorFraction::COLOR_BLACK;
-			color_fraction16_t ColorB = ColorFraction::COLOR_BLACK;
+			Rgb8::color_t ColorA = Rgb8::BLACK;
+			Rgb8::color_t ColorB = Rgb8::BLACK;
 			uint8_t StripeCount = 8;
 
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 
@@ -178,7 +179,7 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
-			StripeShader.ColorA = ColorFraction::COLOR_WHITE;
+			StripeShader.ColorA = Rgb8::WHITE;
 			StripeShader.ColorB = fragment.color;
 			if (StripeShader.SetFragmentData(fragment))
 			{
@@ -192,12 +193,12 @@ namespace IntegerWorld
 	private:
 		struct SquareShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			color_fraction16_t ColorA = ColorFraction::COLOR_WHITE;
-			color_fraction16_t ColorB = ColorFraction::COLOR_BLACK;
+			Rgb8::color_t ColorA = Rgb8::WHITE;
+			Rgb8::color_t ColorB = Rgb8::BLACK;
 
 			uint8_t CheckerSize = 4;
 
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
@@ -211,12 +212,12 @@ namespace IntegerWorld
 
 		struct DistortedShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			color_fraction16_t ColorA = ColorFraction::COLOR_WHITE;
-			color_fraction16_t ColorB = ColorFraction::COLOR_BLACK;
+			Rgb8::color_t ColorA = Rgb8::WHITE;
+			Rgb8::color_t ColorB = Rgb8::BLACK;
 
 			uint8_t CheckerSize = 2;
 
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
@@ -241,11 +242,11 @@ namespace IntegerWorld
 		SquareShaderFunctor CheckerShader{};
 
 	public:
-		color_fraction16_t ColorA{ UFRACTION16_1X, UFRACTION16_1X, UFRACTION16_1X };
+		Rgb8::color_t ColorA = Rgb8::WHITE;
 
-		color_fraction16_t ColorB{ 0, 0, 0 };
+		Rgb8::color_t ColorB = Rgb8::BLACK;
 
-		void SetColors(const color_fraction16_t& colorA, const color_fraction16_t& colorB, uint8_t size = 8)
+		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, uint8_t size = 8)
 		{
 			CheckerShader.ColorA = colorA;
 			CheckerShader.ColorB = colorB;
@@ -270,11 +271,11 @@ namespace IntegerWorld
 	private:
 		struct BandShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			color_fraction16_t ColorA{ UFRACTION16_1X, 0, 0 };
-			color_fraction16_t ColorB{ 0, UFRACTION16_1X, 0 };
-			color_fraction16_t ColorC{ 0, 0, UFRACTION16_1X };
+			Rgb8::color_t ColorA = Rgb8::RED;
+			Rgb8::color_t ColorB = Rgb8::GREEN;
+			Rgb8::color_t ColorC = Rgb8::BLUE;
 
-			bool operator()(color_fraction16_t& color, const int16_t x, const int16_t y)
+			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
@@ -292,7 +293,7 @@ namespace IntegerWorld
 		} BandShader{};
 
 	public:
-		void SetColors(const color_fraction16_t& colorA, const color_fraction16_t& colorB, const color_fraction16_t& colorC)
+		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, const Rgb8::color_t colorC)
 		{
 			BandShader.ColorA = colorA;
 			BandShader.ColorB = colorB;

@@ -172,9 +172,7 @@ namespace IntegerWorld
 	protected:
 		virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
 		{
-			fragment.color.r = UFRACTION16_1X;
-			fragment.color.g = UFRACTION16_1X;
-			fragment.color.b = UFRACTION16_1X;
+			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
 			fragment.material.Diffuse = UFRACTION8_1X;
 			fragment.material.Specular = 0;
@@ -302,9 +300,7 @@ namespace IntegerWorld
 	protected:
 		virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
 		{
-			fragment.color.r = UFRACTION16_1X;
-			fragment.color.g = UFRACTION16_1X;
-			fragment.color.b = UFRACTION16_1X;
+			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
 			fragment.material.Diffuse = UFRACTION8_1X;
 			fragment.material.Specular = 0;

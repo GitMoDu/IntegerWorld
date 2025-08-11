@@ -1,7 +1,6 @@
 #ifndef _INTEGER_WORLD_WINDOW_RASTERIZER_h
 #define _INTEGER_WORLD_WINDOW_RASTERIZER_h
 
-#include "ColorFraction.h"
 #include "IOutputSurface.h"
 
 namespace IntegerWorld
@@ -46,10 +45,10 @@ namespace IntegerWorld
 		/// <summary>
 		/// Draws a point at the specified coordinates with the given color, if the point is inside the window.
 		/// </summary>
-		/// <param name="color">The color to use for the point, represented as a color_fraction16_t value.</param>
+		/// <param name="color">The color to use for the point, represented as a Rgb8::color_t value.</param>
 		/// <param name="x">The x-coordinate of the point.</param>
 		/// <param name="y">The y-coordinate of the point.</param>
-		void DrawPoint(const color_fraction16_t color, const int16_t x, const int16_t y)
+		void DrawPixel(const Rgb8::color_t color, const int16_t x, const int16_t y)
 		{
 			if (IsInsideWindow(x, y))
 			{
@@ -62,23 +61,23 @@ namespace IntegerWorld
 		/// </summary>
 		/// <param name="color">The color to use when drawing the point.</param>
 		/// <param name="point">The 3D vertex specifying the location of the point.</param>
-		void DrawPoint(const color_fraction16_t color, const vertex16_t point)
+		void DrawPoint(const Rgb8::color_t color, const vertex16_t point)
 		{
 			if (point.z >= 0)
 			{
-				DrawPoint(color, point.x, point.y);
+				DrawPixel(color, point.x, point.y);
 			}
 		}
 
 		/// <summary>
 		/// Draws a line between two points, clipping the line to the window boundaries if necessary.
 		/// </summary>
-		/// <param name="color">The color to use for the line, specified as a color_fraction16_t value.</param>
+		/// <param name="color">The color to use for the line, specified as a Rgb8::color_t value.</param>
 		/// <param name="x1">The x-coordinate of the starting point of the line.</param>
 		/// <param name="y1">The y-coordinate of the starting point of the line.</param>
 		/// <param name="x2">The x-coordinate of the ending point of the line.</param>
 		/// <param name="y2">The y-coordinate of the ending point of the line.</param>
-		void DrawLine(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2)
+		void DrawLine(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2)
 		{
 			const bool in1 = IsInsideWindow(x1, y1);
 			const bool in2 = IsInsideWindow(x2, y2);
@@ -138,10 +137,10 @@ namespace IntegerWorld
 		/// <summary>
 		/// Draws a 3D line segment projected onto a 2D screen, handling cases where endpoints may be out of bounds in the z-direction.
 		/// </summary>
-		/// <param name="color">The color to use when drawing the line, specified as a color_fraction16_t value.</param>
+		/// <param name="color">The color to use when drawing the line, specified as a Rgb8::color_t value.</param>
 		/// <param name="start">The starting vertex of the line, specified as a vertex16_t structure containing x, y, and z coordinates.</param>
 		/// <param name="end">The ending vertex of the line, specified as a vertex16_t structure containing x, y, and z coordinates.</param>
-		void DrawLine(const color_fraction16_t color, const vertex16_t start, const vertex16_t end)
+		void DrawLine(const Rgb8::color_t color, const vertex16_t start, const vertex16_t end)
 		{
 			if (start.z == end.z)
 			{
@@ -201,7 +200,7 @@ namespace IntegerWorld
 					else
 					{
 						// Degenerate line.
-						DrawPoint(color, x2, y2);
+						DrawPixel(color, x2, y2);
 					}
 				}
 			}
@@ -210,14 +209,14 @@ namespace IntegerWorld
 		/// <summary>
 		/// Draws a filled triangle with the specified color and vertex coordinates, clipping it to the window boundaries if necessary.
 		/// </summary>
-		/// <param name="color">The color to fill the triangle, specified as a color_fraction16_t value.</param>
+		/// <param name="color">The color to fill the triangle, specified as a Rgb8::color_t value.</param>
 		/// <param name="x1">The x-coordinate of the first vertex of the triangle.</param>
 		/// <param name="y1">The y-coordinate of the first vertex of the triangle.</param>
 		/// <param name="x2">The x-coordinate of the second vertex of the triangle.</param>
 		/// <param name="y2">The y-coordinate of the second vertex of the triangle.</param>
 		/// <param name="x3">The x-coordinate of the third vertex of the triangle.</param>
 		/// <param name="y3">The y-coordinate of the third vertex of the triangle.</param>
-		void DrawTriangle(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3)
+		void DrawTriangle(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3)
 		{
 			// Count how many vertices are inside the window
 			const bool in1 = IsInsideWindow(x1, y1);
@@ -321,7 +320,7 @@ namespace IntegerWorld
 		/// <param name="a">The first vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="b">The second vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="c">The third vertex of the triangle, including x, y, and z coordinates.</param>
-		void DrawTriangle(const color_fraction16_t color, const vertex16_t a, const vertex16_t b, const vertex16_t c)
+		void DrawTriangle(const Rgb8::color_t color, const vertex16_t a, const vertex16_t b, const vertex16_t c)
 		{
 			if (a.z == b.z
 				&& a.z == c.z)
@@ -368,7 +367,7 @@ namespace IntegerWorld
 		/// <param name="y1">The y-coordinate of the first corner of the rectangle.</param>
 		/// <param name="x2">The x-coordinate of the opposite corner of the rectangle.</param>
 		/// <param name="y2">The y-coordinate of the opposite corner of the rectangle.</param>
-		void DrawRectangle(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2)
+		void DrawRectangle(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2)
 		{
 			uint8_t inCount = IsInsideWindow(x1, y1);
 			inCount += IsInsideWindow(x1, y2);
@@ -416,7 +415,7 @@ namespace IntegerWorld
 		/// Fills the entire drawing surface with the specified color.
 		/// </summary>
 		/// <param name="color">The color to use for filling surface</param>
-		void FillSurface(const color_fraction16_t color)
+		void Fill(const Rgb8::color_t color)
 		{
 			Surface.RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
 		}
@@ -426,7 +425,7 @@ namespace IntegerWorld
 		/// Rasterizes a line between two points, applying a custom pixel shader to each pixel.
 		/// The line is clipped to the window boundaries as needed.
 		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (Rgb8::color_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
 		/// <param name="x1">The x-coordinate of the starting point of the line.</param>
 		/// <param name="y1">The y-coordinate of the starting point of the line.</param>
 		/// <param name="x2">The x-coordinate of the ending point of the line.</param>
@@ -472,7 +471,7 @@ namespace IntegerWorld
 					return; // No visible segment after clipping.
 			}
 
-			color_fraction16_t color{};
+			Rgb8::color_t color{};
 			if (x2c == x1c && y2c == y1c)
 			{
 				// Degenerate line, only draw a single pixel.
@@ -520,7 +519,7 @@ namespace IntegerWorld
 		/// Rasterizes (fills) a triangle using a custom pixel shader, handling window clipping and degenerate cases.
 		/// The pixel shader is invoked for each pixel within the triangle, allowing for per-pixel color and visibility control.
 		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t& color, int16_t x, int16_t x) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (Rgb8::color_t& color, int16_t x, int16_t x) and return a bool indicating whether to draw the pixel.</typeparam>
 		/// <param name="x1">The x-coordinate of the first vertex of the triangle.</param>
 		/// <param name="y1">The y-coordinate of the first vertex of the triangle.</param>
 		/// <param name="x2">The x-coordinate of the second vertex of the triangle.</param>
@@ -619,7 +618,7 @@ namespace IntegerWorld
 		/// <summary>
 		/// Renders a rectangle on the framebuffer using a custom pixel shader, handling clipping to the surface boundaries and degenerate cases (lines or points).
 		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int16_t, int16_t) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (Rgb8::color_t&, int16_t, int16_t) and return a bool indicating whether to draw the pixel.</typeparam>
 		/// <param name="x1">The x-coordinate of the first corner of the rectangle.</param>
 		/// <param name="y1">The y-coordinate of the first corner of the rectangle.</param>
 		/// <param name="x2">The x-coordinate of the opposite corner of the rectangle.</param>
@@ -635,7 +634,7 @@ namespace IntegerWorld
 
 			if (inCount > 0)
 			{
-				color_fraction16_t color{};
+				Rgb8::color_t color{};
 				const int16_t x1c = LimitValue(x1, int16_t(0), int16_t(SurfaceWidth - 1));
 				const int16_t x2c = LimitValue(x2, int16_t(0), int16_t(SurfaceWidth - 1));
 				const int16_t y1c = LimitValue(y1, int16_t(0), int16_t(SurfaceHeight - 1));
@@ -713,7 +712,7 @@ namespace IntegerWorld
 		/// Rasterizes a 3D line segment with Z-plane clipping and applying a custom pixel shader to each pixel.
 		/// The line is clipped to the window boundaries as needed.
 		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (Rgb8::color_t&, int, int) and return a bool indicating whether to draw the pixel.</typeparam>
 		/// <param name="start">The starting vertex of the line segment, containing x, y, and z coordinates.</param>
 		/// <param name="end">The ending vertex of the line segment, containing x, y, and z coordinates.</param>
 		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the line. It is called with the color, relative x offset, and relative y offset.</param>
@@ -772,7 +771,7 @@ namespace IntegerWorld
 		/// Handles z-plane clipping: only pixels with z > 0 are considered visible.
 		/// The pixel shader is invoked for each pixel within the visible portion of the triangle, allowing for per-pixel color and visibility control.
 		/// </summary>
-		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (color_fraction16_t& color, int16_t x, int16_tx) and return a bool indicating whether to draw the pixel.</typeparam>
+		/// <typeparam name="PixelShader">The type of the pixel shader callable, which must be invocable with (Rgb8::color_t& color, int16_t x, int16_tx) and return a bool indicating whether to draw the pixel.</typeparam>
 		/// <param name="a">The first vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="b">The second vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="c">The third vertex of the triangle, including x, y, and z coordinates.</param>
@@ -942,7 +941,7 @@ namespace IntegerWorld
 	private:
 		// Diagonal (Bresenham) Line implementation based on https://www.geeksforgeeks.org/bresenhams-line-generation-algorithm/
 		template<typename PixelShader>
-		void BresenhamLineShade(color_fraction16_t& color, int16_t x1, int16_t y1,
+		void BresenhamLineShade(Rgb8::color_t& color, int16_t x1, int16_t y1,
 			int16_t x2, int16_t y2,
 			PixelShader&& pixelShader)
 		{
@@ -980,7 +979,7 @@ namespace IntegerWorld
 			const int16_t x3, const int16_t y3,
 			PixelShader&& pixelShader)
 		{
-			color_fraction16_t color{};
+			Rgb8::color_t color{};
 
 			if (y1 == y3)
 			{
@@ -1047,7 +1046,7 @@ namespace IntegerWorld
 		template<typename PixelShader>
 		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
-			color_fraction16_t color{};
+			Rgb8::color_t color{};
 
 			if (y1 == y2)
 			{
@@ -1164,7 +1163,7 @@ namespace IntegerWorld
 			}
 			else if (y3 == y1) // Degenerate triangle.
 			{
-				color_fraction16_t color{};
+				Rgb8::color_t color{};
 				if (x1 == x3)
 				{
 					// Degenerate triangle, point only.

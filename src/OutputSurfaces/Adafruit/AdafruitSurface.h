@@ -24,16 +24,18 @@ namespace IntegerWorld
 
 		struct AdafruitMonochromeColorConverter
 		{
-			static constexpr ufraction16_t ColorThreshold = UFRACTION16_1X / 2;
+			static constexpr uint8_t ColorThreshold = UINT8_MAX / 2;
 
 			static constexpr uint8_t GetColorDepth()
 			{
 				return 1;
 			}
 
-			static constexpr uint16_t GetNativeColor(const color_fraction16_t shaderColor)
+			static constexpr uint16_t GetNativeColor(const Rgb8::color_t shaderColor)
 			{
-				return (shaderColor.r >= ColorThreshold || shaderColor.g >= ColorThreshold || shaderColor.b >= ColorThreshold) * 1;
+				return (Rgb8::R(shaderColor) >= ColorThreshold
+					|| Rgb8::G(shaderColor) >= ColorThreshold
+					|| Rgb8::B(shaderColor) >= ColorThreshold) * 1;
 			}
 		};
 
@@ -44,11 +46,11 @@ namespace IntegerWorld
 				return 16;
 			}
 
-			static constexpr uint16_t GetNativeColor(const color_fraction16_t shaderColor)
+			static constexpr uint16_t GetNativeColor(const Rgb8::color_t shaderColor)
 			{
-				return uint16_t(Fraction::Scale(shaderColor.r, uint8_t(31))) << 11
-					| Fraction::Scale(shaderColor.g, uint8_t(63)) << 5
-					| Fraction::Scale(shaderColor.b, uint8_t(31));
+				return (uint16_t(Rgb8::R(shaderColor) >> 3) << 11)
+					| (uint16_t(Rgb8::G(shaderColor) >> 2) << 5)
+					| (uint8_t(Rgb8::B(shaderColor) >> 3));
 			}
 		};
 
@@ -83,12 +85,12 @@ namespace IntegerWorld
 				colorDepth = ColorConverter::GetColorDepth();
 			}
 
-			void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) final
+			void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) final
 			{
 				Display.drawPixel(x, y, ColorConverter::GetNativeColor(color));
 			}
 
-			void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+			void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 			{
 				if (x1 == x2)
 				{
@@ -104,12 +106,12 @@ namespace IntegerWorld
 				}
 			}
 
-			void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
+			void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
 			{
 				Display.fillTriangle(x1, y1, x2, y2, x3, y3, ColorConverter::GetNativeColor(color));
 			}
 
-			void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+			void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 			{
 				Display.fillRect(x1, y1, x2 - x1, y2 - y1, ColorConverter::GetNativeColor(color));
 			}

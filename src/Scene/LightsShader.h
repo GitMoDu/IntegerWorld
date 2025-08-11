@@ -16,12 +16,12 @@ namespace IntegerWorld
 		uint8_t LightCount = 0;
 
 	public:
-		color_fraction16_t AmbientLight{};
+		Rgb8::color_t AmbientLight{};
 
 	private:
-		color_fraction16_t Tinted{};
-		color_fraction16_t LightColor{};
-		color_fraction16_t FragmentColor{};
+		Rgb8::color_t Tinted{};
+		Rgb8::color_t LightColor{};
+		Rgb8::color_t FragmentColor{};
 
 
 	public:
@@ -33,7 +33,7 @@ namespace IntegerWorld
 	public:
 		LightsShader() : ISceneShader() {}
 
-		void ClearLights() 
+		void ClearLights()
 		{
 			LightCount = 0;
 		}
@@ -54,51 +54,57 @@ namespace IntegerWorld
 		}
 
 	public:
-		void Shade(color_fraction16_t& color, const material_t& material) final
+		void Shade(Rgb8::color_t& color, const material_t& material) final
 		{
 			FragmentColor = color;
 			ApplyBaseLight(color, material);
 		}
 
-		void Shade(color_fraction16_t& color, const material_t& material, const world_position_shade_t& shade) final
+		void Shade(Rgb8::color_t& color, const material_t& material, const world_position_shade_t& shade) final
 		{
 			TemplateShade(color, material, shade);
 		}
 
-		void Shade(color_fraction16_t& color, const material_t& material, const world_position_normal_shade_t& shade) final
+		void Shade(Rgb8::color_t& color, const material_t& material, const world_position_normal_shade_t& shade) final
 		{
 			TemplateShade(color, material, shade);
 		}
 
 	protected:
-		void ColorMix(color_fraction16_t& color, const ufraction16_t rMix, const ufraction16_t gMix, const ufraction16_t bMix)
+		void ColorMix(Rgb8::color_t& color, const Rgb8::component_t rMix, const Rgb8::component_t gMix, const Rgb8::component_t bMix)
 		{
-			color.r = MinValue(uint32_t(UFRACTION16_1X), uint32_t(color.r + rMix));
-			color.g = MinValue(uint32_t(UFRACTION16_1X), uint32_t(color.g + gMix));
-			color.b = MinValue(uint32_t(UFRACTION16_1X), uint32_t(color.b + bMix));
+			color = Rgb8::Color(
+				uint8_t(MinValue(uint16_t(Rgb8::COMPONENT_MAX), uint16_t(Rgb8::Red(color) + rMix))),
+				uint8_t(MinValue(uint16_t(Rgb8::COMPONENT_MAX), uint16_t(Rgb8::Green(color) + gMix))),
+				uint8_t(MinValue(uint16_t(Rgb8::COMPONENT_MAX), uint16_t(Rgb8::Blue(color) + bMix))));
 		}
 
-		void ColorMix(color_fraction16_t& color, const color_fraction16_t mix)
+		void ColorMix(Rgb8::color_t& color, const Rgb8::color_t mix)
 		{
-			ColorMix(color, mix.r, mix.g, mix.b);
+			ColorMix(color, Rgb8::Red(mix), Rgb8::Green(mix), Rgb8::Blue(mix));
+		}
+
+		static Rgb8::color_t ColorMultiply(const Rgb8::color_t a, const Rgb8::color_t b)
+		{
+			return Rgb8::Color(
+				(uint16_t(Rgb8::Red(a)) * Rgb8::Red(b)) >> 8,
+				(uint16_t(Rgb8::Green(a)) * Rgb8::Green(b)) >> 8,
+				(uint16_t(Rgb8::Blue(a)) * Rgb8::Blue(b)) >> 8);
 		}
 
 	private:
-		void ApplyDiffuse(color_fraction16_t& color, const ufraction16_t diffuseWeight)
+		void ApplyDiffuse(Rgb8::color_t& color, const ufraction16_t diffuseWeight)
 		{
-			if (!DiffuseLightEnabled)
+			if (!DiffuseLightEnabled || diffuseWeight == 0)
 				return;
 
-			if (diffuseWeight > 0)
-			{
-				ColorMix(color,
-					Fraction::Scale(diffuseWeight, Fraction::Scale(FragmentColor.r, LightColor.r)),
-					Fraction::Scale(diffuseWeight, Fraction::Scale(FragmentColor.g, LightColor.g)),
-					Fraction::Scale(diffuseWeight, Fraction::Scale(FragmentColor.b, LightColor.b)));
-			}
+			ColorMix(color,
+				Fraction::Scale(diffuseWeight, uint8_t((uint16_t(Rgb8::Red(FragmentColor)) * Rgb8::Red(LightColor)) >> 8)),
+				Fraction::Scale(diffuseWeight, uint8_t((uint16_t(Rgb8::Green(FragmentColor)) * Rgb8::Green(LightColor)) >> 8)),
+				Fraction::Scale(diffuseWeight, uint8_t((uint16_t(Rgb8::Blue(FragmentColor)) * Rgb8::Blue(LightColor)) >> 8)));
 		}
 
-		void ApplySpecular(color_fraction16_t& color, const material_t& material, const ufraction16_t specularWeight)
+		void ApplySpecular(Rgb8::color_t& color, const material_t& material, const ufraction16_t specularWeight)
 		{
 			if (!SpecularLightEnabled)
 				return;
@@ -108,36 +114,39 @@ namespace IntegerWorld
 				// Metals tint the specular light at low specular fractions.
 				ColorMix(color,
 					Fraction::Scale(specularWeight,
-						Fraction::Interpolate(material.Metallic, LightColor.r, Fraction::Scale(specularWeight, FragmentColor.r))),
+						Fraction::Interpolate(material.Metallic, Rgb8::Red(LightColor), Fraction::Scale(specularWeight, Rgb8::Red(FragmentColor)))),
 					Fraction::Scale(specularWeight,
-						Fraction::Interpolate(material.Metallic, LightColor.g, Fraction::Scale(specularWeight, FragmentColor.g))),
+						Fraction::Interpolate(material.Metallic, Rgb8::Green(LightColor), Fraction::Scale(specularWeight, Rgb8::Green(FragmentColor)))),
 					Fraction::Scale(specularWeight,
-						Fraction::Interpolate(material.Metallic, LightColor.b, Fraction::Scale(specularWeight, FragmentColor.b))));
+						Fraction::Interpolate(material.Metallic, Rgb8::Blue(LightColor), Fraction::Scale(specularWeight, Rgb8::Blue(FragmentColor)))));
 			}
 		}
 
-		void ApplyBaseLight(color_fraction16_t& color, const material_t& material)
+		void ApplyBaseLight(Rgb8::color_t& color, const material_t& material)
 		{
-			// 15 bit output color components.
 			if (EmissiveLightEnabled && material.Emissive > 0)
 			{
 				// Apply emissivity first.
-				color.r = Fraction::Scale(material.Emissive, FragmentColor.r);
-				color.g = Fraction::Scale(material.Emissive, FragmentColor.g);
-				color.b = Fraction::Scale(material.Emissive, FragmentColor.b);
+				color = Rgb8::Color(
+					Fraction::Scale(material.Emissive, Rgb8::Red(FragmentColor)),
+					Fraction::Scale(material.Emissive, Rgb8::Green(FragmentColor)),
+					Fraction::Scale(material.Emissive, Rgb8::Blue(FragmentColor)));
 			}
 			else
 			{
-				color = { 0,0,0 };
+				color = Rgb8::BLACK;
 			}
 
 			// Apply ambient light next.
 			if (AmbientLightEnabled && material.Diffuse > 0)
 			{
 				ColorMix(color,
-					Fraction::Scale(material.Diffuse, Fraction::Scale(FragmentColor.r, AmbientLight.r)),
-					Fraction::Scale(material.Diffuse, Fraction::Scale(FragmentColor.g, AmbientLight.g)),
-					Fraction::Scale(material.Diffuse, Fraction::Scale(FragmentColor.b, AmbientLight.b)));
+					Fraction::Scale(material.Diffuse,
+						uint8_t((uint16_t(Rgb8::Red(FragmentColor)) * Rgb8::Red(AmbientLight)) >> 8)),
+					Fraction::Scale(material.Diffuse,
+						uint8_t((uint16_t(Rgb8::Green(FragmentColor)) * Rgb8::Green(AmbientLight)) >> 8)),
+					Fraction::Scale(material.Diffuse,
+						uint8_t((uint16_t(Rgb8::Blue(FragmentColor)) * Rgb8::Blue(AmbientLight)) >> 8)));
 			}
 		}
 
@@ -169,7 +178,7 @@ namespace IntegerWorld
 		}
 
 		template<typename shade_t>
-		void TemplateShade(color_fraction16_t& color, const material_t& material, const shade_t& shade)
+		void TemplateShade(Rgb8::color_t& color, const material_t& material, const shade_t& shade)
 		{
 			FragmentColor = color;
 			ApplyBaseLight(color, material);

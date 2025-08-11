@@ -199,42 +199,34 @@ namespace IntegerWorld
 				}
 			}
 
-			virtual void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) final
+			void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) final
 			{
 				GetSurfaceDimensions(Framebuffer, width, height, colorDepth);
 			}
 
-			virtual void Pixel(const color_fraction16_t color, const int16_t x, const int16_t y) final
+			void Pixel(const Rgb8::color_t color, const int16_t x, const int16_t y) final
 			{
 				Framebuffer->Pixel(GetNativeColor(color), x + OffsetX, y + OffsetY);
 			}
 
-			virtual void Line(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+			void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 			{
 				Framebuffer->Line(GetNativeColor(color), x1 + OffsetX, y1 + OffsetY, x2 + OffsetX, y2 + OffsetY);
-
 			}
-			virtual void TriangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
+
+			void TriangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3) final
 			{
 				Framebuffer->TriangleFill(GetNativeColor(color), x1 + OffsetX, y1 + OffsetY, x2 + OffsetX, y2 + OffsetY, x3 + OffsetX, y3 + OffsetY);
 			}
 
-			virtual void RectangleFill(const color_fraction16_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
+			void RectangleFill(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 			{
 				Framebuffer->RectangleFill(GetNativeColor(color), x1 + OffsetX, y1 + OffsetY, x2 + OffsetX, y2 + OffsetY);
 			}
 
-		private:
-			/// <summary>
-			/// Optmized convertion of fractions (15.5 bit) directly into 8:8:8 color space for native conversion.
-			/// </summary>
-			/// <param name="shaderColor">Engine native color in RGB ufraction16_t (15 bits).</param>
-			/// <returns></returns>
-			static constexpr Egfx::rgb_color_t GetNativeColor(const color_fraction16_t shaderColor)
+			static constexpr Egfx::rgb_color_t GetNativeColor(const Rgb8::color_t shaderColor)
 			{
-				return Egfx::Rgb::Color(ColorFraction::FractionToRgbValue(shaderColor.r),
-					ColorFraction::FractionToRgbValue(shaderColor.g),
-					ColorFraction::FractionToRgbValue(shaderColor.b));
+				return Egfx::Rgb::Color(shaderColor);
 			}
 		};
 	}
