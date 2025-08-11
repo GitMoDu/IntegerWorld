@@ -1,5 +1,5 @@
 /*
-* Integer Wrold Tiny Scene that fits in an AVR328 (Arduino OG).
+* Integer World Tiny Scene that fits in an AVR328 (Arduino OG).
 * Scene has no lights or scene shader.
 * Includes configurations for multiple screen drivers (uncomment driver and required include).
 * With DEMO_SCENE_EDGE_OBJECT: 2 edge objects. Without: 2 mesh objects.
@@ -113,12 +113,13 @@ void setup()
 	delay(1000);
 #endif
 
+	EngineRenderer.Start();
+
 	int16_t width, height;
 	uint8_t colorDepth;
 	Driver.GetSurfaceDimensions(width, height, colorDepth);
 
-	EngineRenderer.Start();
-	Scene.Start(EngineRenderer, colorDepth);
+	Scene.Start(EngineRenderer, width, height, colorDepth == 1);
 
 #if defined(DEBUG)
 	Serial.println(F("Integer World 3D Tiny Scenee"));

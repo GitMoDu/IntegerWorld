@@ -8,59 +8,26 @@ namespace Assets
 	using namespace Egfx;
 	using namespace IntegerWorld;
 
-	namespace Shapes
+	namespace Palletes
 	{
-		namespace ExampleCube
-		{
-			static constexpr vertex16_t Vertices[] PROGMEM
-			{
-				{-512, -512, -512},
-				{ 512, -512, -512},
-				{ 512,  512, -512},
-				{-512,  512, -512},
-				{-512, -512,  512},
-				{ 512, -512,  512},
-				{ 512,  512,  512},
-				{-512,  512,  512}
-			};
-			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
-
-			static constexpr triangle_face_t Triangles[] PROGMEM
-			{
-				{0, 2, 1}, {0, 3, 2},
-				{5, 7, 4}, {5, 6, 7},
-				{4, 3, 0}, {4, 7, 3},
-				{1, 6, 5}, {1, 2, 6},
-				{3, 6, 2}, {3, 7, 6},
-				{0, 5, 4}, {0, 1, 5}
-			};
-
-			constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
-			static constexpr uint32_t Colors[TriangleCount] PROGMEM
-			{
-				{0xFF0000}, {0xFF0000},
-				{0x00FF00}, {0x00FF00},
-				{0x0000FF}, {0x0000FF},
-				{0xFF0000}, {0xFF0000},
-				{0x00FF00}, {0x00FF00},
-				{0x0000FF}, {0x0000FF}
-			};
-		}
-
 		namespace Cube
 		{
-			static constexpr color_fraction16_t Pallete[TriangleCount]
+			static constexpr Rgb8::color_t Pallete[Shapes::Cube::TriangleCount]
 			{
-				ColorFraction::RgbToColorFraction(uint32_t(0xFF0000)),
-				ColorFraction::RgbToColorFraction(uint32_t(0x00FF00)),
-				ColorFraction::RgbToColorFraction(uint32_t(0x0000FF)),
-				ColorFraction::RgbToColorFraction(uint32_t(0xFFFF00)),
-				ColorFraction::RgbToColorFraction(uint32_t(0x00FFFF)),
-				ColorFraction::RgbToColorFraction(uint32_t(0xFF00FF))
+				0xFF0000,
+				0x00FF00,
+				0x0000FF,
+				0xFFFF00,
+				0x00FFFF,
+				0xFF00FF
 			};
+
 			constexpr uint8_t PalleteSize = sizeof(Pallete) / sizeof(Pallete[0]);
 		}
+	}
 
+	namespace Shapes
+	{
 		namespace Star
 		{
 			static constexpr int16_t scaleFactor = SHAPE_UNIT / 128;
@@ -248,19 +215,88 @@ namespace Assets
 
 	namespace Shaders
 	{
+		struct LightBillboardFragmentShader : IFragmentShader<billboard_fragment_t>
+		{
+			ILightSource* LightSource = nullptr;
+
+			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader) final
+			{
+				FragmentShade(rasterizer, fragment);
+			}
+
+			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment) final
+			{
+				Rgb8::color_t lightColor{};
+				if (LightSource == nullptr)
+					return;
+				else
+					LightSource->GetLightColor(lightColor);
+
+				if (lightColor == 0)
+					return;
+
+				int_fast16_t radius = SignedRightShift(fragment.bottomRightY - fragment.topLeftY, 1);
+
+				if (radius < 1)
+					return;
+
+				uint32_t radiusPower = int32_t(radius) * radius;
+
+				// Limit radius to prevent overflow.
+				if (radiusPower > INT16_MAX)
+				{
+					radiusPower = INT16_MAX;
+					radius = SquareRoot16(INT16_MAX);
+				}
+
+				const int_fast16_t centerX = SignedRightShift(fragment.bottomRightX + fragment.topLeftX, 1);
+				const int_fast16_t centerY = SignedRightShift(fragment.bottomRightY + fragment.topLeftY, 1);
+
+				Rgb8::color_t color = 0;
+				for (int_fast16_t y = 0; y < radius; y++)
+				{
+					for (int_fast16_t x = 0; x < radius; x++)
+					{
+						const uint32_t distancePower = ((uint32_t(x) * (x)) + (uint_fast16_t(y) * (y)));
+						const ufraction8_t distanceFraction = Fraction::GetUFraction8(distancePower, radiusPower);
+						const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
+
+						if (distanceFraction < UFRACTION8_1X)
+						{
+							const uint32_t distancePower = ((uint32_t(x) * (x)) + (uint_fast16_t(y) * (y)));
+							const ufraction8_t distanceFraction = Fraction::GetUFraction8(distancePower, radiusPower);
+							const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
+
+							if (distanceFraction < UFRACTION8_1X)
+							{
+								const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+								color = Rgb8::Color(
+									Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
+									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
+									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
+									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
+								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
+								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
+								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
+								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);
+							}
+						}
+					}
+				}
+			}
+		};
+
 		struct FloorFragmentShader : IFragmentShader<point_fragment_t>
 		{
 		private:
 			world_position_shade_t Shade{};
-			color_fraction16_t FragmentColor{};
+			Rgb8::color_t FragmentColor{};
 
 		public:
 			int16_t Radius = 1;
 
 		public:
-			FloorFragmentShader() {}
-
-			virtual void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
+			void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
 			{
 				FragmentColor = fragment.color;
 				Shade.positionWorld = fragment.world;
@@ -274,99 +310,6 @@ namespace Assets
 				FragmentColor = fragment.color;
 				rasterizer.DrawLine(FragmentColor, fragment.screen.x - Radius, fragment.screen.y, fragment.screen.x + Radius, fragment.screen.y);
 				rasterizer.DrawLine(FragmentColor, fragment.screen.x, fragment.screen.y - Radius, fragment.screen.x, fragment.screen.y + Radius);
-			}
-		};
-
-		class LightSourceFragmentShader : public IFragmentShader<point_fragment_t>
-		{
-		private:
-			class RaysShaderFunctor
-			{
-			private:
-				uint16_t rng = 42;
-
-			public:
-				color_fraction16_t outerColor{};
-				uint32_t radiusPower = 0;
-				int16_t centerX = 0;
-				int16_t centerY = 0;
-
-				RaysShaderFunctor() {}
-
-				bool operator()(color_fraction16_t& color, const int16_t x, int16_t y)
-				{
-					// Calculate point properties.
-					const int16_t xShifted = x - centerX;
-					const int16_t yShifted = y - centerY;
-					const uint32_t distancePower = ((int32_t(xShifted) * xShifted) + (int32_t(yShifted) * yShifted));
-
-					// Rng update every pixel, regardles of draw to keep entropy high.
-					rng ^= rng << 7;
-					rng ^= rng >> 9;
-					rng ^= rng << 8;
-					const uint8_t seed = rng & UINT8_MAX;
-
-					if (distancePower < radiusPower)
-					{
-						// Approximate a distance fraction.
-						const uint8_t distance = Fraction::GetUFraction8(distancePower, radiusPower);
-						const uint8_t proximity = UINT8_MAX - 1 - (distance << 1);
-
-						// Rng determines pixel visibility, to apply a dithered transparency according to distance from center.
-						if (seed < proximity)
-						{
-							// Convert distance to fraction to be used in color interpolation.
-							const ufraction8_t distanceFraction = uint16_t(distance) >> 1;
-							const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
-
-							// Interpolate between outer and inner color.
-							color.r = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.r) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.r));
-							color.g = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.g) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.g));
-							color.b = ufraction16_t(Fraction::Scale(distanceFraction, outerColor.b) + Fraction::Scale(proximityFraction, ColorFraction::COLOR_WHITE.b));
-
-							return true;
-						}
-					}
-					return false;
-				}
-			} RaysShader{};
-
-		public:
-			uint16_t MaxSize = 8;
-
-		public:
-			LightSourceFragmentShader() {}
-
-			virtual void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
-			{
-				// Calculate fragment properties.
-				const ufraction16_t proximity = AbstractPixelShader::GetZFraction(fragment.screen.z, 1, VERTEX16_RANGE / 2);
-				const uint16_t radius = MaxValue(uint16_t(Fraction::Scale(proximity, MaxSize)), uint16_t(2));
-
-				rasterizer.DrawRectangle(fragment.color, fragment.screen.x - radius, fragment.screen.y - radius, fragment.screen.x + radius, fragment.screen.y + radius);
-			}
-
-			virtual void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
-			{
-				// Calculate fragment properties.
-				const ufraction16_t proximity = AbstractPixelShader::GetZFraction(fragment.screen.z, 1, VERTEX16_RANGE / 2);
-				const uint16_t radius = MaxValue(uint16_t(Fraction::Scale(proximity, MaxSize)), uint16_t(2));
-				const uint32_t radiusPower = (((uint32_t)radius * radius));
-
-				// Pass along the fragment properties.
-				RaysShader.centerX = fragment.screen.x;
-				RaysShader.centerY = fragment.screen.y;
-				RaysShader.radiusPower = radiusPower;
-
-				// Apply shading to light color. This serves as an intensity dial with emissive the property.
-				RaysShader.outerColor = fragment.color;
-				sceneShader->Shade(RaysShader.outerColor, fragment.material);
-
-				if (RaysShader.outerColor.r > 0 || RaysShader.outerColor.g > 0 || RaysShader.outerColor.b > 0)
-				{
-					// Draw light source fragment with RaysShader.
-					rasterizer.RasterRectangle(fragment.screen.x - radius, fragment.screen.y - radius, fragment.screen.x + radius, fragment.screen.y + radius, RaysShader);
-				}
 			}
 		};
 	}
@@ -396,7 +339,7 @@ namespace Assets
 		protected:
 			virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
 			{
-				fragment.color = Cube::Pallete[(index / 2) % Cube::PalleteSize];
+				fragment.color = Palletes::Cube::Pallete[(index / 2) % Palletes::Cube::PalleteSize];
 				fragment.material = Material;
 			}
 		};
@@ -463,9 +406,7 @@ namespace Assets
 		protected:
 			virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
 			{
-				fragment.color.r = UFRACTION16_1X;
-				fragment.color.g = UFRACTION16_1X;
-				fragment.color.b = UFRACTION16_1X;
+				fragment.color = Rgb8::WHITE;
 				fragment.material.Diffuse = UFRACTION8_1X;
 				fragment.material.Emissive = 0;
 				fragment.material.Specular = 0;
@@ -477,105 +418,32 @@ namespace Assets
 		{
 			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount>(Grid8x8::Vertices) {}
 		};
-
-		template<typename LightSourceType, typename fragment_t = point_fragment_t>
-		struct ShadedLightSourceObject : public LightSourceType
-		{
-		private:
-			static constexpr int16_t WindowTolerance = 3;
-
-		protected:
-			using LightSourceType::ObjectPosition;
-			using LightSourceType::WorldPosition;
-
-			using LightSourceType::GetProximityFraction;
-
-		public:
-			using LightSourceType::Color;
-			using LightSourceType::SceneShader;
-
-		private:
-			point_fragment_t LightFragment{};
-
-		public:
-			IFragmentShader<fragment_t>* FragmentShader = nullptr;
-
-		public:
-			ShadedLightSourceObject() : LightSourceType() {}
-
-			bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
-			{
-				if (LightSourceType::PrimitiveScreenShade(index, boundsWidth, boundsHeight))
-				{
-					if (ObjectPosition.z < 0
-						|| ObjectPosition.x < -WindowTolerance
-						|| ObjectPosition.y < -WindowTolerance
-						|| ObjectPosition.x > boundsWidth + WindowTolerance
-						|| ObjectPosition.y > boundsHeight + WindowTolerance
-						|| (Color.r == 0 && Color.g == 0 && Color.b == 0)
-						)
-					{
-						ObjectPosition.z = -VERTEX16_RANGE;
-					}
-
-					return true;
-				}
-				else
-				{
-					return false;
-				}
-			}
-
-			void FragmentCollect(FragmentCollector& fragmentCollector) final
-			{
-				if (ObjectPosition.z > 0)
-				{
-					fragmentCollector.AddFragment(0, ObjectPosition.z);
-				}
-			}
-
-			void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
-			{
-				if (FragmentShader != nullptr)
-				{
-					LightFragment.color = Color;
-					LightFragment.material = { UFRACTION8_1X , 0, 0, 0 };
-					LightFragment.screen = ObjectPosition;
-					LightFragment.world = WorldPosition;
-
-					if (SceneShader != nullptr)
-					{
-						FragmentShader->FragmentShade(rasterizer, LightFragment, SceneShader);
-					}
-					else
-					{
-						FragmentShader->FragmentShade(rasterizer, LightFragment);
-					}
-				}
-			}
-		};
 	}
 
 	namespace Lights
 	{
-		template<typename LightSourceType>
-		struct TemplateOnOffLightSource : LightSourceType
+		template<typename ShaderType>
+		struct TemplateOnOffShader : ShaderType
 		{
 		private:
-			color_fraction16_t OriginalColor{};
+			bool Enabled = true;
 
 		public:
+			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader)
+			{
+				if (Enabled)
+					ShaderType::FragmentShade(rasterizer, fragment, sceneShader);
+			}
+
+			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment)
+			{
+				if (Enabled)
+					ShaderType::FragmentShade(rasterizer, fragment);
+			}
+
 			void SetEnabled(const bool enabled)
 			{
-				if (enabled)
-				{
-					LightSourceType::Color = OriginalColor;
-				}
-				else
-				{
-					OriginalColor = LightSourceType::Color;
-					LightSourceType::Color = ColorFraction::COLOR_BLACK;
-				}
+				Enabled = enabled;
 			}
 		};
 	}

@@ -7,18 +7,18 @@ namespace Assets
 {
 	using namespace IntegerWorld;
 
-	namespace Shapes
+	namespace Palletes
 	{
 		namespace Cube
 		{
-			static constexpr color_fraction16_t Pallete[TriangleCount]
+			static constexpr Rgb8::color_t Pallete[Shapes::Cube::TriangleCount]
 			{
-				ColorFraction::COLOR_RED,
-				ColorFraction::COLOR_GREEN,
-				ColorFraction::COLOR_BLUE,
-				ColorFraction::RgbToColorFraction(uint32_t(0xFFFF00)),
-				ColorFraction::RgbToColorFraction(uint32_t(0x00FFFF)),
-				ColorFraction::RgbToColorFraction(uint32_t(0xFF00FF))
+				Rgb8::RED,
+				Rgb8::GREEN,
+				Rgb8::BLUE,
+				0xFFFF00,
+				0x00FFFF,
+				0xFF00FF
 			};
 			constexpr uint8_t PalleteSize = sizeof(Pallete) / sizeof(Pallete[0]);
 		}
@@ -44,11 +44,11 @@ namespace Assets
 			}
 		};
 
-		struct CubeMeshObject : public MeshObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>
+		struct CubeMeshObject : public MeshWorldObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>
 		{
 			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
 
-			CubeMeshObject() : MeshObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>(
+			CubeMeshObject() : MeshWorldObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>(
 				Shapes::Cube::Vertices,
 				Shapes::Cube::Triangles
 			) {
@@ -57,14 +57,14 @@ namespace Assets
 		protected:
 			void GetFragment(triangle_fragment_t& fragment, const uint16_t index) final
 			{
-				fragment.color = Shapes::Cube::Pallete[(index >> 1) % Shapes::Cube::PalleteSize];
+				fragment.color = Palletes::Cube::Pallete[(index >> 1) % Palletes::Cube::PalleteSize];
 				fragment.material = Material;
 			}
 		};
 
-		struct OctahedronMeshObject : public MeshObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>
+		struct OctahedronMeshObject : public MeshWorldObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>
 		{
-			OctahedronMeshObject() : MeshObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>(
+			OctahedronMeshObject() : MeshWorldObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>(
 				Shapes::Octahedron::Vertices,
 				Shapes::Octahedron::Triangles) {
 			}
@@ -86,11 +86,9 @@ namespace Assets
 				const int16_t y = AverageApproximate(fragment.triangleScreenA.y, fragment.triangleScreenB.y, fragment.triangleScreenC.y);
 				const int16_t yTravel = LimitValue(y - BaseMeshObject::ObjectPosition.y, -yRange, yRange);
 
-				const fraction16_t fraction = Fraction::GetFraction16(yTravel, yRange);
-
-				fragment.color.r = fraction16_t(UFRACTION16_1X / 2) - fraction;
-				fragment.color.g = fragment.color.r;
-				fragment.color.b = fragment.color.r;
+				uint8_t gray = INT8_MAX;
+				gray += (-yTravel * INT8_MAX) / yRange;
+				fragment.color = Rgb8::Color(gray, gray, gray);
 
 				fragment.material = { UFRACTION8_1X, 0, 0, 0 };
 			}

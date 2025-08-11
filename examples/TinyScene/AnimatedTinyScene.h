@@ -1,6 +1,7 @@
 #ifndef _ANIMATED_TINY_SCENE_h
 #define _ANIMATED_TINY_SCENE_h
 
+
 //#define DEMO_SCENE_EDGE_OBJECT // Enable for monochrome and low RAM devices.
 
 #include "TinyAssets.h"
@@ -19,13 +20,15 @@ public:
 #endif
 private:
 	static constexpr uint32_t ShapeColorPeriodMicros = 19000000;
-	static constexpr uint32_t ShapeRotatePeriodMicros = 65000000;
-	static constexpr uint32_t ShapeMovePeriodMicros = 15111111;
+	static constexpr uint32_t ShapeRotatePeriodMicros = 55555555;
+	static constexpr uint32_t ShapeMovePeriodMicros = 11111111;
 
-	static constexpr int16_t BaseDistance = -((int32_t)VERTEX16_UNIT * 10) / 10;
-	static constexpr int16_t ShapeMove = ((int32_t)Assets::Shapes::SHAPE_UNIT * 20) / 10;
-	static constexpr int16_t ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * 128) / 64;
+	static constexpr int16_t DistanceUnit = Assets::Shapes::SHAPE_UNIT;
+	static constexpr int16_t BaseDistance = (VERTEX16_UNIT * 7) / 10;
+	static constexpr int16_t ShapeMove = (DistanceUnit * 15) / 10;
 	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
+
+	int16_t ShapeMoveX = (((int32_t)ShapeMove * 4) / 10);
 
 private:
 #if defined(DEMO_SCENE_EDGE_OBJECT)
@@ -45,7 +48,7 @@ private:
 #endif
 
 	// Track animation color style.
-	uint8_t ColorDepth = 1;
+	bool Monochrome = false;
 
 public:
 	AnimatedTinyScene(TS::Scheduler& scheduler)
@@ -60,50 +63,56 @@ public:
 		return true;
 	}
 
-	void Start(IEngineRenderer& engineRenderer, const uint8_t colorDepth)
+	bool Start(IEngineRenderer& engineRenderer, const int16_t width, const int16_t height, const bool monochrome)
 	{
+		// Add all render objects to the pipeline.
+		engineRenderer.ClearObjects();
+
+		uint8_t fovPercent = 75;
+		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * (100 - fovPercent)) / 100);
+
+		if (!engineRenderer.AddObject(&ObjectCube)
+			|| !engineRenderer.AddObject(&ObjectOctahedron))
+		{
+			TS::Task::disable();
+			return false;
+		}
+
+		// Configure animation based on surface dimensions.
+		ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * width) / height;
+
 		// Attach shaders to objects for rendering.
 		ObjectCube.FragmentShader = &ObjectsShader;
 		ObjectOctahedron.FragmentShader = &ObjectsShader;
 
+		Monochrome = monochrome;
 #if defined(DEMO_SCENE_EDGE_OBJECT)
 		// Adjust animation on 1 bit color output.
-		ColorDepth = colorDepth;
-		if (ColorDepth <= 1)
+		if (Monochrome)
 		{
-			ObjectCube.Color = ColorFraction::COLOR_WHITE;
-			ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
+			ObjectCube.Color = Rgb8::COLOR_WHITE;
+			ObjectOctahedron.Color = Rgb8::COLOR_WHITE;
 		}
 
 		// Set edge draw mode for each object.
 		ObjectCube.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
 		ObjectOctahedron.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
-#else
-		// Adjust animation on 1 bit color output.
-		ColorDepth = colorDepth;
-		if (ColorDepth <= 1)
-		{
-			//ObjectOctahedron.Color = ColorFraction::COLOR_WHITE;
-		}
 #endif	
 
-		// Add all render objects to the pipeline.
-		engineRenderer.ClearObjects();
-		engineRenderer.AddObject(&ObjectCube);
-		engineRenderer.AddObject(&ObjectOctahedron);
-
 		TS::Task::enable();
+
+		return true;
 	}
 
 private:
 	void AnimateObjects(const uint32_t timestamp)
 	{
 #if defined(DEMO_SCENE_EDGE_OBJECT)
-		if (ColorDepth > 1)
+		if (!Monochrome)
 		{
 			// Rainbow color pattern with HSV color.
 			const ufraction16_t colorFraction = GetUFraction16((uint32_t)(timestamp % (ShapeColorPeriodMicros + 1)), ShapeColorPeriodMicros);
-			ObjectOctahedron.Color = ColorFraction::HsvToColorFraction(colorFraction, UFRACTION16_1X, UFRACTION16_1X);
+			ObjectOctahedron.Color = Rgb8::HsvColor(colorFraction, UINT8_MAX, UINT8_MAX);
 		}
 #endif
 

@@ -13,6 +13,7 @@
 
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
 #define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging..
+//#define INTEGER_WORLD_HIGH_PRECISION_TRANSFORMS // Enable high precision transforms in IntegerWorldDemo.
 
 
 // Preset of SPI pin definitions for various platforms.
@@ -77,6 +78,12 @@ Egfx::SpiType SpiInstance(3);
 Egfx::SpiType& SpiInstance(SPI);
 #endif
 
+using EgfxOptions = DisplayOptions::TemplateOptions<
+	DisplayOptions::MirrorEnum::None
+	, DisplayOptions::RotationEnum::None
+	, DisplayOptions::AntiAliasingEnum::PixelCoverage
+	, false>;
+
 // Uncomment Driver and matching framebuffer type. Drivers will have Async, DMA, and RTOS variants, depending on the platform.
 //ScreenDriverSSD1306_64x32x1_I2C ScreenDriver(WireInstance);
 //ScreenDriverSSD1306_64x48x1_I2C ScreenDriver(WireInstance);
@@ -85,16 +92,16 @@ Egfx::SpiType& SpiInstance(SPI);
 //ScreenDriverSSD1306_128x64x1_I2C_Rtos<> ScreenDriver(WireInstance);
 //ScreenDriverSSD1306_128x64x1_SPI<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverSH1106_128x64x1_SPI<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
-//using FramebufferType = BinaryFrameBuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight>;
+//using FramebufferType = BinaryFramebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 0, EgfxOptions>;
 
 //ScreenDriverSSD1331_96x64x8_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
-//using FramebufferType = Color8FrameBuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight>;
+//using FramebufferType = Color8Framebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 0, EgfxOptions>;
 
 //ScreenDriverSSD1331_96x64x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverSSD1351_128x128x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverST7789_240x240x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverST7735S_80x160x16_SPI<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
-//using FramebufferType = Color16FrameBuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight>;
+//using FramebufferType = Color16Framebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 0, EgfxOptions>;
 
 
 // In-memory frame-buffer.
@@ -176,9 +183,6 @@ void setup()
 	// Optional callback for RTOS driver variants.
 	GraphicsEngine.SetBufferTaskCallback(BufferTaskCallback);
 
-	// Framebuffer can be inverted at any time.
-	GraphicsEngine.SetInverted(false);
-
 	// Set the Display Sync Type.
 	GraphicsEngine.SetSyncType(DisplaySyncType::Vrr);
 
@@ -207,10 +211,10 @@ void setup()
 	//Surface.SizeX = 64;
 
 	// Start the scene with the visible dimensions.
-	int16_t width;
-	int16_t height;
+	int16_t width, height;
 	uint8_t colorDepth;
 	Surface.GetSurfaceDimensions(width, height, colorDepth);
+
 	DemoScene.Start(EngineRenderer, width, height);
 
 #if defined(DEBUG)
