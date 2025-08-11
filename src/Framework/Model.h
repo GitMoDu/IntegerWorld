@@ -64,6 +64,15 @@ namespace IntegerWorld
 		vertex16_t end;
 	};
 
+	struct billboard_fragment_t
+	{
+		vertex16_t world;
+		int16_t topLeftX;
+		int16_t topLeftY;
+		int16_t bottomRightX;
+		int16_t bottomRightY;
+	};
+
 	struct triangle_fragment_t : base_fragment_t
 	{
 		vertex16_t world;
@@ -118,6 +127,14 @@ namespace IntegerWorld
 	{
 		vertex16_t worldPosition;
 		vertex16_t worldNormal;
+	};
+
+	struct billboard_primitive_t : base_primitive_t
+	{
+		int16_t topLeftX;
+		int16_t topLeftY;
+		int16_t bottomRightX;
+		int16_t bottomRightY;
 	};
 
 	struct camera_state_t

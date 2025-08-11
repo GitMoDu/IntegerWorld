@@ -7,6 +7,7 @@
 #include "Object/PointCloudObject.h"
 #include "Object/MeshObject.h"
 #include "Object/EdgeObject.h"
+#include "Object/BillboardObject.h"
 #include "Object/BackgroundObject.h"
 #include "Object/Shader.h"
 #include "Object/ExtraShaders.h"

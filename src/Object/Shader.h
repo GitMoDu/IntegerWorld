@@ -309,6 +309,31 @@ namespace IntegerWorld
 		}
 	};
 
+	struct BillboardPlaceholderFragmentShader : IFragmentShader<billboard_fragment_t>
+	{
+	public:
+		Rgb8::color_t Color = Rgb8::WHITE;
+
+	public:
+		void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader) final
+		{
+			FragmentShade(rasterizer, fragment);
+		}
+
+		void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment) final
+		{
+			// Rectangle edges
+			rasterizer.DrawLine(Color, fragment.topLeftX, fragment.topLeftY, fragment.bottomRightX, fragment.topLeftY);
+			rasterizer.DrawLine(Color, fragment.bottomRightX, fragment.topLeftY, fragment.bottomRightX, fragment.bottomRightY);
+			rasterizer.DrawLine(Color, fragment.bottomRightX, fragment.bottomRightY, fragment.topLeftX, fragment.bottomRightY);
+			rasterizer.DrawLine(Color, fragment.topLeftX, fragment.bottomRightY, fragment.topLeftX, fragment.topLeftY);
+
+			// Diagonals
+			rasterizer.DrawLine(Color, fragment.topLeftX, fragment.topLeftY, fragment.bottomRightX, fragment.bottomRightY);
+			rasterizer.DrawLine(Color, fragment.bottomRightX, fragment.topLeftY, fragment.topLeftX, fragment.bottomRightY);
+		}
+	};
+
 	struct PointNormalFragmentShader : IFragmentShader<point_normal_fragment_t>
 	{
 	private:
