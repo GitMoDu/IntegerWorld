@@ -31,7 +31,7 @@ namespace IntegerWorld
 			return true;
 		}
 
-		virtual bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index)
+		virtual bool CameraTransform(const camera_transform_t& transform, const uint16_t index)
 		{
 			ApplyCameraTransform(transform, ObjectPosition);
 
@@ -56,7 +56,7 @@ namespace IntegerWorld
 		resize16_t Resize = RESIZE16_1X;
 
 	protected:
-		transform16_scale_rotate_translate_t MeshTransform{};
+		object_transform_t MeshTransform{};
 
 	public:
 		TransformObject() : TranslationObject() {}
@@ -80,15 +80,9 @@ namespace IntegerWorld
 		}
 	};
 
-	struct base_vertex_t : vertex16_t
-	{
-	};
-
-	struct base_primitive_t
-	{
-		int16_t z;
-	};
-
+	/// <summary>
+	/// Abstract render object with vertices and cached primitives.
+	/// </summary>
 	template<uint16_t vertexCount,
 		uint16_t primitiveCount,
 		typename vertex_t = base_vertex_t,
@@ -118,7 +112,7 @@ namespace IntegerWorld
 			return index >= vertexCount;
 		}
 
-		virtual bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index)
+		virtual bool CameraTransform(const camera_transform_t& transform, const uint16_t index)
 		{
 			switch (index)
 			{

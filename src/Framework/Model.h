@@ -77,6 +77,49 @@ namespace IntegerWorld
 	{
 	};
 
+	struct base_vertex_t : vertex16_t
+	{
+	};
+
+	struct normal_vertex_t : vertex16_t
+	{
+		vertex16_t normal;
+	};
+
+	struct color_vertex_t : vertex16_t
+	{
+		Rgb8::color_t color;
+	};
+
+	struct normal_color_vertex_t : vertex16_t
+	{
+		vertex16_t normal;
+		Rgb8::color_t color;
+	};
+
+	struct mesh_vertex_t : base_vertex_t
+	{
+	};
+
+	struct billboard_vertex_t : base_vertex_t
+	{
+	};
+
+	struct base_primitive_t
+	{
+		int16_t z;
+	};
+
+	struct mesh_primitive_t : base_primitive_t
+	{
+	};
+
+	struct mesh_world_primitive_t : base_primitive_t
+	{
+		vertex16_t worldPosition;
+		vertex16_t worldNormal;
+	};
+
 	struct camera_state_t
 	{
 		vertex16_t Position{};

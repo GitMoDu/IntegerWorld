@@ -39,25 +39,48 @@ namespace IntegerWorld
 		fraction32_t SinZ{};
 	};
 
-	struct transform16_rotate_translate_t : public transform16_rotate_t
+	struct transform16_rotate_translate_t : transform16_rotate_t
 	{
 		vertex16_t Translation{};
 	};
 
-	struct transform16_scale_rotate_translate_t : public transform16_rotate_translate_t
+	struct transform16_scale_translate_t : transform16_rotate_t
 	{
 		resize16_t Resize = RESIZE16_1X;
 	};
 
-	struct transform32_rotate_translate_t : public transform32_rotate_t
+	struct transform16_scale_rotate_translate_t : transform16_rotate_translate_t
+	{
+		resize16_t Resize = RESIZE16_1X;
+	};
+
+	struct transform32_rotate_translate_t : transform32_rotate_t
 	{
 		vertex16_t Translation{};
 	};
 
-	struct transform32_scale_rotate_translate_t : public transform32_rotate_translate_t
+	struct transform32_scale_rotate_translate_t : transform32_rotate_translate_t
 	{
 		resize16_t Resize = RESIZE16_1X;
 	};
+
+	struct transform16_camera_t : transform16_rotate_translate_t
+	{
+		uint16_t ViewDistance;
+	};
+
+	struct transform32_camera_t : transform32_rotate_translate_t
+	{
+		uint16_t ViewDistance;
+	};
+
+#if defined(INTEGER_WORLD_HIGH_PRECISION_TRANSFORMS)
+	using object_transform_t = transform32_scale_rotate_translate_t;
+	using camera_transform_t = transform32_camera_t;
+#else
+	using object_transform_t = transform16_scale_rotate_translate_t;
+	using camera_transform_t = transform16_camera_t;
+#endif
 
 	static void CalculateTransformRotation(transform16_rotate_t& transform, const angle_t angleX, const angle_t angleY, const angle_t angleZ)
 	{
@@ -168,35 +191,6 @@ namespace IntegerWorld
 		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
 	}
 
-	static void ApplyCameraTransform(const transform32_rotate_translate_t& transform, vertex16_t& vertex)
-	{
-		static constexpr int16_t CameraShift = VERTEX16_UNIT;
-
-		vertex.z += CameraShift;
-
-		// Apply translation.
-		vertex.x += transform.Translation.x;
-		vertex.y += transform.Translation.y;
-		vertex.z += transform.Translation.z;
-
-		// Rotation around X-axis
-		const int16_t y1 = vertex.y;
-		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
-		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
-
-		// Rotation around Y-axis
-		const int16_t x1 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
-		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
-
-		// Rotation around Z-axis
-		const int16_t x2 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
-		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
-
-		vertex.z -= CameraShift;
-	}
-
 	static void ApplyTransform(const transform32_rotate_translate_t& transform, vertex16_t& vertex)
 	{
 		// Rotation around X-axis
@@ -282,6 +276,32 @@ namespace IntegerWorld
 		const int16_t x2 = vertex.x;
 		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
 		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
+	}
+
+	static void ApplyCameraTransform(const camera_transform_t& transform, vertex16_t& vertex)
+	{
+		// Apply translation first (camera position in world)
+		vertex.x += transform.Translation.x;
+		vertex.y += transform.Translation.y;
+		vertex.z += transform.Translation.z;
+
+		// Rotation around Y-axis (Yaw - looking left/right)
+		const int16_t x1 = vertex.x;
+		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
+		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
+
+		// Rotation around X-axis (Pitch - looking up/down)
+		const int16_t y1 = vertex.y;
+		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
+		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
+
+		// Rotation around Z-axis (Roll - tilting the view)
+		const int16_t x2 = vertex.x;
+		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
+		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
+
+		// Apply view distance
+		vertex.z -= transform.ViewDistance;
 	}
 }
 #endif

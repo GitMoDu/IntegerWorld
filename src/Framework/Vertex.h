@@ -189,6 +189,31 @@ namespace IntegerWorld
 		// (a + b + c) * 0x5556 >> 16 is equivalent to (a + b + c) / 3
 		return int16_t(((int32_t(a) + b + c) * 0x5556) >> 16);
 	}
+
+	static uint16_t Distance16(const int16_t aX, const int16_t aY, const int16_t bX, const int16_t bY)
+	{
+		// Calculate squared differences for each axis
+		const int32_t dx = int32_t(bX) - aX;
+		const int32_t dy = int32_t(bY) - aY;
+		// Compute squared distance
+		const uint32_t distSquared = uint32_t(dx * dx) + uint32_t(dy * dy);
+		// Use IntegerSignal's integer square root
+		return IntegerSignal::SquareRoot32(distSquared);
+	}
+
+	static uint16_t Distance16(const vertex16_t& a, const vertex16_t& b)
+	{
+		// Calculate squared differences for each axis
+		const int32_t dx = int32_t(b.x) - a.x;
+		const int32_t dy = int32_t(b.y) - a.y;
+		const int32_t dz = int32_t(b.z) - a.z;
+
+		// Compute squared distance
+		const uint32_t distSquared = uint32_t(dx * dx) + uint32_t(dy * dy) + uint32_t(dz * dz);
+
+		// Use IntegerSignal's integer square root
+		return IntegerSignal::SquareRoot32(distSquared);
+	}
 }
 
 #endif

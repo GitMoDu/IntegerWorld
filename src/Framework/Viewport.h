@@ -9,8 +9,9 @@ namespace IntegerWorld
 	{
 	private:
 		static constexpr uint16_t RangeMin = VERTEX16_UNIT;
-		static constexpr uint16_t RangeMax = (((uint32_t)VERTEX16_RANGE * 6) / 10);
+		static constexpr uint16_t RangeMax = (((uint32_t)VERTEX16_RANGE * 3) / 10);
 		static constexpr uint16_t Range = RangeMax - RangeMin;
+		static constexpr uint16_t RangeMiddle = (RangeMax + RangeMin) / 2;
 		static constexpr uint8_t DownShift = 12;
 		static constexpr uint8_t DownShift2 = GetBitShifts(RangeMax) - GetBitShifts(RangeMin);
 
@@ -44,6 +45,11 @@ namespace IntegerWorld
 			distanceNum = RangeMin + Fraction::Scale(ufraction16_t(fovFraction), Range);
 		}
 
+		uint16_t GetViewDistance() const
+		{
+			return distanceNum;
+		}
+
 		void Project(vertex16_t& cameraToscreen)
 		{
 			const int32_t distanceDenum = int32_t(distanceNum + cameraToscreen.z);
@@ -72,6 +78,6 @@ namespace IntegerWorld
 			cameraToscreen.y = ViewHeightHalf + iy;
 			cameraToscreen.z = distanceDenum;
 		}
-	};	
+	};
 }
 #endif

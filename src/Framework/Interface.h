@@ -39,12 +39,25 @@ namespace IntegerWorld
 
 	struct IRenderObject
 	{
+		// Load and transforms vertices.
 		virtual bool VertexShade(const uint16_t index) = 0;
+
+		// Computes primitive properties (e.g., world position, normal).
 		virtual bool PrimitiveWorldShade(const uint16_t index) = 0;
-		virtual bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) = 0;
+
+		// Apply camera transformation to each vertex.
+		virtual bool CameraTransform(const camera_transform_t& transform, const uint16_t index) = 0;
+
+		// Projects vertices to screen space.
 		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) = 0;
+
+		// Performs culling and sets up screen - space primitives.
 		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) = 0;
+
+		// Collect z-indexed fragments for rasterization.
 		virtual void FragmentCollect(FragmentCollector& fragmentCollector) = 0;
+
+		// Rasterize z-ordered fragments to the screen.
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) = 0;
 	};
 

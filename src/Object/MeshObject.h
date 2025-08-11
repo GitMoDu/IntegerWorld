@@ -5,20 +5,8 @@
 
 namespace IntegerWorld
 {
-	struct mesh_vertex_t : base_vertex_t
 	{
 	};
-
-	struct mesh_primitive_t : base_primitive_t
-	{
-	};
-
-	struct mesh_world_primitive_t : base_primitive_t
-	{
-		vertex16_t worldPosition;
-		vertex16_t worldNormal;
-	};
-
 
 	template<uint16_t vertexCount, uint16_t triangleCount,
 		typename vertex_t = mesh_vertex_t,
@@ -76,7 +64,7 @@ namespace IntegerWorld
 			return index >= vertexCount;
 		}
 
-		bool CameraTransform(const transform32_rotate_translate_t& transform, const uint16_t index) final
+		bool CameraTransform(const camera_transform_t& transform, const uint16_t index) final
 		{
 			switch (index)
 			{
@@ -124,9 +112,9 @@ namespace IntegerWorld
 				if (Primitives[index].z != -VERTEX16_RANGE)
 				{
 					// Check if triangle is entirely out of bounds.
-					if ((Vertices[triangle.v1].z <= 0
-						&& Vertices[triangle.v1].z <= 0
-						&& Vertices[triangle.v1].z <= 0)
+					if (((Vertices[triangle.v1].z <= 0)
+						&& (Vertices[triangle.v1].z <= 0)
+						&& (Vertices[triangle.v1].z <= 0))
 						|| (Vertices[triangle.v1].x <= 0
 							&& Vertices[triangle.v2].x <= 0
 							&& Vertices[triangle.v3].x <= 0)
