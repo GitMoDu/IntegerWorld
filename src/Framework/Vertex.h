@@ -15,7 +15,12 @@ namespace IntegerWorld
 	/// <summary>
 	/// Unit scale for 16-bit vertices.
 	/// </summary>
-	static constexpr int16_t VERTEX16_UNIT = (UINT16_MAX / 16) + 1;
+	static constexpr int16_t VERTEX16_UNIT = (UINT16_MAX / 8) + 1;
+
+	/// <summary>
+	/// Dot product range for 16-bit vertex units.
+	/// </summary>
+	static constexpr int32_t VERTEX16_DOT = (int32_t(VERTEX16_UNIT) * VERTEX16_UNIT);
 
 	/// <summary>
 	/// vertex32_t axis uses int32_t.
@@ -26,6 +31,12 @@ namespace IntegerWorld
 	/// Unit scale for 32-bit vertices.
 	/// </summary>
 	static constexpr int32_t VERTEX32_UNIT = (UINT32_MAX / (16 * 16)) + 1;
+
+	/// <summary>
+	/// Dot product range for 32-bit vertex units.
+	/// </summary>
+	static constexpr int32_t VERTEX32_DOT = (int64_t(VERTEX32_UNIT) * VERTEX32_UNIT);
+
 
 	struct vertex16_t
 	{

@@ -52,38 +52,13 @@ namespace IntegerWorld
 
 	struct AbstractLightSource
 	{
-		static constexpr int32_t VERTEX16_DOT_RANGE = (int32_t(VERTEX16_UNIT) * VERTEX16_UNIT) * 3;
+		static constexpr uint8_t DOT_SHIFTS = GetBitShifts(VERTEX16_DOT);
+		static constexpr uint8_t FRAC_SHIFTS = GetBitShifts(UFRACTION16_1X);
+		static constexpr uint8_t DOT_CONVERT_SHIFTS = DOT_SHIFTS - FRAC_SHIFTS;
 
-		static ufraction16_t GetDotProductFraction(const int32_t dotProduct)
+		static constexpr ufraction16_t GetDotProductFraction(const int32_t dotProduct)
 		{
-			if (dotProduct >= VERTEX16_DOT_RANGE)
-			{
-				return UFRACTION16_1X;
-			}
-			else
-			{
-				static constexpr auto RangeShift = GetBitShifts(VERTEX16_DOT_RANGE) - GetBitShifts(UFRACTION16_1X) - 1;
-
-				// Fast convert to ufraction16_t.
-				return MinValue(uint32_t(dotProduct) >> RangeShift, uint32_t(UFRACTION16_1X));
-			}
-		}
-
-		static ufraction16_t GetDotFraction(const int32_t dotProduct)
-		{
-			if (dotProduct >= VERTEX16_DOT_RANGE)
-			{
-				return UFRACTION16_1X;
-			}
-			else
-			{
-				static constexpr auto RangeShift = (GetBitShifts(INT32_MAX) - GetBitShifts(VERTEX16_DOT_RANGE)) + 1;
-
-				const uint32_t clipped = MinValue(dotProduct, VERTEX16_DOT_RANGE);
-				const uint16_t rooted = SquareRoot32(clipped << RangeShift);
-
-				return MinValue(rooted, uint16_t(UFRACTION16_1X));
-			}
+			return dotProduct <= 0 ? 0 : ufraction16_t(uint32_t(dotProduct) >> DOT_CONVERT_SHIFTS);
 		}
 
 		static ufraction16_t GetSpecularFraction(const vertex32_t& illuminationVector, const vertex16_t& viewVector, const vertex16_t& normal)
@@ -113,11 +88,11 @@ namespace IntegerWorld
 		{
 			// Get the distance approximate.
 			const uint16_t distance =
-				MinValue((uint32_t)VERTEX16_RANGE,
-					(uint32_t)(((((uint32_t)vector.x * vector.x)
-						+ ((uint32_t)vector.y * vector.y)
-						+ ((uint32_t)vector.z * vector.z))
-						* falloffWeight) >> (GetBitShifts(VERTEX16_RANGE) + 1)));
+				MinValue<uint32_t>(VERTEX16_RANGE,
+					(uint32_t(((int32_t)vector.x * vector.x)
+						+ ((int32_t)vector.y * vector.y)
+						+ ((int32_t)vector.z * vector.z))
+						* falloffWeight) >> (GetBitShifts(VERTEX16_RANGE) + 1));
 
 			return Fraction::GetUFraction16((uint16_t)VERTEX16_UNIT, (uint16_t)MaxValue(distance, (uint16_t)VERTEX16_UNIT));
 		}

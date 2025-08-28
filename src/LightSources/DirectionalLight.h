@@ -55,7 +55,7 @@ namespace IntegerWorld
 				if (lightDot > 0)
 				{
 					// Scale the diffuse light output.
-					diffuse = AbstractLightSource::GetDotFraction(lightDot);
+					diffuse = AbstractLightSource::GetDotProductFraction(lightDot);
 				}
 
 				// Get the specular component.

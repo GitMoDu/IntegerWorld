@@ -9,11 +9,10 @@ namespace IntegerWorld
 	{
 	private:
 		static constexpr uint16_t RangeMin = VERTEX16_UNIT;
-		static constexpr uint16_t RangeMax = (((uint32_t)VERTEX16_RANGE * 3) / 10);
+		static constexpr uint8_t RangeUnits = VERTEX16_RANGE / VERTEX16_UNIT;
+		static constexpr uint16_t RangeMax = (((uint32_t)VERTEX16_UNIT) * RangeUnits);
 		static constexpr uint16_t Range = RangeMax - RangeMin;
-		static constexpr uint16_t RangeMiddle = (RangeMax + RangeMin) / 2;
-		static constexpr uint8_t DownShift = 12;
-		static constexpr uint8_t DownShift2 = GetBitShifts(RangeMax) - GetBitShifts(RangeMin);
+		static constexpr uint8_t DownShift = GetBitShifts(Range);
 
 	private:
 		int16_t ViewWidthHalf = 0;
@@ -29,7 +28,7 @@ namespace IntegerWorld
 		{
 		}
 
-		void SetDimensions(uint16_t viewWidth, const uint16_t viewHeight)
+		void SetDimensions(const uint16_t viewWidth, const uint16_t viewHeight)
 		{
 			verticalNum = viewWidth;
 			verticalDenum = viewHeight;
@@ -42,7 +41,7 @@ namespace IntegerWorld
 		/// <param name="fovFraction">0 -> Minimum FoV; UFRACTION16_1X -> Max FoV.</param>
 		void SetFov(const ufraction16_t fovFraction)
 		{
-			distanceNum = RangeMin + Fraction::Scale(ufraction16_t(fovFraction), Range);
+			distanceNum = RangeMin + Fraction::Scale(fovFraction, Range);
 		}
 
 		uint16_t GetViewDistance() const
@@ -52,30 +51,28 @@ namespace IntegerWorld
 
 		void Project(vertex16_t& cameraToscreen)
 		{
-			const int32_t distanceDenum = int32_t(distanceNum + cameraToscreen.z);
+			const int32_t distanceDenum = int32_t(distanceNum) + cameraToscreen.z;
 
 			int32_t ix, iy;
 			if (distanceDenum == 0)
 			{
-				ix = cameraToscreen.x;
-				ix = SignedRightShift((ix * ViewWidthHalf), DownShift);
+				ix = SignedRightShift(int32_t(cameraToscreen.x) * ViewWidthHalf, DownShift);
 
-				iy = cameraToscreen.y;
-				iy = (iy * verticalNum) / verticalDenum;
-				iy = SignedRightShift((iy * ViewHeightHalf), DownShift);
+				iy = (int32_t(cameraToscreen.y) * verticalNum) / verticalDenum;
+				iy = SignedRightShift(iy * ViewHeightHalf, DownShift);
 			}
 			else
 			{
-				ix = ((int32_t)cameraToscreen.x * distanceNum) / distanceDenum;
-				ix = SignedRightShift((ix * ViewWidthHalf), DownShift);
+				ix = (int32_t(cameraToscreen.x) * distanceNum) / distanceDenum;
+				ix = SignedRightShift(ix * ViewWidthHalf, DownShift);
 
-				iy = ((int32_t)cameraToscreen.y * distanceNum) / distanceDenum;
+				iy = (int32_t(cameraToscreen.y) * distanceNum) / distanceDenum;
 				iy = (iy * verticalNum) / verticalDenum;
-				iy = SignedRightShift((iy * ViewHeightHalf), DownShift);
+				iy = SignedRightShift(iy * ViewHeightHalf, DownShift);
 			}
 
-			cameraToscreen.x = ViewWidthHalf + ix;
-			cameraToscreen.y = ViewHeightHalf + iy;
+			cameraToscreen.x = ViewWidthHalf + int16_t(ix);
+			cameraToscreen.y = ViewHeightHalf + int16_t(iy);
 			cameraToscreen.z = distanceDenum;
 		}
 	};
