@@ -125,7 +125,7 @@ namespace Assets
 				{  Z, -X,  0 },
 				{ -Z, -X,  0 }
 			};
-			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+			constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
 			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
@@ -150,7 +150,7 @@ namespace Assets
 				{9, 5, 2},
 				{7, 11, 2}
 			};
-			constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 
 			static constexpr vertex16_t Normals[TriangleCount] PROGMEM
 			{
@@ -178,14 +178,18 @@ namespace Assets
 
 			static constexpr edge_line_t Edges[] PROGMEM
 			{
-				{0, 1}, {0, 4}, {0, 5}, {0, 6}, {0, 9}, {0, 11},
-				{1, 4}, {1, 6}, {1, 8}, {1, 10}, {2, 3}, {2, 5},
-				{2, 7}, {2, 9}, {2, 11}, {3, 5}, {3, 7}, {3, 8},
-				{3, 10}, {4, 8}, {4, 9}, {4, 5}, {5, 9}, {5, 11},
-				{5, 8},	{6, 7}, {6, 10}, {6, 11}, {7, 10}, {7, 11},
-				{7, 2}, {8, 10}, {8, 3},{9, 11}, {9, 2}, {10, 3}, {11, 2}
+				{0, 1}, {0, 4}, {0, 6}, {0, 9}, {0, 11},
+				{1, 4}, {1, 6}, {1, 8}, {1, 10},
+				{2, 3}, {2, 5}, {2, 7}, {2, 9}, {2, 11},
+				{3, 5}, {3, 7}, {3, 8}, {3, 10},
+				{4, 5}, {4, 8}, {4, 9},
+				{5, 8}, {5, 9},
+				{6, 7}, {6, 10}, {6, 11},
+				{7, 10}, {7, 11},
+				{8, 10},
+				{9, 11}
 			};
-			constexpr uint8_t EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
+			constexpr auto EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
 		}
 
 		namespace Sphere
