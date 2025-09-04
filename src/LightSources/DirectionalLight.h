@@ -5,18 +5,29 @@
 
 namespace IntegerWorld
 {
-	class DirectionalLightSource : public ILightSource
+	class DirectionalLightSource : public ILightSource//, public TranslationObject
 	{
 	public:
 		Rgb8::color_t Color = Rgb8::WHITE;
 
 	private:
 		vertex16_t IlluminationVector{ 0, 0, -VERTEX16_UNIT };
-		vertex32_t IlluminationNormal{ 0, 0, 0 };
+
+	private:
+		vertex16_t CameraVector{ 0, 0, 0 };
+
+		const vertex16_t* CameraPosition;
 
 	public:
-		DirectionalLightSource() : ILightSource()
+		DirectionalLightSource(const vertex16_t* cameraPosition = nullptr)
+			: ILightSource()
+			, CameraPosition(cameraPosition)
 		{
+		}
+
+		void SetCameraPosition(const vertex16_t* cameraPosition)
+		{
+			CameraPosition = cameraPosition;
 		}
 
 		void SetIlluminationVector(const vertex16_t& illuminationVector)
@@ -55,11 +66,39 @@ namespace IntegerWorld
 				if (lightDot > 0)
 				{
 					// Scale the diffuse light output.
-					diffuse = AbstractLightSource::GetDotProductFraction(lightDot);
+					diffuse = ufraction16_t(uint32_t(lightDot) >> AbstractLightSource::DOT_CONVERT_SHIFTS);
 				}
 
+				if (CameraPosition == nullptr)
+				{
+					// No specular component without a valid camera position.
+					return;
+				}
+
+				// Calculate camera vector from this point to the camera world position.
+				CameraVector = { int16_t(CameraPosition->x - shade.positionWorld.x)  ,
+												 int16_t(CameraPosition->y - shade.positionWorld.y),
+												  int16_t(CameraPosition->z - shade.positionWorld.z) };
+
+				// Normalize vector for dot magnitude calculation.
+				NormalizeVertex16(CameraVector);
+
+				// Blinn–Phong: Compute the half–vector as the sum of the illumination vector and the view vector.
+				const vertex32_t halfVector{ SignedRightShift((int32_t)IlluminationVector.x + CameraVector.x, 1),
+										SignedRightShift((int32_t)IlluminationVector.y + CameraVector.y, 1),
+										SignedRightShift((int32_t)IlluminationVector.z + CameraVector.z, 1) };
+
+				// Compute the dot product between the surface normal and the half–vector.
+				// In the Blinn–Phong model, a higher dot product corresponds to a stronger specular highlight.
+				const int32_t dotProduct = DotProduct16(shade.normalWorld, halfVector);
+
 				// Get the specular component.
-				specular = AbstractLightSource::GetSpecularFraction(IlluminationNormal, shade.positionWorld, shade.normalWorld);
+				if (dotProduct > 0)
+				{
+					// Use a squared falloff for the specular highlight.
+					specular = ufraction16_t(uint32_t(dotProduct) >> (AbstractLightSource::DOT_CONVERT_SHIFTS - 1));
+					specular = (uint32_t(specular) * specular) >> (GetBitShifts(UFRACTION16_1X) + 2);
+				}
 			}
 		}
 	};
