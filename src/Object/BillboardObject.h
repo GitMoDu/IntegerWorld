@@ -19,7 +19,7 @@ namespace IntegerWorld
 	class BillboardObject : public TranslationObject
 	{
 	public:
-		int16_t ZOverride = -VERTEX16_RANGE;
+		int16_t ZOverride = -VERTEX16_UNIT;
 		resize16_t Resize = RESIZE16_1X;
 		static constexpr BillboardScaleModeEnum BillboardScaleMode = billboardScaleMode;
 
@@ -60,7 +60,7 @@ namespace IntegerWorld
 
 		void ClearZOverride()
 		{
-			ZOverride = -VERTEX16_RANGE;
+			ZOverride = -VERTEX16_UNIT;
 		}
 
 		void SetDimensions(const uint16_t width, const uint16_t height)
@@ -155,7 +155,7 @@ namespace IntegerWorld
 				|| (halfHeight == 0)
 				|| ScreenPosition.z <= 0)
 			{
-				Primitive.z = -VERTEX16_RANGE;
+				Primitive.z = -VERTEX16_UNIT;
 			}
 			else
 			{
@@ -174,7 +174,7 @@ namespace IntegerWorld
 		{
 			if (Primitive.z >= 0)
 			{
-				if (ZOverride == -VERTEX16_RANGE)
+				if (ZOverride == -VERTEX16_UNIT)
 				{
 					fragmentCollector.AddFragment(0, Primitive.z);
 				}
