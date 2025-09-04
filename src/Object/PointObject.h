@@ -14,35 +14,15 @@ namespace IntegerWorld
 		vertex16_t Translation{};
 
 	protected:
-		vertex16_t ObjectPosition{};
 		vertex16_t WorldPosition{};
 
 	public:
 		TranslationObject() : AbstractObject() {}
 
-		virtual bool VertexShade(const uint16_t index)
+		virtual void ObjectShade(const frustum_t& frustum)
 		{
 			// Apply world transform to object.
 			WorldPosition = Translation;
-
-			// Copy world position before camera transform.
-			ObjectPosition = WorldPosition;
-
-			return true;
-		}
-
-		virtual bool CameraTransform(const camera_transform_t& transform, const uint16_t index)
-		{
-			ApplyCameraTransform(transform, ObjectPosition);
-
-			return true;
-		}
-
-		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index)
-		{
-			screenProjector.Project(ObjectPosition);
-
-			return true;
 		}
 	};
 
@@ -56,27 +36,19 @@ namespace IntegerWorld
 		resize16_t Resize = RESIZE16_1X;
 
 	protected:
-		object_transform_t MeshTransform{};
+		transform16_scale_rotate_translate_t MeshTransform{};
 
 	public:
 		TransformObject() : TranslationObject() {}
 
-		virtual bool VertexShade(const uint16_t index)
+		virtual void ObjectShade(const frustum_t& frustum)
 		{
+			TranslationObject::ObjectShade(frustum);
+
 			// Pre-calculate transform.
-			MeshTransform.Translation.x = Translation.x;
-			MeshTransform.Translation.y = Translation.y;
-			MeshTransform.Translation.z = Translation.z;
+			MeshTransform.Translation = WorldPosition;
 			MeshTransform.Resize = Resize;
 			CalculateTransformRotation(MeshTransform, Rotation.x, Rotation.y, Rotation.z);
-
-			// Apply world transform to object.
-			WorldPosition = Translation;
-
-			// Copy world position before camera transform.
-			ObjectPosition = WorldPosition;
-
-			return true;
 		}
 	};
 
@@ -89,57 +61,52 @@ namespace IntegerWorld
 		typename primitive_t = base_primitive_t>
 	class AbstractTransformObject : public TransformObject
 	{
+	private:
+		using Base = TransformObject;
+
 	protected:
 		vertex_t Vertices[vertexCount]{};
 		primitive_t Primitives[primitiveCount]{};
 
-	public:
-		AbstractTransformObject() : TransformObject() {}
+	protected:
+		uint16_t VertexCount;
 
 	public:
-		virtual bool VertexShade(const uint16_t index)
+		AbstractTransformObject()
+			: TransformObject()
+			, VertexCount(vertexCount)
 		{
-			switch (index)
-			{
-			case 0:
-				TransformObject::VertexShade(0);
-				break;
-			default:
-				ApplyTransform(MeshTransform, Vertices[index - 1]);
-				break;
-			}
-
-			return index >= vertexCount;
 		}
 
-		virtual bool CameraTransform(const camera_transform_t& transform, const uint16_t index)
+	public:
+		virtual bool WorldTransform(const uint16_t vertexIndex)
 		{
-			switch (index)
-			{
-			case 0:
-				ApplyCameraTransform(transform, ObjectPosition);
-				break;
-			default:
-				ApplyCameraTransform(transform, Vertices[index - 1]);
-				break;
-			}
+			if (vertexIndex >= VertexCount)
+				return true;
 
-			return index >= vertexCount;
+			ApplyTransform(MeshTransform, Vertices[vertexIndex]);
+
+			return false;
 		}
 
-		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index)
+		virtual bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex)
 		{
-			switch (index)
-			{
-			case 0:
-				screenProjector.Project(ObjectPosition);
-				break;
-			default:
-				screenProjector.Project(Vertices[index - 1]);
-				break;
-			}
+			if (vertexIndex >= VertexCount)
+				return true;
 
-			return index >= vertexCount;
+			ApplyCameraTransform(transform, Vertices[vertexIndex]);
+
+			return false;
+		}
+
+		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex)
+		{
+			if (vertexIndex >= VertexCount)
+				return true;
+
+			screenProjector.Project(Vertices[vertexIndex]);
+
+			return false;
 		}
 	};
 }

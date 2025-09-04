@@ -44,210 +44,337 @@ namespace IntegerWorld
 		vertex16_t worldPosition;
 	};
 
-	template<uint16_t vertexCount, uint16_t edgeCount,
-		typename BaseObject = AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>>
-		class EdgeObject : public BaseObject
+	/// <summary>
+	/// Abstract static edge object with a fixed number of vertices and edges.
+	/// </summary>
+	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
+	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
+	template<uint16_t vertexCount, uint16_t edgeCount>
+	class AbstractStaticEdgeObject : public AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>
 	{
-	public:
-		using BaseObject::SceneShader;
+	private:
+		using Base = AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>;
 
 	protected:
-		using BaseObject::Vertices;
-		using BaseObject::Primitives;
-		using BaseObject::ObjectPosition;
-		using BaseObject::MeshTransform;
+		using Base::Vertices;
+
+	protected:
+		const vertex16_t* VerticesSource = nullptr;
+		const edge_line_t* EdgesSource = nullptr;
+
+	protected:
+		static constexpr uint16_t EdgeCount = edgeCount;
 
 	public:
+		AbstractStaticEdgeObject() : Base() {}
+
+		void SetStaticSources(const vertex16_t vertices[vertexCount], const edge_line_t edges[edgeCount])
+		{
+			VerticesSource = vertices;
+			EdgesSource = edges;
+		}
+
+	protected:
+#if defined(ARDUINO_ARCH_AVR)
+		const edge_line_t GetEdge(const uint16_t index) const
+		{
+			return edge_line_t
+			{
+				(uint16_t)pgm_read_word(&EdgesSource[index].start),
+				(uint16_t)pgm_read_word(&EdgesSource[index].end)
+			};
+		}
+#else
+		const edge_line_t& GetEdge(const uint16_t index) const
+		{
+			return EdgesSource[index];
+		}
+#endif
+
+		void LoadVertex(const uint16_t index)
+		{
+#if defined(ARDUINO_ARCH_AVR)
+			Vertices[index].x = pgm_read_word(&VerticesSource[index].x);
+			Vertices[index].y = pgm_read_word(&VerticesSource[index].y);
+			Vertices[index].z = pgm_read_word(&VerticesSource[index].z);
+#else
+			Vertices[index].x = VerticesSource[index].x;
+			Vertices[index].y = VerticesSource[index].y;
+			Vertices[index].z = VerticesSource[index].z;
+#endif
+		}
+	};
+
+	/// <summary>
+	/// Abstract object with dynamic edges and vertices.
+	/// </summary>
+	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
+	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
+	template<uint16_t vertexCount, uint16_t edgeCount>
+	class AbstractDynamicEdgeObject : public AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>
+	{
+	private:
+		using Base = AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>;
+
+	protected:
+		using Base::Vertices;
+
+	protected:
+		vertex16_t VerticesSource[vertexCount]{};
+		edge_line_t EdgesSource[edgeCount]{};
+
+	protected:
+		uint16_t EdgeCount;
+
+	public:
+		AbstractDynamicEdgeObject()
+			: Base()
+			, EdgeCount(edgeCount)
+		{
+		}
+
+	protected:
+		const edge_line_t& GetEdge(const uint16_t index) const
+		{
+			return EdgesSource[index];
+		}
+
+		void LoadVertex(const uint16_t index)
+		{
+			Vertices[index].x = VerticesSource[index].x;
+			Vertices[index].y = VerticesSource[index].y;
+			Vertices[index].z = VerticesSource[index].z;
+		}
+	};
+
+	/// <summary>
+	/// Extends a base edge object and manages edge primitives, their transformations, and rendering logic.
+	/// Implements frustum culling, edge drawing modes, fragment collection and shading.
+	/// Parameterized Base Class Pattern allows code-reuse for static and dynamic edge objects with zero overhead.
+	/// </summary>
+	/// <typeparam name="BaseEdgeObject">AbstractDynamicEdgeObject or AbstractStaticEdgeObject.</typeparam>
+	/// <typeparam name="frustumCulling">Specifies the frustum culling mode (default: ObjectCulling).</typeparam>
+	/// <typeparam name="edgeDrawMode">Specifies the edge drawing mode (default: NoCulling).</typeparam>
+	template<typename BaseEdgeObject,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+	class TemplateEdgeObject : public BaseEdgeObject
+	{
+	public:
+		using BaseEdgeObject::SceneShader;
+
+	protected:
+		using BaseEdgeObject::Vertices;
+		using BaseEdgeObject::Primitives;
+		using BaseEdgeObject::WorldPosition;
+		using BaseEdgeObject::VertexCount;
+		using BaseEdgeObject::EdgeCount;
+
+	public:
+		// Edge fragment shader.
 		IFragmentShader<edge_fragment_t>* FragmentShader = nullptr;
 
 	private:
-		const vertex16_t* VerticesSource;
-		const edge_line_t* EdgesSource;
+		// Screen space object position.
+		vertex16_t ScreenPosition{};
 
-	private:
+		// Reusable edge fragment for edge shading.
 		edge_fragment_t EdgeFragment{};
 
 	public:
-		EdgeDrawModeEnum EdgeDrawMode;
+		TemplateEdgeObject() : BaseEdgeObject() {}
 
-	protected:
-		virtual void GeometryShade(const uint16_t index) {}
-
-	public:
-		EdgeObject(const vertex16_t vertices[vertexCount], const edge_line_t edges[edgeCount], const EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling)
-			: BaseObject()
-			, VerticesSource(vertices)
-			, EdgesSource(edges)
-			, EdgeDrawMode(edgeDrawMode)
+		virtual void ObjectShade(const frustum_t& frustum)
 		{
-		}
+			BaseEdgeObject::ObjectShade(frustum);
 
-	public:
-		bool VertexShade(const uint16_t index) final
-		{
-			switch (index)
+			ScreenPosition = WorldPosition;
+
+			int16_t zFlag = 0;
+
+			switch (frustumCulling)
 			{
-			case 0:
-				return BaseObject::VertexShade(0);
-			default:
-#if defined(ARDUINO_ARCH_AVR)
-				Vertices[index - 1].x = pgm_read_word(&VerticesSource[index - 1].x);
-				Vertices[index - 1].y = pgm_read_word(&VerticesSource[index - 1].y);
-				Vertices[index - 1].z = pgm_read_word(&VerticesSource[index - 1].z);
-#else
-				Vertices[index - 1].x = VerticesSource[index - 1].x;
-				Vertices[index - 1].y = VerticesSource[index - 1].y;
-				Vertices[index - 1].z = VerticesSource[index - 1].z;
-#endif
-				GeometryShade(index - 1);
-
-				ApplyTransform(MeshTransform, Vertices[index - 1]);
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::ObjectCulling:
+				if (!frustum.IsPointInside(WorldPosition))
+				{
+					zFlag = -VERTEX16_UNIT;
+				}
+				for (uint_fast16_t i = 0; i < EdgeCount; i++)
+				{
+					Primitives[i].z = zFlag;
+				}
 				break;
-			}
-
-			return index >= vertexCount;
-		}
-
-		bool PrimitiveWorldShade(const uint16_t index) final
-		{
-#if defined(ARDUINO_ARCH_AVR)
-			const edge_line_t edge
-			{
-				(uint16_t)pgm_read_word(&EdgesSource[index].start),
-				(uint16_t)pgm_read_word(&EdgesSource[index].end)
-			};
-#else
-			const edge_line_t& edge = EdgesSource[index];
-#endif
-
-			// Early cull based on edge cull mode.
-			bool renderFragment = true;
-			switch (EdgeDrawMode)
-			{
-			case EdgeDrawModeEnum::CullCenterZBehind:
-				renderFragment &= ObjectPosition.z >
-					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-						+ Vertices[edge.end].z), 1);
+			case FrustumCullingEnum::PrimitiveCulling:
+				for (uint_fast16_t i = 0; i < EdgeCount; i++)
+				{
+					Primitives[i].z = 0;
+				}
 				break;
-			case EdgeDrawModeEnum::CullCenterZFront:
-				renderFragment &= ObjectPosition.z <
-					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-						+ Vertices[edge.end].z), 1);
-				break;
-			case EdgeDrawModeEnum::CullAllBehind:
-				renderFragment &= (Vertices[edge.start].z <= ObjectPosition.z
-					|| Vertices[edge.end].z <= ObjectPosition.z);
-				break;
-			case EdgeDrawModeEnum::CullAnyBehind:
-				renderFragment &= (Vertices[edge.start].z <= ObjectPosition.z
-					&& Vertices[edge.end].z <= ObjectPosition.z);
-				break;
-			case EdgeDrawModeEnum::NoCulling:
+			case FrustumCullingEnum::NoCulling:
 			default:
 				break;
-			}
+			};
 
-			if (renderFragment)
+			if (zFlag >= 0)
 			{
-				Primitives[index].z = 0;
-				Primitives[index].worldPosition.x = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].x + Vertices[edge.end].x), 1);
-				Primitives[index].worldPosition.y = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].y + Vertices[edge.end].y), 1);
-				Primitives[index].worldPosition.z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
+				for (uint_fast16_t i = 0; i < VertexCount; i++)
+				{
+					BaseEdgeObject::LoadVertex(i);
+				}
 			}
-			else
-			{
-				Primitives[index].z = -VERTEX16_RANGE;
-			}
-
-			return index >= edgeCount - 1;
 		}
 
-		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
+		virtual bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex)
 		{
-#if defined(ARDUINO_ARCH_AVR)
-			const edge_line_t edge
-			{
-				(uint16_t)pgm_read_word(&EdgesSource[index].start),
-				(uint16_t)pgm_read_word(&EdgesSource[index].end)
-			};
-#else
-			const edge_line_t& edge = EdgesSource[index];
-#endif
+			if (primitiveIndex >= EdgeCount)
+				return true;
 
-			if (Primitives[index].z != -VERTEX16_RANGE)
+			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+
+			switch (frustumCulling)
 			{
-				// Quick check if triangle is behind screen.
-				if ((Vertices[edge.start].z < 0
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::PrimitiveCulling:
+				if (Primitives[primitiveIndex].z >= 0)
+				{
+					Primitives[primitiveIndex].z = -VERTEX16_UNIT * !frustum.IsPointInside(Primitives[primitiveIndex].worldPosition);
+				}
+				break;
+			case FrustumCullingEnum::NoCulling:
+			default:
+				Primitives[primitiveIndex].z = 0;
+				break;
+			};
+
+			if (Primitives[primitiveIndex].z >= 0)
+			{
+				// Cache primitive world position as average of both edge vertices.
+				Primitives[primitiveIndex].worldPosition.x = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].x + Vertices[edge.end].x), 1);
+				Primitives[primitiveIndex].worldPosition.y = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].y + Vertices[edge.end].y), 1);
+				Primitives[primitiveIndex].worldPosition.z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
+			}
+
+			return false;
+		}
+
+		virtual bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex)
+		{
+			if (vertexIndex == 0)
+				ApplyCameraTransform(transform, ScreenPosition);
+
+			return BaseEdgeObject::CameraTransform(transform, vertexIndex);
+		}
+
+		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex)
+		{
+			if (vertexIndex == 0)
+				screenProjector.Project(ScreenPosition);
+
+			return BaseEdgeObject::ScreenProject(screenProjector, vertexIndex);
+		}
+
+		virtual bool ScreenShade(const uint16_t primitiveIndex)
+		{
+			if (primitiveIndex >= EdgeCount)
+				return true;
+
+			if (Primitives[primitiveIndex].z < 0)
+				return false;
+
+			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+
+			if (Primitives[primitiveIndex].z >= 0)
+			{
+				//TODO: remove after frustum culling is working correctly
+				if (Vertices[edge.start].z < 0
 					&& Vertices[edge.end].z < 0)
-					|| (Vertices[edge.start].x < 0 && Vertices[edge.end].x < 0)
-					|| (Vertices[edge.start].x >= boundsWidth && Vertices[edge.end].x >= boundsWidth)
-					|| (Vertices[edge.start].y < 0 && Vertices[edge.end].y < 0)
-					|| (Vertices[edge.start].y >= boundsHeight && Vertices[edge.end].y >= boundsHeight))
 				{
 					// Whole edge is out of bounds.
-					Primitives[index].z = -VERTEX16_RANGE;
+					Primitives[primitiveIndex].z = -VERTEX16_UNIT;
+					return false;
+				}
+
+				// Cull based on edge cull mode.
+				bool renderFragment = true;
+				switch (edgeDrawMode)
+				{
+				case EdgeDrawModeEnum::CullCenterZBehind:
+					renderFragment = ScreenPosition.z >
+						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+							+ Vertices[edge.end].z), 1);
+					break;
+				case EdgeDrawModeEnum::CullCenterZFront:
+					renderFragment = ScreenPosition.z <
+						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+							+ Vertices[edge.end].z), 1);
+					break;
+				case EdgeDrawModeEnum::CullAllBehind:
+					renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
+						|| Vertices[edge.end].z <= ScreenPosition.z);
+					break;
+				case EdgeDrawModeEnum::CullAnyBehind:
+					renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
+						&& Vertices[edge.end].z <= ScreenPosition.z);
+					break;
+				case EdgeDrawModeEnum::NoCulling:
+				default:
+					break;
+				}
+
+				if (!renderFragment)
+				{
+					Primitives[primitiveIndex].z = -VERTEX16_UNIT;
+					return false;
 				}
 			}
 
-			return index >= edgeCount - 1;
+			return false;
 		}
 
 		void FragmentCollect(FragmentCollector& fragmentCollector) final
 		{
-			for (uint16_t i = 0; i < edgeCount; i++)
+			for (uint_fast16_t i = 0; i < EdgeCount; i++)
 			{
-#if defined(ARDUINO_ARCH_AVR)
-				const edge_line_t edge
+				if (Primitives[i].z >= 0)
 				{
-					(uint16_t)pgm_read_word(&EdgesSource[i].start),
-					(uint16_t)pgm_read_word(&EdgesSource[i].end)
-				};
-#else
-				const edge_line_t& edge = EdgesSource[i];
-#endif
+					auto edge = BaseEdgeObject::GetEdge(i);
 
-				if (Primitives[i].z != -VERTEX16_RANGE)
-				{
-					Primitives[i].z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
-					fragmentCollector.AddFragment(i, Primitives[i].z);
+					if (Primitives[i].z >= 0)
+					{
+						Primitives[i].z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
+						fragmentCollector.AddFragment(i, Primitives[i].z);
+					}
 				}
 			}
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex)
 		{
-			if (FragmentShader != nullptr)
+			if (FragmentShader == nullptr)
+				return;
+
+			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+			const edge_primitive_t& primitive = Primitives[primitiveIndex];
+
+			EdgeFragment.start = Vertices[edge.start];
+			EdgeFragment.end = Vertices[edge.end];
+			EdgeFragment.world = primitive.worldPosition;
+
+			GetFragment(EdgeFragment, primitiveIndex);
+
+			if (SceneShader != nullptr)
 			{
-#if defined(ARDUINO_ARCH_AVR)
-				const edge_line_t edge
-				{
-					(uint16_t)pgm_read_word(&EdgesSource[index].start),
-					(uint16_t)pgm_read_word(&EdgesSource[index].end)
-				};
-#else
-				const edge_line_t& edge = EdgesSource[index];
-#endif
-				const edge_primitive_t& primitive = Primitives[index];
-				EdgeFragment.start = Vertices[edge.start];
-				EdgeFragment.end = Vertices[edge.end];
-				EdgeFragment.world = primitive.worldPosition;
-				EdgeFragment.world = primitive.worldPosition;
-
-				GetFragment(EdgeFragment, index);
-
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, EdgeFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, EdgeFragment);
-				}
+				FragmentShader->FragmentShade(rasterizer, EdgeFragment, SceneShader);
+			}
+			else
+			{
+				FragmentShader->FragmentShade(rasterizer, EdgeFragment);
 			}
 		}
 
 	protected:
-		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t index)
+		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
@@ -257,25 +384,99 @@ namespace IntegerWorld
 		}
 	};
 
+	/// <summary>
+	/// Dynamic edge object, supporting customizable vertex and edge counts, frustum culling, and edge draw modes.
+	/// </summary>
+	/// <typeparam name="vertexCount">The max number of vertices in the edge object.</typeparam>
+	/// <typeparam name="edgeCount">The max number of edges in the edge object.</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use, defaulting to ObjectCulling (FrustumCullingEnum).</typeparam>
+	/// <typeparam name="edgeDrawMode">The edge draw mode to use, defaulting to NoCulling (EdgeDrawModeEnum).</typeparam>
 	template<uint16_t vertexCount, uint16_t edgeCount,
-		typename BaseObject = AbstractTransformObject<vertexCount, edgeCount, edge_vertex_t, edge_primitive_t>>
-		class EdgeSingleColorSingleMaterialObject : public EdgeObject<vertexCount, edgeCount, BaseObject>
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+	using DynamicEdgeObject = TemplateEdgeObject<AbstractDynamicEdgeObject<vertexCount, edgeCount>, frustumCulling, edgeDrawMode>;
+
+	/// <summary>
+	/// Static edge object, supporting frustum culling and edge draw modes.
+	/// </summary>
+	/// <typeparam name="vertexCount">The number of vertices in the object .</typeparam>
+	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use. Defaults to ObjectCulling.</typeparam>
+	/// <typeparam name="edgeDrawMode">The edge drawing mode to use. Defaults to NoCulling.</typeparam>
+	template<uint16_t vertexCount, uint16_t edgeCount,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+	class StaticEdgeObject : public TemplateEdgeObject<AbstractStaticEdgeObject<vertexCount, edgeCount>, frustumCulling, edgeDrawMode>
 	{
 	private:
-		using Base = EdgeObject<vertexCount, edgeCount, BaseObject>;
+		using Base = TemplateEdgeObject<AbstractStaticEdgeObject<vertexCount, edgeCount>, frustumCulling, edgeDrawMode>;
+
+	public:
+		StaticEdgeObject(const vertex16_t vertices[vertexCount], const edge_line_t edges[edgeCount])
+			: Base()
+		{
+			Base::SetStaticSources(vertices, edges);
+		}
+	};
+
+	/// <summary>
+	/// Dynamic edge object with a single color and material, supporting customizable vertex and edge counts, frustum culling, and edge draw modes.
+	/// </summary>
+	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
+	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use (default: ObjectCulling).</typeparam>
+	/// <typeparam name="edgeDrawMode">The edge draw mode to use (default: NoCulling).</typeparam>
+	template<uint16_t vertexCount, uint16_t edgeCount,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+	class DynamicEdgeSingleColorSingleMaterialObject : public DynamicEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>
+	{
+	private:
+		using Base = DynamicEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>;
 
 	public:
 		Rgb8::color_t Color = Rgb8::WHITE;
 		material_t Material{ UFRACTION8_1X, 0, 0, 0 };
 
 	public:
-		EdgeSingleColorSingleMaterialObject(const vertex16_t vertices[vertexCount], const edge_line_t edges[edgeCount], const EdgeDrawModeEnum edgeDrawMode)
-			: Base(vertices, edges, edgeDrawMode)
+		DynamicEdgeSingleColorSingleMaterialObject() : Base() {}
+
+	protected:
+		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t primitiveIndex) final
+		{
+			fragment.color = Color;
+			fragment.material = Material;
+		}
+	};
+
+	/// <summary>
+	/// Static edge object with a single color and material, supporting frustum culling and edge draw modes.
+	/// </summary>
+	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
+	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode (default: ObjectCulling).</typeparam>
+	/// <typeparam name="edgeDrawMode">The edge draw mode (default: NoCulling).</typeparam>
+	template<uint16_t vertexCount, uint16_t edgeCount,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+	class StaticEdgeSingleColorSingleMaterialObject : public StaticEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>
+	{
+	private:
+		using Base = StaticEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>;
+
+	public:
+		Rgb8::color_t Color = Rgb8::WHITE;
+		material_t Material{ UFRACTION8_1X, 0, 0, 0 };
+
+	public:
+		StaticEdgeSingleColorSingleMaterialObject(
+			const vertex16_t vertices[vertexCount],
+			const edge_line_t edges[edgeCount])
+			: Base(vertices, edges)
 		{
 		}
 
-	protected:
-		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t index)
+		virtual void GetFragment(edge_fragment_t& fragment, const uint16_t primitiveIndex) final
 		{
 			fragment.color = Color;
 			fragment.material = Material;

@@ -12,7 +12,7 @@ namespace IntegerWorld
 	};
 
 	/// <summary>
-	/// The billboard is always centered on ObjectPosition.
+	/// The billboard is always centered on its world position.
 	/// The billboard is always axis-aligned (upright in screen space), with no rotation to match the camera’s up vector
 	/// </summary>
 	template<BillboardScaleModeEnum billboardScaleMode = BillboardScaleModeEnum::WorldSpace>
@@ -32,14 +32,17 @@ namespace IntegerWorld
 		billboard_primitive_t Primitive{};
 		vertex16_t Top{};
 
-		uint16_t Height;
 		resize16_t ProportionCopy;
+		uint16_t Height;
+
+	private:
+		vertex16_t ScreenPosition{}; //TODO: Remove?
 
 	public:
 		BillboardObject()
 			: TranslationObject()
-			, Height(1)
 			, Proportion(RESIZE16_1X)
+			, Height(1)
 		{
 		}
 
@@ -66,94 +69,102 @@ namespace IntegerWorld
 			Height = height;
 		}
 
-		bool VertexShade(const uint16_t index) final
+		virtual void ObjectShade(const frustum_t& frustum)
 		{
-			// Apply world transform to object.
-			WorldPosition = Translation;
+			TranslationObject::ObjectShade(frustum);
 
 			// Copy world position before camera transform.
-			ObjectPosition = WorldPosition;
+			ScreenPosition = WorldPosition;
 
 			// Double buffer to ensure consistent billboard widht/height.
 			HeightScaled = Resize::Scale(Resize, Height);
 			ProportionCopy = Proportion;
 
+			// Simple frustum culling based on the center point.
+			if (frustum.IsPointInside(WorldPosition))
+			{
+				Primitive.z = 0;
+			}
+			else
+			{
+				Primitive.z = -VERTEX16_UNIT;
+			}
+		}
+
+		bool WorldTransform(const uint16_t vertexIndex) final
+		{
 			return true;
 		}
 
-		bool PrimitiveWorldShade(const uint16_t index) final
+		bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex) final
 		{
-			Primitive.z = 0;
-			//TODO: Frustum culling.
-
 			return true;
 		}
 
-		bool CameraTransform(const camera_transform_t& transform, const uint16_t index) final
+		bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex) final
 		{
-			ApplyCameraTransform(transform, ObjectPosition);
+			if (Primitive.z < 0)
+				return true;
 
-			Top = { ObjectPosition.x,
-						   int16_t(ObjectPosition.y + HeightScaled),
-						   ObjectPosition.z };
+			ApplyCameraTransform(transform, ScreenPosition);
+
+			Top = { ScreenPosition.x,
+						   int16_t(ScreenPosition.y + HeightScaled),
+						   ScreenPosition.z };
 
 			if (HeightScaled < 1)
-				Primitive.z = -VERTEX16_RANGE;
+				Primitive.z = -VERTEX16_UNIT;
 
 			return true;
 		}
 
-		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) final
+		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex) final
 		{
-			screenProjector.Project(ObjectPosition);
+			screenProjector.Project(ScreenPosition);
 			screenProjector.Project(Top);
 
 			return true;
 		}
 
-		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) final
+		bool ScreenShade(const uint16_t primitiveIndex) final
 		{
-			if (Primitive.z != -VERTEX16_RANGE)
+			if (Primitive.z < 0)
+				return true;
+
+			uint16_t width = 0;
+			uint16_t height = 0;
+
+			switch (BillboardScaleMode)
 			{
-				uint16_t width = 0;
-				uint16_t height = 0;
+			case BillboardScaleModeEnum::ScreenSpace: // Use a fixed pixel height regardless of distance
+				height = HeightScaled;
+				width = Resize::Scale(ProportionCopy, height);
+				break;
+			case BillboardScaleModeEnum::WorldSpace: // Pixel height based on the distance in screen-space.
+			default:
+				height = Distance16(Top, ScreenPosition);
+				width = Resize::Scale(ProportionCopy, height);
+				break;
+			}
 
-				switch (BillboardScaleMode)
-				{
-				case BillboardScaleModeEnum::ScreenSpace: // Use a fixed pixel height regardless of distance
-					height = HeightScaled;
-					width = Resize::Scale(ProportionCopy, height);
-					break;
-				case BillboardScaleModeEnum::WorldSpace: // Pixel height based on the distance in screen-space.
-				default:
-					height = Distance16(Top, ObjectPosition);
-					width = Resize::Scale(ProportionCopy, height);
-					break;
-				}
+			const uint16_t halfWidth = (width >> 1);
+			const uint16_t halfHeight = (height >> 1);
 
-				const uint16_t halfWidth = (width >> 1);
-				const uint16_t halfHeight = (height >> 1);
+			// Cull if the billboard is outside the bounds.
+			if ((halfWidth == 0)
+				|| (halfHeight == 0)
+				|| ScreenPosition.z <= 0)
+			{
+				Primitive.z = -VERTEX16_RANGE;
+			}
+			else
+			{
+				Primitive.topLeftX = ScreenPosition.x - halfWidth;
+				Primitive.bottomRightX = ScreenPosition.x + halfWidth;
+				Primitive.topLeftY = ScreenPosition.y - halfHeight;
+				Primitive.bottomRightY = ScreenPosition.y + halfHeight;
 
-				// Cull if the billboard is outside the bounds.
-				if ((halfWidth == 0)
-					|| (halfHeight == 0)
-					|| ObjectPosition.z <= 0
-					|| (ObjectPosition.x + halfWidth < 0)
-					|| (ObjectPosition.x - halfWidth >= boundsWidth)
-					|| (ObjectPosition.y + halfHeight < 0)
-					|| (ObjectPosition.y - halfHeight >= boundsHeight))
-				{
-					Primitive.z = -VERTEX16_RANGE;
-				}
-				else
-				{
-					Primitive.topLeftX = ObjectPosition.x - halfWidth;
-					Primitive.bottomRightX = ObjectPosition.x + halfWidth;
-					Primitive.topLeftY = ObjectPosition.y - halfHeight;
-					Primitive.bottomRightY = ObjectPosition.y + halfHeight;
-
-					Primitive.z = ObjectPosition.z;
-				}
+				Primitive.z = ScreenPosition.z;
 			}
 
 			return true;
@@ -161,7 +172,7 @@ namespace IntegerWorld
 
 		void FragmentCollect(FragmentCollector& fragmentCollector) final
 		{
-			if (Primitive.z != -VERTEX16_RANGE)
+			if (Primitive.z >= 0)
 			{
 				if (ZOverride == -VERTEX16_RANGE)
 				{
@@ -174,10 +185,10 @@ namespace IntegerWorld
 			}
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex)
 		{
 			billboard_fragment_t fragment;
-			fragment.world = ObjectPosition;
+			fragment.world = ScreenPosition;
 			fragment.topLeftX = Primitive.topLeftX;
 			fragment.topLeftY = Primitive.topLeftY;
 			fragment.bottomRightX = Primitive.bottomRightX;

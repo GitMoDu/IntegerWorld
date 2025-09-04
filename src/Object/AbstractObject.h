@@ -18,16 +18,11 @@ namespace IntegerWorld
 	public:
 		AbstractObject() : IRenderObject() {}
 
-	public:
-
+		// Default implementation since most objects do not have per-vertex animation.
+		virtual bool VertexShade(const uint16_t vertexIndex)
+		{
+			return true;
+		}
 	};
-
-	static bool IsVertexIn2DBounds(const uint16_t boundsWidth, const uint16_t boundsHeight, const vertex16_t vertex)
-	{
-		return vertex.x >= 0
-			&& vertex.x < boundsWidth
-			&& vertex.x >= 0
-			&& vertex.y < boundsHeight;
-	}
 }
 #endif

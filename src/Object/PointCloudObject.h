@@ -21,23 +21,21 @@ namespace IntegerWorld
 
 	template<uint16_t vertexCount,
 		typename vertex_t = point_cloud_vertex_t,
-		typename primitive_t = lit_point_primitive_t>
+		typename primitive_t = lit_point_primitive_t,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling>
 	class LitPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>
 	{
 	private:
-		using BaseObject = AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
+		using Base = AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
 
 	public:
-		using BaseObject::SceneShader;
+		using Base::SceneShader;
 
 	protected:
-		using BaseObject::ObjectPosition;
-		using BaseObject::WorldPosition;
-
-	protected:
-		using BaseObject::Vertices;
-		using BaseObject::Primitives;
-		using BaseObject::MeshTransform;;
+		using Base::Vertices;
+		using Base::Primitives;
+		using Base::WorldPosition;
+		using Base::VertexCount;
 
 	public:
 		IFragmentShader<point_normal_fragment_t>* FragmentShader = nullptr;
@@ -45,246 +43,136 @@ namespace IntegerWorld
 	private:
 		const vertex16_t* VerticesSource;
 
+		// Screen space object position for edge culling.
+		vertex16_t ScreenPosition{};
+
 	private:
 		point_normal_fragment_t PointFragment{};
 
-	protected:
-		virtual void VertexAnimate(const uint16_t index) {}
-
 	public:
 		LitPointCloudObject(const vertex16_t vertices[vertexCount])
-			: BaseObject()
+			: Base()
 			, VerticesSource(vertices)
 		{
 		}
 
-		virtual bool VertexShade(const uint16_t index)
+		virtual void ObjectShade(const frustum_t& frustum)
 		{
-			switch (index)
+			Base::ObjectShade(frustum);
+
+			ScreenPosition = WorldPosition;
+
+			int16_t zFlag = 0;
+
+			switch (frustumCulling)
 			{
-			case 0:
-				BaseObject::VertexShade(0);
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::ObjectCulling:
+				zFlag = -VERTEX16_UNIT * !frustum.IsPointInside(WorldPosition);
 				break;
 			default:
-				Vertices[index - 1].x = VerticesSource[index - 1].x;
-				Vertices[index - 1].y = VerticesSource[index - 1].y;
-				Vertices[index - 1].z = VerticesSource[index - 1].z;
-
-				VertexAnimate(index - 1);
-
-				ApplyTransform(MeshTransform, Vertices[index - 1]);
 				break;
-			}
+			};
 
-			return index >= vertexCount;
+			for (uint_fast16_t i = 0; i < VertexCount; i++)
+			{
+				Vertices[i].x = VerticesSource[i].x;
+				Vertices[i].y = VerticesSource[i].y;
+				Vertices[i].z = VerticesSource[i].z;
+				Primitives[i].z = zFlag;
+			}
 		}
 
-		virtual bool PrimitiveWorldShade(const uint16_t index)
+		virtual bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex)
 		{
-			if (index < vertexCount)
+			if (primitiveIndex >= VertexCount)
+				return true;
+
+			if (Primitives[primitiveIndex].z < 0)
+				return false;
+
+			switch (frustumCulling)
 			{
-				//TODO: Check for world space frustum culling.
-				// Flag fragment to render.
-				Primitives[index].z = 0;
-				Primitives[index].worldPosition = Vertices[index];
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::PrimitiveCulling:
+				Primitives[primitiveIndex].z = -VERTEX16_UNIT * !frustum.IsPointInside(Vertices[primitiveIndex]);
+				if (Primitives[primitiveIndex].z < 0)
+					return false;
+				break;
+			default:
+				break;
+			};
 
-				vertex32_t normal{ Vertices[index].x - WorldPosition.x,
-									Vertices[index].y - WorldPosition.y,
-									Vertices[index].z - WorldPosition.z };
-				NormalizeVertex32Fast(normal);
-				Primitives[index].worldNormal.x = normal.x;
-				Primitives[index].worldNormal.y = normal.y;
-				Primitives[index].worldNormal.z = normal.z;
-			}
+			Primitives[primitiveIndex].worldPosition = Vertices[primitiveIndex];
 
-			return index >= vertexCount - 1;
+			vertex32_t normal{ Vertices[primitiveIndex].x - WorldPosition.x,
+								Vertices[primitiveIndex].y - WorldPosition.y,
+								Vertices[primitiveIndex].z - WorldPosition.z };
+			NormalizeVertex32Fast(normal);
+			Primitives[primitiveIndex].worldNormal.x = normal.x;
+			Primitives[primitiveIndex].worldNormal.y = normal.y;
+			Primitives[primitiveIndex].worldNormal.z = normal.z;
+
+			return false;
 		}
 
-		virtual bool PrimitiveScreenShade(const uint16_t index)
+		virtual bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex)
 		{
-			if (index < vertexCount)
+			if (vertexIndex == 0)
+				ApplyCameraTransform(transform, ScreenPosition);
+
+			return Base::CameraTransform(transform, vertexIndex);
+		}
+
+		virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex)
+		{
+			if (vertexIndex == 0)
+				screenProjector.Project(ScreenPosition);
+
+			return Base::ScreenProject(screenProjector, vertexIndex);
+		}
+
+		virtual bool ScreenShade(const uint16_t primitiveIndex)
+		{
+			if (primitiveIndex >= VertexCount)
+				return true;
+
+			if (Primitives[primitiveIndex].z >= 0)
 			{
-				//TODO: Check for screen space frustum culling.
-				if (Primitives[index].z != VERTEX16_RANGE)
+				// Calculate screen normal and cull if facing away from viewport.
+				const int32_t normalZ = int16_t(Vertices[primitiveIndex].z) - ScreenPosition.z;
+
+				if (normalZ <= 0)
 				{
-					Primitives[index].z = Vertices[index].z;
-					if (Primitives[index].z <= 0)
-					{
-						Primitives[index].z = VERTEX16_RANGE;
-					}
-					else
-					{
-						// Calculate screen normal and cull if facing away from viewport.
-						const int32_t normalZ = int16_t(Vertices[index].z) - ObjectPosition.z;
-						if (normalZ > 0)
-						{
-							Primitives[index].z = VERTEX16_RANGE;
-						}
-					}
+					Primitives[primitiveIndex].z = -VERTEX16_UNIT;
 				}
-			}
 
-			return index >= vertexCount - 1;
+				return false;
+			}
 		}
 
 		virtual void FragmentCollect(FragmentCollector& fragmentCollector, const uint16_t boundsWidth, const uint16_t boundsHeight)
 		{
-			for (uint16_t i = 0; i < vertexCount; i++)
+			for (uint_fast16_t i = 0; i < VertexCount; i++)
 			{
-				const int16_t fragmentZ = Primitives[i].z;
-				if (fragmentZ != VERTEX16_RANGE
-					&& Vertices[i].x >= 0
-					&& Vertices[i].y >= 0
-					&& Vertices[i].x < boundsWidth
-					&& Vertices[i].y < boundsHeight)
-				{
-					fragmentCollector.AddFragment(i, fragmentZ);
-				}
-			}
-		}
-
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
-		{
-			if (FragmentShader != nullptr)
-			{
-				primitive_t& primitive = Primitives[index];
-
-				if (primitive.z != VERTEX16_RANGE)
-				{
-					GetFragment(PointFragment, index);
-
-					PointFragment.world = primitive.worldPosition;
-					PointFragment.normal = primitive.worldNormal;
-					PointFragment.screen = Vertices[index];
-
-					if (SceneShader != nullptr)
-					{
-						FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
-					}
-					else
-					{
-						FragmentShader->FragmentShade(rasterizer, PointFragment);
-					}
-				}
-			}
-		}
-
-	protected:
-		virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
-		{
-			fragment.color = Rgb8::WHITE;
-			fragment.material.Emissive = 0;
-			fragment.material.Diffuse = UFRACTION8_1X;
-			fragment.material.Specular = 0;
-			fragment.material.Metallic = 0;
-		}
-	};
-
-	template<uint16_t vertexCount,
-		typename vertex_t = point_cloud_vertex_t,
-		typename primitive_t = flat_point_primitive_t>
-	class FlatPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>
-	{
-		using BaseObject = AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
-
-	public:
-		using BaseObject::SceneShader;
-
-	protected:
-		using BaseObject::Vertices;
-		using BaseObject::Primitives;
-		using BaseObject::MeshTransform;
-
-	public:
-		IFragmentShader<point_fragment_t>* FragmentShader = nullptr;
-
-	private:
-		const vertex16_t* VerticesSource;
-
-	private:
-		point_fragment_t PointFragment{};
-
-	protected:
-		virtual void GeometryShade(const uint16_t index) {}
-
-	public:
-		FlatPointCloudObject(const vertex16_t vertices[vertexCount])
-			: BaseObject()
-			, VerticesSource(vertices)
-		{
-		}
-
-		virtual bool VertexShade(const uint16_t index)
-		{
-			switch (index)
-			{
-			case 0:
-				return BaseObject::VertexShade(0);
-			default:
-				Vertices[index - 1].x = VerticesSource[index - 1].x;
-				Vertices[index - 1].y = VerticesSource[index - 1].y;
-				Vertices[index - 1].z = VerticesSource[index - 1].z;
-
-				GeometryShade(index - 1);
-
-				ApplyTransform(MeshTransform, Vertices[index - 1]);
-				break;
-			}
-
-			return index >= vertexCount;
-		}
-
-		virtual bool PrimitiveWorldShade(const uint16_t index)
-		{
-			//TODO: Check for world space frustum culling.
-			// Flag fragment to render.
-			Primitives[index].z = 0;
-			Primitives[index].worldPosition = Vertices[index];
-
-			return index >= vertexCount - 1;
-		}
-
-		virtual bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight)
-		{
-			//TODO: Check for screen space frustum culling.
-			// Check flagged fragments.
-			if (Primitives[index].z != VERTEX16_RANGE
-				&& Vertices[index].z >= 0
-				&& Vertices[index].x >= 0
-				&& Vertices[index].y >= 0
-				&& Vertices[index].x < boundsWidth
-				&& Vertices[index].y < boundsHeight)
-			{
-				Primitives[index].z = Vertices[index].z;
-			}
-			else
-			{
-				Primitives[index].z = VERTEX16_RANGE;
-			}
-
-			return index >= vertexCount - 1;
-		}
-
-		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
-		{
-			for (uint16_t i = 0; i < vertexCount; i++)
-			{
-				if (Primitives[i].z != VERTEX16_RANGE)
+				if (Primitives[i].z >= 0)
 				{
 					fragmentCollector.AddFragment(i, Primitives[i].z);
 				}
 			}
 		}
 
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index)
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex)
 		{
 			if (FragmentShader != nullptr)
 			{
-				primitive_t& primitive = Primitives[index];
+				primitive_t& primitive = Primitives[primitiveIndex];
 
-				GetFragment(PointFragment, index);
+				GetFragment(PointFragment, primitiveIndex);
+
 				PointFragment.world = primitive.worldPosition;
-				PointFragment.screen = Vertices[index];
+				PointFragment.normal = primitive.worldNormal;
+				PointFragment.screen = Vertices[primitiveIndex];
 
 				if (SceneShader != nullptr)
 				{
@@ -298,7 +186,143 @@ namespace IntegerWorld
 		}
 
 	protected:
-		virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
+		virtual void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
+		{
+			fragment.color = Rgb8::WHITE;
+			fragment.material.Emissive = 0;
+			fragment.material.Diffuse = UFRACTION8_1X;
+			fragment.material.Specular = 0;
+			fragment.material.Metallic = 0;
+		}
+	};
+
+	template<uint16_t vertexCount,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling>
+	class FlatPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, point_cloud_vertex_t, flat_point_primitive_t>
+	{
+	private:
+		using Base = AbstractTransformObject<vertexCount, vertexCount, point_cloud_vertex_t, flat_point_primitive_t>;
+
+	public:
+		using Base::SceneShader;
+
+	protected:
+		using Base::Vertices;
+		using Base::Primitives;
+		using Base::VertexCount;
+		using Base::WorldPosition;
+
+	public:
+		IFragmentShader<point_fragment_t>* FragmentShader = nullptr;
+
+	private:
+		const vertex16_t* VerticesSource;
+
+	private:
+		point_fragment_t PointFragment{};
+
+	public:
+		FlatPointCloudObject(const vertex16_t vertices[vertexCount])
+			: Base()
+			, VerticesSource(vertices)
+		{
+		}
+
+		virtual void ObjectShade(const frustum_t& frustum)
+		{
+			Base::ObjectShade(frustum);
+
+			int16_t zFlag = 0;
+
+			switch (frustumCulling)
+			{
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::ObjectCulling:
+				zFlag = -VERTEX16_UNIT * !frustum.IsPointInside(WorldPosition);
+				break;
+			default:
+				break;
+			};
+
+			for (uint_fast16_t i = 0; i < VertexCount; i++)
+			{
+				Vertices[i].x = VerticesSource[i].x;
+				Vertices[i].y = VerticesSource[i].y;
+				Vertices[i].z = VerticesSource[i].z;
+				Primitives[i].z = zFlag;
+			}
+		}
+
+		virtual bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex)
+		{
+			if (primitiveIndex >= VertexCount)
+				return true;
+
+			if (Primitives[primitiveIndex].z < 0)
+				return false;
+
+			switch (frustumCulling)
+			{
+			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
+			case FrustumCullingEnum::PrimitiveCulling:
+				Primitives[primitiveIndex].z = -VERTEX16_UNIT * !frustum.IsPointInside(Vertices[primitiveIndex]);
+				break;
+			default:
+				break;
+			};
+
+			Primitives[primitiveIndex].worldPosition = Vertices[primitiveIndex];
+
+			return false;
+		}
+
+		virtual bool ScreenShade(const uint16_t primitiveIndex)
+		{
+			if (primitiveIndex >= VertexCount)
+				return true;
+
+			if (Primitives[primitiveIndex].z < 0)
+				return false;
+
+			Primitives[primitiveIndex].z = Vertices[primitiveIndex].z;
+
+			return false;
+		}
+
+		virtual void FragmentCollect(FragmentCollector& fragmentCollector)
+		{
+			for (uint_fast16_t i = 0; i < VertexCount; i++)
+			{
+				if (Primitives[i].z >= 0)
+				{
+					fragmentCollector.AddFragment(i, Primitives[i].z);
+				}
+			}
+		}
+
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex)
+		{
+			if (FragmentShader != nullptr)
+			{
+				flat_point_primitive_t& primitive = Primitives[primitiveIndex];
+
+				GetFragment(PointFragment, primitiveIndex);
+				PointFragment.world = primitive.worldPosition;
+				PointFragment.screen = Vertices[primitiveIndex];
+
+				if (SceneShader != nullptr)
+				{
+					FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
+				}
+				else
+				{
+					FragmentShader->FragmentShade(rasterizer, PointFragment);
+				}
+			}
+		}
+
+	protected:
+		virtual void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;

@@ -31,19 +31,20 @@ namespace IntegerWorld
 		{
 		}
 
-		bool VertexShade(const uint16_t index) { return true; }
-		bool PrimitiveWorldShade(const uint16_t index) { return true; }
-		bool CameraTransform(const camera_transform_t& transform, const uint16_t index) { return true; }
-		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t index) { return true; }
+		void ObjectShade(const frustum_t& frustum) {}
+		bool WorldTransform(const uint16_t vertexIndex) { return true; }
+		bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex) { return true; }
+		bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex) { return true; }
+		bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex) { return true; }
 
-		bool PrimitiveScreenShade(const uint16_t index, const uint16_t boundsWidth, const uint16_t boundsHeight) { return true; }
+		bool ScreenShade(const uint16_t primitiveIndex) { return true; }
 
 		void FragmentCollect(FragmentCollector& fragmentCollector)
 		{
-				fragmentCollector.AddFragment(0, MinValue(int32_t(VERTEX16_RANGE), int32_t(VERTEX16_RANGE) + ZOffset));
+			fragmentCollector.AddFragment(0, MinValue(int32_t(VERTEX16_RANGE), int32_t(VERTEX16_RANGE) + ZOffset));
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t index) final
+		void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex) final
 		{
 			BackgroundFragment.color = Color;
 			BackgroundFragment.material = Material;
@@ -61,7 +62,7 @@ namespace IntegerWorld
 		}
 
 	protected:
-		void GetFragment(point_fragment_t& fragment, const uint16_t index)
+		void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
