@@ -33,16 +33,39 @@ namespace IntegerWorld
 			if (RendererStatus.GetRenderDuration() > 0)
 			{
 				Serial.println();
-				Serial.println(F("Integer World Renderer"));
+				Serial.print(F("Integer World Renderer\t"));
+				if (RendererStatus.FrameDuration > 0)
+				{
+					const uint32_t subUnits = 1000000000 / RendererStatus.FrameDuration;
+					Serial.print(subUnits / 1000);
+					Serial.print(',');
+					Serial.print((subUnits / 100) % 10);
+					Serial.print((subUnits / 10) % 10);
+				}
+				else
+				{
+					Serial.print(F("0.00"));
+				}
+				Serial.println(F(" FPS"));
 
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Serial.print(F("\tFramePreparation "));
 				Serial.print(RendererStatus.FramePreparation);
 				Serial.println(F("us"));
+				Serial.print(F("\tObjectShade("));
+				Serial.print(RendererStatus.ObjectShades);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.ObjectShade);
+				Serial.println(F("us"));
 				Serial.print(F("\tVertexShade("));
 				Serial.print(RendererStatus.VertexShades);
 				Serial.print(F(") "));
 				Serial.print(RendererStatus.VertexShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tWorldTransform("));
+				Serial.print(RendererStatus.WorldTransforms);
+				Serial.print(F(") "));
+				Serial.print(RendererStatus.WorldTransform);
 				Serial.println(F("us"));
 				Serial.print(F("\tWorldShade("));
 				Serial.print(RendererStatus.WorldShades);
@@ -79,7 +102,6 @@ namespace IntegerWorld
 				}
 #else
 #endif
-
 				Serial.print(F("\tRaster("));
 				Serial.print(RendererStatus.FragmentsDrawn);
 				Serial.print(F(") "));

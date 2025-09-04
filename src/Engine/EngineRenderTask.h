@@ -90,18 +90,20 @@ namespace IntegerWorld
 		/// </summary>
 		enum class StateEnum : uint8_t
 		{
-			Disabled,           // Task is disabled.
-			EngineStart,        // Initial state, prepares the surface.
-			CycleStart,         // Prepares for a new frame.
-			VertexShade,        // Vertex shading stage.
-			PrimitiveWorldShade,// World-space primitive shading.
-			CameraTransform,    // Applies camera transformation.
-			ScreenProject,      // Projects primitives to screen space.
-			PrimitiveScreenShade,// Screen-space primitive shading.
-			FragmentCollect,    // Collects fragments for rasterization.
-			FragmentSort,       // Sorts fragments for correct rendering order.
-			WaitForSurface,     // Waits for the output surface to be ready.
-			Rasterize           // Rasterizes fragments to the surface.
+			Disabled,			// Engine is disabled.
+			EngineStart,		// Initial state, prepares the surface.
+			CycleStart,			// Prepares for a new frame.
+			ObjectShade,		// Object-level shading.
+			VertexShade,		// Vertex shading stage.
+			WorldTransform,		// World transform stage.
+			WorldShade,			// World-space primitive shading.
+			CameraTransform,	// Applies camera transformation.
+			ScreenProject,		// Projects primitives to screen space.
+			ScreenShade,		// Screen-space primitive shading.
+			FragmentCollect,	// Collects fragments for rasterization.
+			FragmentSort,		// Sorts fragments for correct rendering order.
+			WaitForSurface,		// Waits for the output surface to be ready.
+			Rasterize			// Rasterizes fragments to the surface.
 		};
 
 	private:
@@ -113,7 +115,8 @@ namespace IntegerWorld
 
 		// Camera state and transformation for the current frame.
 		camera_state_t CameraControls{};
-		camera_transform_t ReverseCameraTransform{};
+		transform16_camera_t ReverseCameraTransform{};
+		frustum_t CameraFrustum{};
 		StateEnum State = StateEnum::Disabled; // Current pipeline state.
 
 		uint16_t ObjectIndex = 0; // Index of the current object being processed.
@@ -121,6 +124,8 @@ namespace IntegerWorld
 
 	private:
 		uint32_t MeasureStart = 0; // Used for performance timing.
+		uint32_t LastFramePush = 0; // Used for frame timing.
+
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 		render_debug_status_struct Status{};     // Detailed render status for debugging.
 		render_debug_status_struct StatusCopy{}; // Copy of status for reporting.
@@ -161,6 +166,7 @@ namespace IntegerWorld
 			rendererStatus.Rasterize = StatusCopy.Rasterize;
 			rendererStatus.Render = StatusCopy.GetRenderDuration();
 			rendererStatus.FragmentsDrawn = StatusCopy.FragmentsDrawn;
+			rendererStatus.FrameDuration = StatusCopy.FrameDuration;
 		}
 #else
 		/// <summary>
@@ -247,7 +253,8 @@ namespace IntegerWorld
 					);
 
 					ReverseCameraTransform.ViewDistance = ViewProjector.GetViewDistance();
-					State = StateEnum::VertexShade;
+					ViewProjector.GetFrustum(CameraControls, CameraFrustum);
+					State = StateEnum::ObjectShade;
 				}
 				else
 				{
@@ -259,23 +266,46 @@ namespace IntegerWorld
 				Status.Render += micros() - MeasureStart;
 #endif
 				break;
+			case StateEnum::ObjectShade:
+				MeasureStart = micros();
+				for (uint_fast16_t i = 0; i < BatchSize; i++)
+				{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+					Status.ObjectShades++;
+#endif
+					Objects[ObjectIndex]->ObjectShade(CameraFrustum);
+					ObjectIndex++;
+					if (ObjectIndex >= ObjectCount)
+					{
+						ItemIndex = 0;
+						ObjectIndex = 0;
+						State = StateEnum::VertexShade;
+						break;
+					}
+				}
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.ObjectShade += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
+#endif
+				break;
 			case StateEnum::VertexShade:
 				// Perform vertex shading for each object in batches.
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+					Status.VertexShades++;
+#endif
 					if (Objects[ObjectIndex]->VertexShade(ItemIndex))
 					{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-						Status.VertexShades += ItemIndex;
-#endif
 						ItemIndex = 0;
 						ObjectIndex++;
 						if (ObjectIndex >= ObjectCount)
 						{
 							ItemIndex = 0;
 							ObjectIndex = 0;
-							State = StateEnum::PrimitiveWorldShade;
+							State = StateEnum::WorldTransform;
 							break;
 						}
 					}
@@ -290,16 +320,47 @@ namespace IntegerWorld
 				Status.Render += micros() - MeasureStart;
 #endif
 				break;
-			case StateEnum::PrimitiveWorldShade:
+			case StateEnum::WorldTransform:
+				// Perform vertex transform for each object in batches.
+				MeasureStart = micros();
+				for (uint_fast16_t i = 0; i < BatchSize; i++)
+				{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+					Status.WorldTransforms++;
+#endif
+					if (Objects[ObjectIndex]->WorldTransform(ItemIndex))
+					{
+						ItemIndex = 0;
+						ObjectIndex++;
+						if (ObjectIndex >= ObjectCount)
+						{
+							ItemIndex = 0;
+							ObjectIndex = 0;
+							State = StateEnum::WorldShade;
+							break;
+						}
+					}
+					else
+					{
+						ItemIndex++;
+					}
+				}
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Status.WorldTransform += micros() - MeasureStart;
+#else
+				Status.Render += micros() - MeasureStart;
+#endif
+				break;
+			case StateEnum::WorldShade:
 				// Perform world-space primitive shading for each object in batches.
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-					if (Objects[ObjectIndex]->PrimitiveWorldShade(ItemIndex))
-					{
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-						Status.WorldShades += ItemIndex;
+					Status.WorldShades++;
 #endif
+					if (Objects[ObjectIndex]->WorldShade(CameraFrustum, ItemIndex))
+					{
 						ItemIndex = 0;
 						ObjectIndex++;
 						if (ObjectIndex >= ObjectCount)
@@ -326,11 +387,11 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+					Status.CameraTransforms++;
+#endif
 					if (Objects[ObjectIndex]->CameraTransform(ReverseCameraTransform, ItemIndex))
 					{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-						Status.CameraTransforms += ItemIndex;
-#endif
 						ItemIndex = 0;
 						ObjectIndex++;
 						if (ObjectIndex >= ObjectCount)
@@ -357,18 +418,18 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+					Status.ScreenProjects++;
+#endif
 					if (Objects[ObjectIndex]->ScreenProject(ViewProjector, ItemIndex))
 					{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-						Status.ScreenProjects += ItemIndex;
-#endif
 						ItemIndex = 0;
 						ObjectIndex++;
 						if (ObjectIndex >= ObjectCount)
 						{
 							ItemIndex = 0;
 							ObjectIndex = 0;
-							State = StateEnum::PrimitiveScreenShade;
+							State = StateEnum::ScreenShade;
 							break;
 						}
 					}
@@ -383,16 +444,16 @@ namespace IntegerWorld
 				Status.Render += micros() - MeasureStart;
 #endif
 				break;
-			case StateEnum::PrimitiveScreenShade:
+			case StateEnum::ScreenShade:
 				// Perform screen-space primitive shading for all objects in batches.
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-					if (Objects[ObjectIndex]->PrimitiveScreenShade(ItemIndex, Rasterizer.Width(), Rasterizer.Height()))
-					{
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-						Status.ScreenShades += ItemIndex;
+					Status.ScreenShades++;
 #endif
+					if (Objects[ObjectIndex]->ScreenShade(ItemIndex))
+					{
 						ItemIndex = 0;
 						ObjectIndex++;
 						if (ObjectIndex >= ObjectCount)
@@ -444,15 +505,18 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				break;
 			case StateEnum::WaitForSurface:
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				MeasureStart = micros();
-#endif
+
 				// Wait until the output surface is ready for drawing.
 				if (Rasterizer.IsSurfaceReady())
 				{
 					ObjectIndex = 0;
 					ItemIndex = 0;
 					State = StateEnum::Rasterize;
+
+					MeasureStart = micros();
+					Status.FrameDuration = MeasureStart - LastFramePush;
+					LastFramePush = MeasureStart;
 				}
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				else
