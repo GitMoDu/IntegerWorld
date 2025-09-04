@@ -150,11 +150,70 @@ namespace IntegerWorld
 		int16_t Z;
 	};
 
+	struct frustum_plane_t
+	{
+		vertex16_t topLeft;
+		vertex16_t topRight;
+		vertex16_t bottomLeft;
+		vertex16_t bottomRight;
+	};
+
+	struct plane16_t : vertex16_t
+	{
+		int16_t d;
+	};
+
+	struct frustum_t
+	{
+		plane16_t cullingNearPlane;
+		plane16_t cullingLeftPlane;
+		plane16_t cullingRightPlane;
+		plane16_t cullingTopPlane;
+		plane16_t cullingBottomPlane;
+
+		rotation_angle_t rotation;
+		vertex16_t origin;
+		uint32_t radiusSquared;
+
+		bool IsPointInside(const vertex16_t& point) const
+		{
+			// Check if point is within radius (spherical bound)
+			const int16_t dx = point.x - origin.x;
+			const int16_t dy = point.y - origin.y;
+			const int16_t dz = point.z - origin.z;
+
+			const uint32_t distancePower = (uint32_t(int32_t(dx) * dx) + uint32_t(int32_t(dy) * dy) + uint32_t(int32_t(dz) * dz));
+			if (distancePower > radiusSquared)
+				return false;
+
+			return true;
+		}
+	};
+
+	struct frustum_view_t
+	{
+		rotation_angle_t rotation;
+		frustum_plane_t nearPlane;
+		frustum_plane_t farPlane;
+		vertex16_t origin;
+		uint16_t radius;
+	};
+
+	enum class FrustumCullingEnum : uint8_t
+	{
+		NoCulling,
+		ObjectCulling,
+		PrimitiveCulling,
+		ObjectAndPrimitiveCulling
+	};
+
+
 	/// <summary>
 	/// Minimal render information for each frame.
 	/// </summary>
 	struct render_status_struct
 	{
+		uint32_t FrameDuration = 0;
 		uint32_t Render = 0;
 		uint32_t Rasterize = 0;
 		uint16_t FragmentsDrawn = 0;
@@ -166,6 +225,7 @@ namespace IntegerWorld
 
 		void Clear()
 		{
+			FrameDuration = 0;
 			FragmentsDrawn = 0;
 			Rasterize = 0;
 			Render = 0;
@@ -177,8 +237,11 @@ namespace IntegerWorld
 	/// </summary>
 	struct render_debug_status_struct
 	{
+		uint32_t FrameDuration = 0;
 		uint32_t FramePreparation = 0;
+		uint32_t ObjectShade = 0;
 		uint32_t VertexShade = 0;
+		uint32_t WorldTransform = 0;
 		uint32_t WorldShade = 0;
 		uint32_t ScreenShade = 0;
 		uint32_t CameraTransform = 0;
@@ -188,8 +251,10 @@ namespace IntegerWorld
 		uint32_t RasterizeWait = 0;
 		uint32_t Rasterize = 0;
 
-		uint16_t WorldShades = 0;
+		uint16_t ObjectShades = 0;
 		uint16_t VertexShades = 0;
+		uint16_t WorldShades = 0;
+		uint16_t WorldTransforms = 0;
 		uint16_t CameraTransforms = 0;
 		uint16_t ScreenProjects = 0;
 		uint16_t ScreenShades = 0;
@@ -199,7 +264,9 @@ namespace IntegerWorld
 		uint32_t GetRenderDuration() const
 		{
 			return FramePreparation +
+				ObjectShade +
 				VertexShade +
+				WorldTransform +
 				WorldShade +
 				CameraTransform +
 				ScreenShade +
@@ -211,14 +278,19 @@ namespace IntegerWorld
 		void Clear()
 		{
 			FragmentsDrawn = 0;
+			ObjectShades = 0;
+			WorldTransforms = 0;
 			VertexShades = 0;
 			WorldShades = 0;
 			CameraTransforms = 0;
 			ScreenProjects = 0;
 			ScreenShades = 0;
 
+			FrameDuration = 0;
 			FramePreparation = 0;
+			ObjectShade = 0;
 			VertexShade = 0;
+			WorldTransform = 0;
 			WorldShade = 0;
 			CameraTransform = 0;
 			ScreenShade = 0;

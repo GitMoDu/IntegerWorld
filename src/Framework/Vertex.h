@@ -35,7 +35,7 @@ namespace IntegerWorld
 	/// <summary>
 	/// Dot product range for 32-bit vertex units.
 	/// </summary>
-	static constexpr int32_t VERTEX32_DOT = (int64_t(VERTEX32_UNIT) * VERTEX32_UNIT);
+	static constexpr int32_t VERTEX32_DOT = int32_t(int64_t(VERTEX32_UNIT) * VERTEX32_UNIT);
 
 
 	struct vertex16_t
@@ -68,22 +68,6 @@ namespace IntegerWorld
 		normal.z = (int32_t(ax) * by) - (int32_t(ay) * bx);
 	}
 
-	static void GetNormal32(const vertex32_t& a, const vertex32_t& b, const vertex32_t& c, vertex32_t& normal)
-	{
-		// Compute the vectors for two edges of the triangle.
-		const int32_t ax = b.x - a.x;
-		const int32_t ay = b.y - a.y;
-		const int32_t az = b.z - a.z;
-		const int32_t bx = c.x - a.x;
-		const int32_t by = c.y - a.y;
-		const int32_t bz = c.z - a.z;
-
-		// Compute the cross product of the two edge vectors and scale back to int32 range.
-		normal.x = int32_t(SignedRightShift(((int64_t)ay * bz) - ((int64_t)az * by), sizeof(int32_t)));
-		normal.y = int32_t(SignedRightShift(((int64_t)az * bx) - ((int64_t)ax * bz), sizeof(int32_t)));
-		normal.z = int32_t(SignedRightShift(((int64_t)ax * by) - ((int64_t)ay * bx), sizeof(int32_t)));
-	}
-
 	constexpr int32_t DotProduct16(const vertex16_t& vertex1, const vertex16_t& vertex2)
 	{
 		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
@@ -102,11 +86,6 @@ namespace IntegerWorld
 	constexpr int32_t DotProduct16(const vertex32_t& vertex1, const vertex32_t& vertex2)
 	{
 		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
-	}
-
-	constexpr int64_t DotProduct32(const vertex32_t& vertex1, const vertex32_t& vertex2)
-	{
-		return ((int64_t)vertex1.x * vertex2.x) + ((int64_t)vertex1.y * vertex2.y) + ((int64_t)vertex1.z * vertex2.z);
 	}
 
 	static void NormalizeVertex16(vertex16_t& vertex)

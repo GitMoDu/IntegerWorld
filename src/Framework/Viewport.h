@@ -23,6 +23,8 @@ namespace IntegerWorld
 
 		uint16_t distanceNum = (RangeMin + RangeMax) / 2;
 
+		uint16_t drawDistance = RangeMax;
+
 	public:
 		ViewportProjector()
 		{
@@ -44,9 +46,123 @@ namespace IntegerWorld
 			distanceNum = RangeMin + Fraction::Scale(fovFraction, Range);
 		}
 
+		void SetDrawDistance(const uint16_t distance)
+		{
+			drawDistance = MinValue(distance, RangeMax);
+		}
+
 		uint16_t GetViewDistance() const
 		{
 			return distanceNum;
+		}
+
+		void GetFrustumView(const vertex16_t& cameraPosition,
+			const rotation_angle_t& cameraRotation,
+			frustum_view_t& frustum)
+		{
+			// View distance in world units
+			const uint16_t viewShift = distanceNum;
+
+			// Set frustum origin to apparent camera position.
+			frustum.origin = cameraPosition;
+
+			// Set the camera rotation.
+			frustum.rotation = cameraRotation;
+
+			// Build camera rotation transform.
+			transform16_rotate_t camRot{};
+			CalculateTransformRotation(camRot, cameraRotation);
+
+			// Camera-space basis vectors.
+			vertex16_t forward = { 0, 0, VERTEX16_UNIT };
+			vertex16_t right = { VERTEX16_UNIT, 0, 0 };
+			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
+
+			// Rotate them into world space.
+			ApplyInverseCameraRotation(camRot, forward);
+			ApplyInverseCameraRotation(camRot, right);
+			ApplyInverseCameraRotation(camRot, up);
+
+			// Near / far distances (keeps behavior consistent with the other overload)
+			const int16_t nearDist = viewShift >> 5;
+			const int16_t farDist = Range / 2;
+			const int16_t scaleDenum = viewShift >> 5;
+
+			// View dims at near/far
+			const int16_t nearHalfWidth = (int32_t(nearDist) * ViewWidthHalf) / scaleDenum;
+			const int16_t nearHalfHeight = (int32_t(nearDist) * ViewHeightHalf) / scaleDenum;
+			const int16_t farHalfWidth = (int32_t(farDist) * ViewWidthHalf) / scaleDenum;
+			const int16_t farHalfHeight = (int32_t(farDist) * ViewHeightHalf) / scaleDenum;
+
+			// Centers
+			const vertex16_t nearCenter
+			{
+				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
+				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * nearDist, DownShift))),
+				int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * nearDist, DownShift)))
+			};
+
+			const vertex16_t farCenter
+			{
+				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * farDist, DownShift))),
+				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * farDist, DownShift))),
+				int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * farDist, DownShift)))
+			};
+
+			// Calculate plane corners.
+			CalculateFrustumCorners(nearCenter, right, up, nearHalfWidth, nearHalfHeight, frustum.nearPlane);
+			CalculateFrustumCorners(farCenter, right, up, farHalfWidth, farHalfHeight, frustum.farPlane);
+		}
+
+		void GetFrustum(const camera_state_t& cameraControls, frustum_t& frustum)
+		{
+			// Keep original radius squared calculation
+			frustum.radiusSquared = (uint32_t(drawDistance) * drawDistance);
+
+			// Set frustum origin to apparent camera position.
+			frustum.origin = cameraControls.Position;
+
+			// Set the camera rotation.
+			frustum.rotation = cameraControls.Rotation;
+
+			// View distance in world units
+			const uint16_t viewShift = distanceNum;
+
+			// Build camera rotation cos/sin transform.
+			transform16_rotate_t camRot{};
+			CalculateTransformRotation(camRot, cameraControls.Rotation);
+
+			// Camera-space basis vectors (forward, right, up)
+			vertex16_t forward = { 0, 0, VERTEX16_UNIT };
+			vertex16_t right = { VERTEX16_UNIT, 0, 0 };
+			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
+
+			// Rotate them into world space.
+			ApplyTransform(camRot, forward);
+			ApplyTransform(camRot, right);
+			ApplyTransform(camRot, up);
+
+			// Near distance.
+			const int16_t nearDist = viewShift >> 5;
+			const int16_t scaleDenum = viewShift >> 5;
+
+			// View dims at near plane.
+			const int16_t nearHalfWidth = (int32_t(nearDist) * ViewWidthHalf) / scaleDenum;
+			const int16_t nearHalfHeight = (int32_t(nearDist) * ViewHeightHalf) / scaleDenum;
+
+			// Calculate plane center.
+			const vertex16_t nearCenter =
+			{
+				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
+				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * nearDist, DownShift))),
+				int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * nearDist, DownShift)))
+			};
+
+			// Calculate plane corners.
+			frustum_plane_t nearPlane{};
+			CalculateFrustumCorners(nearCenter, right, up, nearHalfWidth, nearHalfHeight, nearPlane);
+
+			//TODO: Calculate culling planes.
 		}
 
 		void Project(vertex16_t& cameraToscreen)
@@ -74,6 +190,31 @@ namespace IntegerWorld
 			cameraToscreen.x = ViewWidthHalf + int16_t(ix);
 			cameraToscreen.y = ViewHeightHalf + int16_t(iy);
 			cameraToscreen.z = distanceDenum;
+		}
+
+		// Calculate the four corners of the plane using the center point and the right/up vectors
+		void CalculateFrustumCorners(const vertex16_t& center, const vertex16_t& right, const vertex16_t& up,
+			const int16_t halfWidth, const int16_t halfHeight, frustum_plane_t& plane)
+		{
+			// Top-left corner
+			plane.topLeft.x = center.x - int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topLeft.y = center.y - int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topLeft.z = center.z - int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+
+			// Top-right corner
+			plane.topRight.x = center.x + int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topRight.y = center.y + int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topRight.z = center.z + int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+
+			// Bottom-right corner
+			plane.bottomRight.x = center.x + int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomRight.y = center.y + int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomRight.z = center.z + int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+
+			// Bottom-left corner
+			plane.bottomLeft.x = center.x - int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomLeft.y = center.y - int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomLeft.z = center.z - int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
 		}
 	};
 }
