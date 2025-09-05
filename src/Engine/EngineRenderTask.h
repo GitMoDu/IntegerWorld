@@ -115,7 +115,7 @@ namespace IntegerWorld
 
 		// Camera state and transformation for the current frame.
 		camera_state_t CameraControls{};
-		transform16_camera_t ReverseCameraTransform{};
+		transform16_camera_t CameraTransform{};
 		frustum_t CameraFrustum{};
 		StateEnum State = StateEnum::Disabled; // Current pipeline state.
 
@@ -242,17 +242,13 @@ namespace IntegerWorld
 				if (ObjectCount > 0)
 				{
 					// Prepare camera transform for the frame.
-					ReverseCameraTransform.Translation.x = -CameraControls.Position.x;
-					ReverseCameraTransform.Translation.y = -CameraControls.Position.y;
-					ReverseCameraTransform.Translation.z = -CameraControls.Position.z;
+					CameraTransform.Translation.x = CameraControls.Position.x;
+					CameraTransform.Translation.y = CameraControls.Position.y;
+					CameraTransform.Translation.z = CameraControls.Position.z;
 
-					CalculateTransformRotation(ReverseCameraTransform,
-						ANGLE_RANGE - CameraControls.Rotation.x,
-						ANGLE_RANGE - CameraControls.Rotation.y,
-						ANGLE_RANGE - CameraControls.Rotation.z
-					);
+					CalculateTransformRotation(CameraTransform, CameraControls.Rotation);
 
-					ReverseCameraTransform.ViewDistance = ViewProjector.GetViewDistance();
+					CameraTransform.ViewDistance = ViewProjector.GetViewDistance();
 					ViewProjector.GetFrustum(CameraControls, CameraFrustum);
 					State = StateEnum::ObjectShade;
 				}
@@ -390,7 +386,7 @@ namespace IntegerWorld
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 					Status.CameraTransforms++;
 #endif
-					if (Objects[ObjectIndex]->CameraTransform(ReverseCameraTransform, ItemIndex))
+					if (Objects[ObjectIndex]->CameraTransform(CameraTransform, ItemIndex))
 					{
 						ItemIndex = 0;
 						ObjectIndex++;

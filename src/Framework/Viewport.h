@@ -78,10 +78,10 @@ namespace IntegerWorld
 			vertex16_t right = { VERTEX16_UNIT, 0, 0 };
 			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
 
-			// Rotate them into world space.
-			ApplyInverseCameraRotation(camRot, forward);
-			ApplyInverseCameraRotation(camRot, right);
-			ApplyInverseCameraRotation(camRot, up);
+			// Rotate them into world space using Y -> X -> Z (camera convention).
+			ApplyTransformRotation(camRot, forward);
+			ApplyTransformRotation(camRot, right);
+			ApplyTransformRotation(camRot, up);
 
 			// Near / far distances (keeps behavior consistent with the other overload)
 			const int16_t nearDist = viewShift >> 5;
@@ -138,9 +138,9 @@ namespace IntegerWorld
 			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
 
 			// Rotate them into world space.
-			ApplyTransform(camRot, forward);
-			ApplyTransform(camRot, right);
-			ApplyTransform(camRot, up);
+			ApplyTransformRotation(camRot, forward);
+			ApplyTransformRotation(camRot, right);
+			ApplyTransformRotation(camRot, up);
 
 			// Near distance.
 			const int16_t nearDist = viewShift >> 5;

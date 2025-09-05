@@ -69,24 +69,26 @@ namespace IntegerWorld
 		transform.SinZ = Sine16(rotation.z);
 	}
 
+	// Applies rotation in intrinsic XYZ order: X, then Y, then Z.
 	static void ApplyTransform(const transform16_rotate_t& transform, vertex16_t& vertex)
 	{
-		// Rotation around X-axis
+		// Rotate around X-axis (affects Y,Z)
 		const int16_t y1 = vertex.y;
 		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
 		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
 
-		// Rotation around Y-axis
+		// Rotate around Y-axis (affects X,Z)
 		const int16_t x1 = vertex.x;
 		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
 		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
 
-		// Rotation around Z-axis
+		// Rotate around Z-axis (affects X,Y)
 		const int16_t x2 = vertex.x;
 		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
 		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
 	}
 
+	// Applies: Scale, then rotation in XYZ order, then Translation.
 	static void ApplyTransform(const transform16_scale_rotate_translate_t& transform, vertex16_t& vertex)
 	{
 		// Scale geometry.
@@ -94,17 +96,17 @@ namespace IntegerWorld
 		vertex.y = Resize::Scale(transform.Resize, vertex.y);
 		vertex.z = Resize::Scale(transform.Resize, vertex.z);
 
-		// Rotation around X-axis
+		// Rotate around X-axis (affects Y,Z)
 		const int16_t y1 = vertex.y;
 		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
 		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
 
-		// Rotation around Y-axis
+		// Rotate around Y-axis (affects X,Z)
 		const int16_t x1 = vertex.x;
 		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
 		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
 
-		// Rotation around Z-axis
+		// Rotate around Z-axis (affects X,Y)
 		const int16_t x2 = vertex.x;
 		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
 		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
@@ -115,57 +117,53 @@ namespace IntegerWorld
 		vertex.z += transform.Translation.z;
 	}
 
+	// Rotation only, same XYZ order (X, then Y, then Z).
 	static void ApplyTransformRotation(const transform16_rotate_t& transform, vertex16_t& vertex)
 	{
 		ApplyTransform(transform, vertex);
 	}
 
+	// Rotation only, same XYZ order (X, then Y, then Z) using the rotation part of the scale/translate transform.
 	static void ApplyTransformRotation(const transform16_scale_rotate_translate_t& transform, vertex16_t& vertex)
 	{
 		ApplyTransform(static_cast<const transform16_rotate_t&>(transform), vertex);
 	}
 
-	static void ApplyInverseCameraRotation(const transform16_rotate_t& transform, vertex16_t& vertex)
+	// Applies the inverse of the object rotation (intrinsic XYZ) to go world -> camera.
+	// Order: Z^-1 (roll), then Y^-1 (yaw), then X^-1 (pitch).
+	static void ApplyCameraTransformRotation(const transform16_rotate_t& transform, vertex16_t& vertex)
 	{
-		// Rotation around Z-axis (Roll - tilting the view)
+		// Z^-1 (Roll)
 		const int16_t x2 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
-		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
+		vertex.x = Fraction::Scale(transform.CosZ, x2) + Fraction::Scale(transform.SinZ, vertex.y);
+		vertex.y = -Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
 
-		// Rotation around X-axis (Pitch - looking up/down)
-		const int16_t y1 = vertex.y;
-		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
-		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
-
-		// Rotation around Y-axis (Yaw - looking left/right)
+		// Y^-1 (Yaw)
 		const int16_t x1 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
-		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
+		vertex.x = Fraction::Scale(transform.CosY, x1) - Fraction::Scale(transform.SinY, vertex.z);
+		vertex.z = Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
+
+		// X^-1 (Pitch)
+		const int16_t y1 = vertex.y;
+		vertex.y = Fraction::Scale(transform.CosX, y1) + Fraction::Scale(transform.SinX, vertex.z);
+		vertex.z = -Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
 	}
 
+	// Camera transform (world -> camera):
+	// 1) Subtract camera position
+	// 2) Apply inverse rotation in order Z^-1, Y^-1, X^-1
+	// 3) Shift z by -ViewDistance to compensate for projection focal distance.
 	static void ApplyCameraTransform(const transform16_camera_t& transform, vertex16_t& vertex)
 	{
-		// Apply translation first (camera position in world)
-		vertex.x += transform.Translation.x;
-		vertex.y += transform.Translation.y;
-		vertex.z += transform.Translation.z;
+		// Subtract camera world position
+		vertex.x -= transform.Translation.x;
+		vertex.y -= transform.Translation.y;
+		vertex.z -= transform.Translation.z;
 
-		// Rotation around Y-axis (Yaw - looking left/right)
-		const int16_t x1 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
-		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
+		// Inverse rotation (use reference cast to avoid temporary)
+		ApplyCameraTransformRotation(static_cast<const transform16_rotate_t&>(transform), vertex);
 
-		// Rotation around X-axis (Pitch - looking up/down)
-		const int16_t y1 = vertex.y;
-		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
-		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
-
-		// Rotation around Z-axis (Roll - tilting the view)
-		const int16_t x2 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
-		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
-
-		// Apply view distance
+		// Shift depth by focal distance (matches Project())
 		vertex.z -= transform.ViewDistance;
 	}
 }
