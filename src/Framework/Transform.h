@@ -96,20 +96,8 @@ namespace IntegerWorld
 		vertex.y = Resize::Scale(transform.Resize, vertex.y);
 		vertex.z = Resize::Scale(transform.Resize, vertex.z);
 
-		// Rotate around X-axis (affects Y,Z)
-		const int16_t y1 = vertex.y;
-		vertex.y = Fraction::Scale(transform.CosX, y1) - Fraction::Scale(transform.SinX, vertex.z);
-		vertex.z = Fraction::Scale(transform.SinX, y1) + Fraction::Scale(transform.CosX, vertex.z);
-
-		// Rotate around Y-axis (affects X,Z)
-		const int16_t x1 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosY, x1) + Fraction::Scale(transform.SinY, vertex.z);
-		vertex.z = -Fraction::Scale(transform.SinY, x1) + Fraction::Scale(transform.CosY, vertex.z);
-
-		// Rotate around Z-axis (affects X,Y)
-		const int16_t x2 = vertex.x;
-		vertex.x = Fraction::Scale(transform.CosZ, x2) - Fraction::Scale(transform.SinZ, vertex.y);
-		vertex.y = Fraction::Scale(transform.SinZ, x2) + Fraction::Scale(transform.CosZ, vertex.y);
+		// Apply rotation.
+		ApplyTransform(static_cast<const transform16_rotate_t&>(transform), vertex);
 
 		// Apply translation.
 		vertex.x += transform.Translation.x;
