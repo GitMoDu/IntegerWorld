@@ -46,7 +46,7 @@ namespace IntegerWorld
 
 	struct transform16_camera_t : transform16_rotate_translate_t
 	{
-		uint16_t ViewDistance;
+		uint16_t FocalDistance;
 	};
 
 	static void CalculateTransformRotation(transform16_rotate_t& transform, const angle_t angleX, const angle_t angleY, const angle_t angleZ)
@@ -152,7 +152,7 @@ namespace IntegerWorld
 	// Camera transform (world -> camera):
 	// 1) Subtract camera position
 	// 2) Apply inverse rotation in order Z^-1, Y^-1, X^-1
-	// 3) Shift z by -ViewDistance to compensate for projection focal distance.
+	// 3) Shift z to compensate for projection focal distance.
 	static void ApplyCameraTransform(const transform16_camera_t& transform, vertex16_t& vertex)
 	{
 		// Subtract camera world position
@@ -164,7 +164,7 @@ namespace IntegerWorld
 		ApplyCameraTransformRotation(static_cast<const transform16_rotate_t&>(transform), vertex);
 
 		// Shift depth by focal distance (matches Project())
-		vertex.z -= transform.ViewDistance;
+		vertex.z -= transform.FocalDistance;
 	}
 }
 #endif

@@ -248,7 +248,8 @@ namespace IntegerWorld
 
 					CalculateTransformRotation(CameraTransform, CameraControls.Rotation);
 
-					CameraTransform.ViewDistance = ViewProjector.GetViewDistance();
+					// Set the focal distance from the projector.
+					CameraTransform.FocalDistance = ViewProjector.GetFocalDistance();
 					ViewProjector.GetFrustum(CameraControls, CameraFrustum);
 					State = StateEnum::ObjectShade;
 				}

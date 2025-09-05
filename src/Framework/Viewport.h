@@ -51,7 +51,7 @@ namespace IntegerWorld
 			drawDistance = MinValue(distance, RangeMax);
 		}
 
-		uint16_t GetViewDistance() const
+		uint16_t GetFocalDistance() const
 		{
 			return distanceNum;
 		}
@@ -78,7 +78,7 @@ namespace IntegerWorld
 			vertex16_t right = { VERTEX16_UNIT, 0, 0 };
 			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
 
-			// Rotate them into world space using Y -> X -> Z (camera convention).
+			// Rotate them into world space using the same intrinsic XYZ convention.
 			ApplyTransformRotation(camRot, forward);
 			ApplyTransformRotation(camRot, right);
 			ApplyTransformRotation(camRot, up);
@@ -88,13 +88,13 @@ namespace IntegerWorld
 			const int16_t farDist = Range / 2;
 			const int16_t scaleDenum = viewShift >> 5;
 
-			// View dims at near/far
+			// View dimensions at near/far planes.
 			const int16_t nearHalfWidth = (int32_t(nearDist) * ViewWidthHalf) / scaleDenum;
 			const int16_t nearHalfHeight = (int32_t(nearDist) * ViewHeightHalf) / scaleDenum;
 			const int16_t farHalfWidth = (int32_t(farDist) * ViewWidthHalf) / scaleDenum;
 			const int16_t farHalfHeight = (int32_t(farDist) * ViewHeightHalf) / scaleDenum;
 
-			// Centers
+			// Plane centers.
 			const vertex16_t nearCenter
 			{
 				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
