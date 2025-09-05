@@ -7,7 +7,7 @@ namespace IntegerWorld
 {
 	struct AbstractPixelShader
 	{
-		static ufraction16_t GetZFraction(const int16_t& z, const int16_t rangeMin, const int16_t rangeMax)
+		static ufraction16_t GetZFraction(const int16_t& z, const int16_t rangeMin = 1024, const int16_t rangeMax = 24576)
 		{
 			if (z >= rangeMax)
 			{
@@ -151,10 +151,9 @@ namespace IntegerWorld
 				const vertex16_t& b = fragment.triangleScreenB;
 				const vertex16_t& c = fragment.triangleScreenC;
 
-
 				// Standard CW area formula. TODO: refactor as CCW
 				// Compute denominator (twice the area of the triangle)
-				TriangleArea = (int32_t(b.y) - c.y) * (int32_t(a.x) - c.x) + (int32_t(c.x) - b.x) * (int32_t(a.y) - c.y);
+				TriangleArea = (int32_t(b.y - c.y) * (a.x - c.x)) + (int32_t(c.x - b.x) * (a.y - c.y));
 
 				if (TriangleArea == 0)
 				{
@@ -359,10 +358,6 @@ namespace IntegerWorld
 
 	struct PointZFragmentShader : IFragmentShader<point_fragment_t>
 	{
-	public:
-		Rgb8::color_t FarColor = Rgb8::Color(UINT8_MAX, 0, 0);
-		Rgb8::color_t NearColor = Rgb8::Color(0, 0, UINT8_MAX);
-
 		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			FragmentShade(rasterizer, fragment);
@@ -370,22 +365,17 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
 		{
-			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z, -VERTEX16_UNIT * 8, ((VERTEX16_RANGE / 3) * 2));
-			rasterizer.DrawPixel(Rgb8::ColorInterpolateLinear(FarColor, NearColor, proximityFraction),
+			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z);
+
+			const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+
+			rasterizer.DrawPixel(Rgb8::Color(gray, gray, gray),
 				fragment.screen.x, fragment.screen.y);
 		}
 	};
 
 	struct TriangleFillZFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
-	private:
-		Rgb8::color_t FragmentColor{};
-		vertex16_t LineCenter{};
-
-	public:
-		Rgb8::color_t FarColor = Rgb8::Color(UINT8_MAX, 0, 0);
-		Rgb8::color_t NearColor = Rgb8::Color(0, 0, UINT8_MAX);
-
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			FragmentShade(rasterizer, fragment);
@@ -394,8 +384,9 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			const uint16_t z = int16_t(((int32_t)fragment.triangleScreenA.z + fragment.triangleScreenB.z + fragment.triangleScreenC.z) / 3);
-			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 1, ((VERTEX16_RANGE / 3) * 2));
-			rasterizer.DrawTriangle(Rgb8::ColorInterpolateLinear(FarColor, NearColor, proximityFraction),
+			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z);
+			const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+			rasterizer.DrawTriangle(Rgb8::Color(gray, gray, gray),
 				fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
 	};
@@ -405,39 +396,22 @@ namespace IntegerWorld
 	private:
 		struct ZInterpolatorShaderFunctor : AbstractPixelShader::AbstractTriangleZFunctor
 		{
-			Rgb8::color_t FarColor = Rgb8::Color(UINT8_MAX, 0, 0);
-			Rgb8::color_t NearColor = Rgb8::Color(0, 0, UINT8_MAX);
-
 			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
 				const int32_t w2 = TriangleArea - w0 - w1;
 				const int16_t z = ((w0 * Az) + (w1 * Bz) + (w2 * Cz)) / TriangleArea;
-				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z, 1, ((VERTEX16_RANGE / 3) * 2));
-				color = Rgb8::ColorInterpolateLinear(FarColor, NearColor, proximityFraction);
+				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z);
+				const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+
+				color = Rgb8::Color(gray, gray, gray);
 
 				return true;
 			}
 		} ZShader{};
 
 	public:
-		void SetColors(const Rgb8::color_t nearColor, const Rgb8::color_t farColor)
-		{
-			ZShader.NearColor = nearColor;
-			ZShader.FarColor = farColor;
-		}
-
-		Rgb8::color_t GetNearColor() const
-		{
-			return ZShader.NearColor;
-		}
-
-		Rgb8::color_t GetFarColor() const
-		{
-			return ZShader.FarColor;
-		}
-
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			FragmentShade(rasterizer, fragment);
