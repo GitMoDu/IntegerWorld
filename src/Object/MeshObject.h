@@ -401,13 +401,13 @@ namespace IntegerWorld
 						Primitives[primitiveIndex].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
 						return false;
 					}
+					break;
 				case IntegerWorld::MeshCullingEnum::FrontfaceCullling:
 					if (signedArea > 0)
 					{
 						Primitives[primitiveIndex].z = AverageApproximate(Vertices[triangle.v1].z, Vertices[triangle.v2].z, Vertices[triangle.v3].z);
 						return false;
 					}
-					break;
 					break;
 				default:
 					break;
