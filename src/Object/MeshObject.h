@@ -33,15 +33,14 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">The number of vertices in the mesh.</typeparam>
 	/// <typeparam name="triangleCount">The number of triangles in the mesh.</typeparam>
-	/// <typeparam name="vertex_t">Vertex type stored in the working buffer (default: mesh_vertex_t).</typeparam>
-	/// <typeparam name="primitive_t">Primitive type for world data (default: mesh_world_primitive_t).</typeparam>
-	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename vertex_t = mesh_vertex_t,
-		typename primitive_t = mesh_world_primitive_t>
-	class AbstractStaticMeshObject : public AbstractTransformObject<vertexCount, triangleCount, vertex_t, primitive_t>
+	template<uint16_t vertexCount, uint16_t triangleCount>
+	class AbstractStaticMeshObject : public AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>
 	{
+		static_assert(vertexCount > 0, "vertexCount must be greater than zero.");
+		static_assert(triangleCount > 0, "triangleCount must be greater than zero.");
+
 	private:
-		using Base = AbstractTransformObject<vertexCount, triangleCount, vertex_t, primitive_t>;
+		using Base = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>;
 
 	protected:
 		using Base::Vertices;
@@ -157,17 +156,12 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">Max number of vertices.</typeparam>
 	/// <typeparam name="triangleCount">Max number of triangles.</typeparam>
-	/// <typeparam name="vertex_t">Vertex type stored in the working buffer.</typeparam>
-	/// <typeparam name="primitive_t">Primitive type for world data.</typeparam>
 	/// <typeparam name="hasNormals">Build-time flag indicating a normals buffer is available.</typeparam>
-	template<uint16_t vertexCount, uint16_t triangleCount,
-		typename vertex_t = mesh_vertex_t,
-		typename primitive_t = mesh_world_primitive_t,
-		bool hasNormals = false>
-	class AbstractDynamicMeshObject : public AbstractTransformObject<vertexCount, triangleCount, vertex_t, primitive_t>
+	template<uint16_t vertexCount, uint16_t triangleCount, bool hasNormals>
+	class AbstractDynamicMeshObject : public AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>
 	{
 	private:
-		using Base = AbstractTransformObject<vertexCount, triangleCount, vertex_t, primitive_t>;
+		using Base = AbstractTransformObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>;
 
 	protected:
 		using Base::Vertices;
@@ -493,11 +487,11 @@ namespace IntegerWorld
 		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class StaticMeshObject : public TemplateMeshWorldObject<
-		AbstractStaticMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>, frustumCulling, meshCulling>
+		AbstractStaticMeshObject<vertexCount, triangleCount>, frustumCulling, meshCulling>
 	{
 	private:
 		using Base = TemplateMeshWorldObject<
-			AbstractStaticMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t>, frustumCulling, meshCulling>;
+			AbstractStaticMeshObject<vertexCount, triangleCount>, frustumCulling, meshCulling>;
 
 	public:
 		/// <summary>
@@ -521,11 +515,11 @@ namespace IntegerWorld
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	/// <typeparam name="hasNormals">If true, a normals buffer is available and used.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
+		bool hasNormals = false,
 		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
-		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling,
-		bool hasNormals = false>
+		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	using DynamicMeshObject = TemplateMeshWorldObject<
-		AbstractDynamicMeshObject<vertexCount, triangleCount, mesh_vertex_t, mesh_world_primitive_t, hasNormals>,
+		AbstractDynamicMeshObject<vertexCount, triangleCount, hasNormals>,
 		frustumCulling, meshCulling>;
 
 	/// <summary>
@@ -578,10 +572,10 @@ namespace IntegerWorld
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	/// <typeparam name="hasNormals">If true, the dynamic normals buffer is available and used.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
+		bool hasNormals = false,
 		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
-		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling,
-		bool hasNormals = false>
-	class DynamicMeshSingleColorSingleMaterialObject : public DynamicMeshObject<vertexCount, triangleCount, frustumCulling, meshCulling, hasNormals>
+		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+	class DynamicMeshSingleColorSingleMaterialObject : public DynamicMeshObject<vertexCount, triangleCount, hasNormals, frustumCulling, meshCulling>
 	{
 	public:
 		// Shared color/material for all fragments.
@@ -590,7 +584,7 @@ namespace IntegerWorld
 
 	public:
 		DynamicMeshSingleColorSingleMaterialObject()
-			: DynamicMeshObject<vertexCount, triangleCount, frustumCulling, meshCulling, hasNormals>()
+			: DynamicMeshObject<vertexCount, triangleCount, hasNormals, frustumCulling, meshCulling>()
 		{
 		}
 
