@@ -331,7 +331,7 @@ namespace IntegerWorld
 				&& Primitives[primitiveIndex].z < 0)
 				return false;
 
-			const auto& triangle = BaseMeshObject::GetTriangle(primitiveIndex);
+			const auto triangle = BaseMeshObject::GetTriangle(primitiveIndex);
 
 			Primitives[primitiveIndex].worldPosition.x = AverageApproximate(Vertices[triangle.v1].x, Vertices[triangle.v2].x, Vertices[triangle.v3].x);
 			Primitives[primitiveIndex].worldPosition.y = AverageApproximate(Vertices[triangle.v1].y, Vertices[triangle.v2].y, Vertices[triangle.v3].y);
@@ -387,7 +387,7 @@ namespace IntegerWorld
 
 			if (Primitives[primitiveIndex].z >= 0)
 			{
-				const auto& triangle = BaseMeshObject::GetTriangle(primitiveIndex);
+				const auto triangle = BaseMeshObject::GetTriangle(primitiveIndex);
 
 				switch (meshCulling)
 				{
@@ -456,8 +456,8 @@ namespace IntegerWorld
 			if (FragmentShader == nullptr)
 				return;
 
-			const auto& triangle = GetTriangle(primitiveIndex);
-			const auto& primitive = Primitives[primitiveIndex];
+			const auto triangle = GetTriangle(primitiveIndex);
+			const auto primitive = Primitives[primitiveIndex];
 
 			TriangleFragment.normalWorld = primitive.worldNormal;
 			TriangleFragment.world = primitive.worldPosition;
