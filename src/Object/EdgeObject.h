@@ -236,7 +236,6 @@ namespace IntegerWorld
 			ScreenPosition = WorldPosition;
 
 			int16_t zFlag = 0;
-
 			switch (frustumCulling)
 			{
 			case FrustumCullingEnum::ObjectAndPrimitiveCulling:
@@ -251,13 +250,12 @@ namespace IntegerWorld
 				}
 				break;
 			case FrustumCullingEnum::PrimitiveCulling:
+			case FrustumCullingEnum::NoCulling:
+			default:
 				for (uint_fast16_t i = 0; i < EdgeCount; i++)
 				{
 					Primitives[i].z = 0;
 				}
-				break;
-			case FrustumCullingEnum::NoCulling:
-			default:
 				break;
 			};
 
@@ -280,7 +278,15 @@ namespace IntegerWorld
 			if (primitiveIndex >= EdgeCount)
 				return true;
 
-			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+			if (Primitives[primitiveIndex].z < 0)
+				return false;
+
+			const auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+
+			// Cache primitive world position as average of both edge vertices.
+			Primitives[primitiveIndex].worldPosition.x = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].x + Vertices[edge.end].x), 1);
+			Primitives[primitiveIndex].worldPosition.y = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].y + Vertices[edge.end].y), 1);
+			Primitives[primitiveIndex].worldPosition.z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
 
 			switch (frustumCulling)
 			{
@@ -293,17 +299,8 @@ namespace IntegerWorld
 				break;
 			case FrustumCullingEnum::NoCulling:
 			default:
-				Primitives[primitiveIndex].z = 0;
 				break;
 			};
-
-			if (Primitives[primitiveIndex].z >= 0)
-			{
-				// Cache primitive world position as average of both edge vertices.
-				Primitives[primitiveIndex].worldPosition.x = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].x + Vertices[edge.end].x), 1);
-				Primitives[primitiveIndex].worldPosition.y = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].y + Vertices[edge.end].y), 1);
-				Primitives[primitiveIndex].worldPosition.z = (int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z + Vertices[edge.end].z), 1);
-			}
 
 			return false;
 		}
@@ -347,51 +344,48 @@ namespace IntegerWorld
 			if (Primitives[primitiveIndex].z < 0)
 				return false;
 
-			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+			const auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
 
-			if (Primitives[primitiveIndex].z >= 0)
+			// Cull edges with both vertices behind the camera.
+			if (Vertices[edge.start].z < 0
+				&& Vertices[edge.end].z < 0)
 			{
-				// Cull edges with both vertices behind the camera.
-				if (Vertices[edge.start].z < 0
-					&& Vertices[edge.end].z < 0)
-				{
-					// Whole edge is out of bounds.
-					Primitives[primitiveIndex].z = -VERTEX16_UNIT;
-					return false;
-				}
+				// Whole edge is out of bounds.
+				Primitives[primitiveIndex].z = -VERTEX16_UNIT;
+				return false;
+			}
 
-				// Cull based on edge cull mode.
-				bool renderFragment = true;
-				switch (edgeDrawMode)
-				{
-				case EdgeDrawModeEnum::CullCenterZBehind:
-					renderFragment = ScreenPosition.z >
-						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-							+ Vertices[edge.end].z), 1);
-					break;
-				case EdgeDrawModeEnum::CullCenterZFront:
-					renderFragment = ScreenPosition.z <
-						(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
-							+ Vertices[edge.end].z), 1);
-					break;
-				case EdgeDrawModeEnum::CullAllBehind:
-					renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
-						|| Vertices[edge.end].z <= ScreenPosition.z);
-					break;
-				case EdgeDrawModeEnum::CullAnyBehind:
-					renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
-						&& Vertices[edge.end].z <= ScreenPosition.z);
-					break;
-				case EdgeDrawModeEnum::NoCulling:
-				default:
-					break;
-				}
+			// Cull based on edge cull mode.
+			bool renderFragment = true;
+			switch (edgeDrawMode)
+			{
+			case EdgeDrawModeEnum::CullCenterZBehind:
+				renderFragment = ScreenPosition.z >
+					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+						+ Vertices[edge.end].z), 1);
+				break;
+			case EdgeDrawModeEnum::CullCenterZFront:
+				renderFragment = ScreenPosition.z <
+					(int16_t)SignedRightShift(((int32_t)Vertices[edge.start].z
+						+ Vertices[edge.end].z), 1);
+				break;
+			case EdgeDrawModeEnum::CullAllBehind:
+				renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
+					|| Vertices[edge.end].z <= ScreenPosition.z);
+				break;
+			case EdgeDrawModeEnum::CullAnyBehind:
+				renderFragment = (Vertices[edge.start].z <= ScreenPosition.z
+					&& Vertices[edge.end].z <= ScreenPosition.z);
+				break;
+			case EdgeDrawModeEnum::NoCulling:
+			default:
+				break;
+			}
 
-				if (!renderFragment)
-				{
-					Primitives[primitiveIndex].z = -VERTEX16_UNIT;
-					return false;
-				}
+			if (!renderFragment)
+			{
+				Primitives[primitiveIndex].z = -VERTEX16_UNIT;
+				return false;
 			}
 
 			return false;
@@ -407,7 +401,7 @@ namespace IntegerWorld
 			{
 				if (Primitives[i].z >= 0)
 				{
-					auto edge = BaseEdgeObject::GetEdge(i);
+					const auto edge = BaseEdgeObject::GetEdge(i);
 
 					if (Primitives[i].z >= 0)
 					{
@@ -426,7 +420,7 @@ namespace IntegerWorld
 			if (FragmentShader == nullptr)
 				return;
 
-			auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
+			const auto edge = BaseEdgeObject::GetEdge(primitiveIndex);
 			const edge_primitive_t& primitive = Primitives[primitiveIndex];
 
 			EdgeFragment.start = Vertices[edge.start];
