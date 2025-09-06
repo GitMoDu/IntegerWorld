@@ -27,10 +27,10 @@ namespace IntegerWorld
 
 		uint16_t drawDistance = RangeMax;
 
+		int16_t planeTolerance = VERTEX16_UNIT / 10;
+
 	public:
-		ViewportProjector()
-		{
-		}
+		ViewportProjector() {}
 
 		void SetDimensions(const uint16_t viewWidth, const uint16_t viewHeight)
 		{
@@ -51,6 +51,11 @@ namespace IntegerWorld
 		void SetDrawDistance(const uint16_t distance)
 		{
 			drawDistance = MinValue(distance, RangeMax);
+		}
+
+		void SetFrustumTolerance(const int16_t tolerance)
+		{
+			planeTolerance = MaxValue<int16_t>(1, tolerance);
 		}
 
 		uint16_t GetFocalDistance() const
@@ -178,6 +183,12 @@ namespace IntegerWorld
 
 			// Bottom plane (using origin, bottom-left and bottom-right)
 			CalculatePlane(frustum.origin, nearPlane.bottomLeft, nearPlane.bottomRight, frustum.cullingBottomPlane);
+
+			// Apply tolerance to expand the frustum walls and ceiling slightly.
+			frustum.cullingLeftPlane.distance -= planeTolerance;
+			frustum.cullingRightPlane.distance -= planeTolerance;
+			frustum.cullingTopPlane.distance -= planeTolerance;
+			frustum.cullingBottomPlane.distance -= planeTolerance;
 		}
 
 		void Project(vertex16_t& cameraToscreen)
