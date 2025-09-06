@@ -53,7 +53,7 @@ namespace IntegerWorld
 		const vertex16_t* NormalsSource = nullptr;
 
 	protected:
-		static constexpr uint16_t TriangleCount = triangleCount;
+		uint16_t TriangleCount = triangleCount;
 
 	public:
 		AbstractStaticMeshObject() : Base() {}
