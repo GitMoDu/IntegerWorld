@@ -232,6 +232,209 @@ namespace IntegerWorld
 	};
 
 	/// <summary>
+	/// Abstract static mesh object that selects pre-bound sources by distance using Levels of Detail (LOD).
+	/// - Holds up to LevelsOfDetail entries, each with its own vertex/triangle/normal buffers and counts.
+	/// - Selects the first LOD whose squared distance threshold is within the camera-to-object distance.
+	/// - Optionally enforces a minimum render distance before any LOD is considered.
+	/// When no LOD matches, the mesh is skipped.
+	/// </summary>
+	/// <typeparam name="vertexCount">Compile-time maximum vertex count, typically from LoD 0.</typeparam>
+	/// <typeparam name="triangleCount">Compile-time maximum triangle count, typically from LoD 0.</typeparam>
+	/// <typeparam name="LevelsOfDetail">Maximum number of LOD entries that can be registered.</typeparam>
+	template<uint16_t vertexCount, uint16_t triangleCount, uint8_t LevelsOfDetail>
+	class AbstractStaticMeshLodObject : public AbstractStaticMeshObject<vertexCount, triangleCount>
+	{
+		static_assert(LevelsOfDetail > 0, "LevelsOfDetail must be greater than zero.");
+
+	private:
+		using Base = AbstractStaticMeshObject<vertexCount, triangleCount>;
+
+	private:
+		/// <summary>
+		/// Single Level-of-Detail entry containing selection threshold and data sources.
+		/// </summary>
+		struct lod_t
+		{
+			/// <summary>
+			/// Pointer to the vertex source buffer for this LOD (may point to PROGMEM on AVR).
+			/// </summary>
+			const vertex16_t* VerticesSource;
+
+			/// <summary>
+			/// Pointer to the triangle index source buffer for this LOD (may point to PROGMEM on AVR).
+			/// </summary>
+			const triangle_face_t* TrianglesSource;
+
+			/// <summary>
+			/// Optional pointer to per-triangle normal source buffer for this LOD (nullptr to compute on the fly).
+			/// </summary>
+			const vertex16_t* NormalsSource;
+
+			/// <summary>
+			/// Max distance threshold (squared). Above this distance this LOD is not selected.
+			/// </summary>
+			uint32_t SquareDistanceThreshold;
+
+			/// <summary>
+			/// Effective vertex count when this LOD is active.
+			/// </summary>
+			uint16_t VertexCount;
+
+			/// <summary>
+			/// Effective triangle count when this LOD is active.
+			/// </summary>
+			uint16_t TriangleCount;
+		};
+
+	private:
+		/// <summary>
+		/// Registered LOD entries. Only the first LodCount entries are valid.
+		/// </summary>
+		lod_t Levels[LevelsOfDetail];
+
+		/// <summary>
+		/// Minimum squared distance before any LOD is considered. Below this value the mesh is not rendered.
+		/// </summary>
+		uint32_t SquareMinDistance = 0;
+
+		/// <summary>
+		/// Number of active LOD entries in Levels.
+		/// </summary>
+		uint8_t LodCount = 0;
+
+		/// <summary>
+		/// Index of the currently selected LOD after ObjectShade.
+		/// </summary>
+		uint8_t CurrentLoD = 0;
+
+	public:
+		/// <summary>
+		/// Constructs an empty LOD mesh. Levels must be provided via SetSourcesLevelOfDetail before rendering.
+		/// </summary>
+		AbstractStaticMeshLodObject() : Base() {}
+
+		/// <summary>
+		/// Object pass:
+		/// - Computes squared distance from camera to object center.
+		/// - If distance is below the minimum render distance, disables rendering for this frame.
+		/// - Otherwise selects the first LOD whose threshold exceeds the distance, binds its sources,
+		///   and sets the effective vertex/triangle counts.
+		/// - If no LOD matches, disables rendering for this frame.
+		/// </summary>
+		/// <param name="frustum">Current view frustum used for camera origin and culling radius.</param>
+		virtual void ObjectShade(const frustum_t& frustum)
+		{
+			Base::ObjectShade(frustum);
+
+			// Vector from camera to object.
+			const int32_t dx = int32_t(WorldPosition.x) - frustum.origin.x;
+			const int32_t dy = int32_t(WorldPosition.y) - frustum.origin.y;
+			const int32_t dz = int32_t(WorldPosition.z) - frustum.origin.z;
+
+			// Determine LOD based on distance to camera.
+			const uint32_t squareDistance = uint32_t(dx * dx) + uint32_t(dy * dy) + uint32_t(dz * dz);
+
+			// Only select LOD if beyond the minimum distance.
+			if (squareDistance >= SquareMinDistance)
+			{
+				// Select the first LOD whose threshold exceeds current distance.
+				for (uint_fast8_t i = 0; i < LodCount; i++)
+				{
+					if (squareDistance < Levels[i].SquareDistanceThreshold)
+					{
+						CurrentLoD = static_cast<uint8_t>(i);
+						Base::SetStaticSources(Levels[i].VerticesSource, Levels[i].TrianglesSource);
+						Base::SetStaticNormals(Levels[i].NormalsSource);
+						Base::VertexCount = Levels[i].VertexCount;
+						Base::TriangleCount = Levels[i].TriangleCount;
+						return;
+					}
+				}
+			}
+
+			// No LOD matched, skip rendering.
+			Base::VertexCount = 0;
+			Base::TriangleCount = 0;
+		}
+
+		/// <summary>
+		/// Sets a minimum render distance. Below this distance (squared) no LOD is selected and the mesh is not rendered.
+		/// </summary>
+		/// <param name="distance">Distance in world units. The squared value is stored internally.</param>
+		void SetRenderDistanceMinimum(const uint16_t distance)
+		{
+			SquareMinDistance = uint32_t(distance) * distance;
+		}
+
+		/// <summary>
+		/// Clears all registered LODs and resets selection to zero.
+		/// </summary>
+		void ClearLevelsOfDetail()
+		{
+			LodCount = 0;
+			CurrentLoD = 0;
+		}
+
+		/// <summary>
+		/// Returns the number of LOD entries currently registered.
+		/// </summary>
+		uint8_t GetLevelsOfDetailCount() const
+		{
+			return LodCount;
+		}
+
+		/// <summary>
+		/// Registers or updates a Level of Detail entry.
+		/// Entries are appended up to LevelsOfDetail and then kept ordered by increasing distance threshold.
+		/// </summary>
+		/// <param name="maxDistance">Distance in world units until LOD is no longer selected.</param>
+		/// <param name="verticesSource">Pointer to the vertex source buffer for this LOD.</param>
+		/// <param name="vertexCount">Effective vertex count when this LOD is active.</param>
+		/// <param name="trianglesSource">Pointer to the triangle index source buffer for this LOD.</param>
+		/// <param name="triangleCount">Effective triangle count when this LOD is active.</param>
+		/// <param name="normalsSource">Optional pointer to per-triangle normals for this LOD (nullptr to disable precomputed normals).</param>
+		void SetSourcesLevelOfDetail(const uint16_t maxDistance,
+			const vertex16_t* verticesSource, const uint16_t vertexCount,
+			const triangle_face_t* trianglesSource, const uint16_t triangleCount,
+			const vertex16_t* normalsSource = nullptr)
+		{
+			if (LodCount < LevelsOfDetail)
+			{
+				Levels[LodCount].VerticesSource = verticesSource;
+				Levels[LodCount].TrianglesSource = trianglesSource;
+				Levels[LodCount].NormalsSource = normalsSource;
+				Levels[LodCount].SquareDistanceThreshold = uint32_t(maxDistance) * maxDistance;
+				Levels[LodCount].VertexCount = vertexCount;
+				Levels[LodCount].TriangleCount = triangleCount;
+				LodCount++;
+
+				// Keep thresholds ordered for selection in ObjectShade.
+				SortLods();
+			}
+		}
+
+	private:
+		/// <summary>
+		/// Stable insertion sort by increasing squared distance threshold over the first LodCount entries.
+		/// Ensures deterministic LOD selection when thresholds are equal (preserves relative order).
+		/// </summary>
+		void SortLods()
+		{
+			for (uint_fast8_t i = 1; i < LodCount; ++i)
+			{
+				lod_t key = Levels[i];
+				int16_t j = int16_t(i) - 1;
+				while (j >= 0 && Levels[j].SquareDistanceThreshold > key.SquareDistanceThreshold)
+				{
+					Levels[j + 1] = Levels[j];
+					--j;
+				}
+				Levels[j + 1] = key;
+			}
+		}
+	};
+
+	/// <summary>
 	/// Extends a base mesh loader (static/dynamic) and implements the world-space mesh pipeline:
 	/// - Object/primitive frustum culling
 	/// - Optional use of precomputed triangle normals (rotated) or on-the-fly normal calculation
@@ -523,6 +726,54 @@ namespace IntegerWorld
 	};
 
 	/// <summary>
+	/// Static (ROM-backed) mesh world object with Level of Detail (LOD) selection.
+	/// - Wraps AbstractStaticMeshLodObject and runs the world pipeline.
+	/// - LODs can be registered incrementally and will be selected by squared distance at render time.
+	/// </summary>
+	/// <typeparam name="vertexCount">Number of vertices in working buffers.</typeparam>
+	/// <typeparam name="triangleCount">Number of triangles in working buffers.</typeparam>
+	/// <typeparam name="LevelsOfDetail">Maximum number of LODs that can be registered.</typeparam>
+	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
+	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
+	template<uint16_t vertexCount, uint16_t triangleCount, uint8_t LevelsOfDetail,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+	class StaticMeshLodObject : public TemplateMeshWorldObject<
+		AbstractStaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail>, frustumCulling, meshCulling>
+	{
+	private:
+		using Base = TemplateMeshWorldObject<
+			AbstractStaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail>, frustumCulling, meshCulling>;
+
+	public:
+		/// <summary>
+		/// Constructs an empty LOD mesh. Use SetSourcesLevelOfDetail to register one or more LODs.
+		/// </summary>
+		StaticMeshLodObject()
+			: Base()
+		{
+		}
+
+		/// <summary>
+		/// Convenience constructor that registers a single default LOD entry.
+		/// </summary>
+		/// <param name="maxDistance">Distance in world units until LOD is no longer selected.</param>
+		/// <param name="verticesSource">Pointer to vertex source for this LOD.</param>
+		/// <param name="vertexCount">Effective vertex count for this LOD.</param>
+		/// <param name="trianglesSource">Pointer to triangle index source for this LOD.</param>
+		/// <param name="triangleCount">Effective triangle count for this LOD.</param>
+		/// <param name="normalsSource">Optional pointer to per-triangle normals for this LOD.</param>
+		StaticMeshLodObject(const uint16_t maxDistance,
+			const vertex16_t* verticesSource, const uint16_t vertexCount,
+			const triangle_face_t* trianglesSource, const uint16_t triangleCount,
+			const vertex16_t* normalsSource = nullptr)
+			: Base()
+		{
+			Base::SetSourcesLevelOfDetail(maxDistance, verticesSource, vertexCount, trianglesSource, triangleCount, normalsSource);
+		}
+	};
+
+	/// <summary>
 	/// Dynamic (RAM-backed) mesh world object alias using the dynamic loader.
 	/// Overriding classes can modify the vertex/triangle/normal buffers directly.
 	/// </summary>
@@ -602,6 +853,45 @@ namespace IntegerWorld
 	public:
 		DynamicMeshSingleColorSingleMaterialObject()
 			: DynamicMeshObject<vertexCount, triangleCount, hasNormals, frustumCulling, meshCulling>()
+		{
+		}
+
+	protected:
+		/// <summary>
+		/// Supplies the shared color/material to the fragment.
+		/// </summary>
+		virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t primitiveIndex)
+		{
+			fragment.color = Color;
+			fragment.material = Material;
+		}
+	};
+
+	/// <summary>
+	/// Static LOD mesh with a single color and material.
+	/// Inherits LOD distance selection and mesh pipeline behavior, supplying a shared color/material for all fragments.
+	/// </summary>
+	/// <typeparam name="vertexCount">Number of vertices in working buffers.</typeparam>
+	/// <typeparam name="triangleCount">Number of triangles in working buffers.</typeparam>
+	/// <typeparam name="LevelsOfDetail">Maximum number of LODs that can be registered.</typeparam>
+	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
+	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
+	template<uint16_t vertexCount, uint16_t triangleCount, uint8_t LevelsOfDetail,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+	class StaticMeshLodSingleColorSingleMaterialObject : public StaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail, frustumCulling, meshCulling>
+	{
+	public:
+		// Shared color/material for all fragments.
+		Rgb8::color_t Color = Rgb8::WHITE;
+		material_t Material{ UFRACTION8_1X, 0, 0, 0 };
+
+	public:
+		/// <summary>
+		/// Constructs an empty LOD mesh with shared color/material. Use SetSourcesLevelOfDetail to add LODs.
+		/// </summary>
+		StaticMeshLodSingleColorSingleMaterialObject()
+			: StaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail, frustumCulling, meshCulling>()
 		{
 		}
 
