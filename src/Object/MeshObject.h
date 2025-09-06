@@ -170,13 +170,30 @@ namespace IntegerWorld
 		// Dynamic sources stored in RAM.
 		vertex16_t VerticesSource[vertexCount]{};
 		triangle_face_t TrianglesSource[triangleCount]{};
-		vertex16_t NormalsSource[hasNormals * triangleCount]{};
+		vertex16_t NormalsSource[triangleCount]{}; // Only used if hasNormals == true.
 
 	protected:
-		static constexpr uint16_t TriangleCount = triangleCount;
+		uint16_t TriangleCount = triangleCount;
+
+	protected:
+		/// <summary>
+		/// Load object data into working buffers.
+		/// </summary>
+		virtual void LoadObjectData(const frustum_t& frustum) = 0;
 
 	public:
 		AbstractDynamicMeshObject() : Base() {}
+
+		/// <summary>
+		/// Override ObjectShade to load object data after base transform.
+		/// </summary>
+		/// <param name="frustum"></param>
+		virtual void ObjectShade(const frustum_t& frustum)
+		{
+			Base::ObjectShade(frustum);
+
+			LoadObjectData(frustum);
+		}
 
 	protected:
 		/// <summary>
