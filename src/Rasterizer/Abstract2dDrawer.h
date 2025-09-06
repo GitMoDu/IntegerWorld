@@ -2,6 +2,7 @@
 #define _INTEGER_WORLD_ABSTRACT_2D_DRAWER_h
 
 #include "AbstractSurfaceRasterizer.h"
+#include "TriangleRasterHelper.h"
 
 namespace IntegerWorld
 {
@@ -14,6 +15,27 @@ namespace IntegerWorld
 	template<typename SurfaceType>
 	class Abstract2dDrawer : public AbstractSurfaceRasterizer<SurfaceType>
 	{
+	protected:
+		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
+		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceWidth;
+		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceHeight;
+
+	protected:
+		using point2d_t = TriangleRasterHelper::point2d_t;
+		using ClipEdgeEnum = TriangleRasterHelper::ClipEdgeEnum;
+
+	private:
+		// Temporary buffers for Sutherland–Hodgman clipping (triangle in, convex polygon out).
+		point2d_t clipInputTriangle[3];
+		point2d_t clippedPolygon[8];
+
+		// Resusable small buffers for edge ping-pong. Max 6 vertices after clipping a triangle to a rect.
+		point2d_t clipScratchA[8];
+		point2d_t clipScratchB[8];
+
+		// Reusable points for clipping calculations.
+		point2d_t p0, p1, p2;
+
 	public:
 		Abstract2dDrawer(SurfaceType& surface)
 			: AbstractSurfaceRasterizer<SurfaceType>(surface)
@@ -179,114 +201,71 @@ namespace IntegerWorld
 		}
 
 		/// <summary>
-		/// Draws a filled triangle with the specified color and vertex coordinates, clipping it to the window boundaries if necessary.
+		/// Draws a filled triangle with robust clipping to the window.
+		/// Handles all cases, including when all vertices are outside but the triangle intersects the window.
 		/// </summary>
-		/// <param name="color">The color to fill the triangle, specified as a Rgb8::color_t value.</param>
-		/// <param name="x1">The x-coordinate of the first vertex of the triangle.</param>
-		/// <param name="y1">The y-coordinate of the first vertex of the triangle.</param>
-		/// <param name="x2">The x-coordinate of the second vertex of the triangle.</param>
-		/// <param name="y2">The y-coordinate of the second vertex of the triangle.</param>
-		/// <param name="x3">The x-coordinate of the third vertex of the triangle.</param>
-		/// <param name="y3">The y-coordinate of the third vertex of the triangle.</param>
+		/// <param name="color">Fill color.</param>
+		/// <param name="x1">X of first vertex.</param>
+		/// <param name="y1">Y of first vertex.</param>
+		/// <param name="x2">X of second vertex.</param>
+		/// <param name="y2">Y of second vertex.</param>
+		/// <param name="x3">X of third vertex.</param>
+		/// <param name="y3">Y of third vertex.</param>
 		void DrawTriangle(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3)
 		{
-			// Count how many vertices are inside the window
-			const bool in1 = IsInsideWindow(x1, y1);
-			const bool in2 = IsInsideWindow(x2, y2);
-			const bool in3 = IsInsideWindow(x3, y3);
-
-			const uint8_t insideCount = (uint8_t)in1 + (uint8_t)in2 + (uint8_t)in3;
-			if (insideCount == 3)
+			// Fast path: fully inside
+			if (IsInsideWindow(x1, y1) && IsInsideWindow(x2, y2) && IsInsideWindow(x3, y3))
 			{
-				// The whole triangle fits in the window.
-				Surface.TriangleFill(color,
-					x1, y1,
-					x2, y2,
-					x3, y3);
+				Surface.TriangleFill(color, x1, y1, x2, y2, x3, y3);
+				return;
 			}
-			else if (insideCount == 2)
+
+			// Clip the triangle against the window (Sutherland–Hodgman with integer arithmetic).
+			clipInputTriangle[0] = { x1, y1 };
+			clipInputTriangle[1] = { x2, y2 };
+			clipInputTriangle[2] = { x3, y3 };
+			const uint8_t outCount = ClipTriangleToWindow(clipInputTriangle, clippedPolygon);
+
+			if (outCount == 0)
 			{
-				// Find the two inside vertices and the outside vertex
-				int16_t ax, ay, bx, by, cx, cy;
-				if (!in1)
+				return; // Fully outside
+			}
+			else if (outCount == 1)
+			{
+				// Collapsed to a point
+				if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y))
+					Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
+				return;
+			}
+			else if (outCount == 2)
+			{
+				// Collapsed to a line
+				if (clippedPolygon[0].x == clippedPolygon[1].x && clippedPolygon[0].y == clippedPolygon[1].y)
 				{
-					// x1,y1 is outside
-					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
-				}
-				else if (!in2)
-				{
-					// x2,y2 is outside
-					ax = x1; ay = y1; bx = x3; by = y3; cx = x2; cy = y2;
+					if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y))
+						Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
 				}
 				else
 				{
-					// x3,y3 is outside
-					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
+					Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[1].x, clippedPolygon[1].y);
 				}
-
-				// Clip edge AC
-				int16_t pcx1 = cx, pcy1 = cy;
-				ClipEndpointToWindow(pcx1, pcy1, ax, ay);
-
-				// Clip edge BC
-				int16_t pcx2 = cx, pcy2 = cy;
-				ClipEndpointToWindow(pcx2, pcy2, bx, by);
-
-				// The clipped polygon is a quad: A, B, pcx2/pcy2, pcx1/pcy1
-				// Split into two triangles: (A, B, pcx2/pcy2) and (A, pcx2/pcy2, pcx1/pcy1)
-				Surface.TriangleFill(
-					color,
-					ax, ay,
-					bx, by,
-					pcx2, pcy2
-				);
-				Surface.TriangleFill(
-					color,
-					ax, ay,
-					pcx2, pcy2,
-					pcx1, pcy1
-				);
+				return;
 			}
-			else if (insideCount == 1)
-			{
-				// Find the inside vertex and the two outside vertices
-				int16_t ax, ay, bx, by, cx, cy;
-				if (in1)
-				{
-					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
-				}
-				else if (in2)
-				{
-					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
-				}
-				else // in3
-				{
-					ax = x3; ay = y3; bx = x1; by = y1; cx = x2; cy = y2;
-				}
 
-				// Clip edge AB
-				int16_t pbx = bx, pby = by;
-				ClipEndpointToWindow(pbx, pby, ax, ay);
-
-				// Clip edge AC
-				int16_t pcx = cx, pcy = cy;
-				ClipEndpointToWindow(pcx, pcy, ax, ay);
-
-				// Draw the clipped triangle
-				Surface.TriangleFill(color,
-					ax, ay,
-					pbx, pby,
-					pcx, pcy);
-			}
-			else if (TriangleCoversWindow(x1, y1, x2, y2, x3, y3)) //  insideCount == 0.
+			// General convex polygon (up to 6 vertices) -> triangulate as a fan
+			p0 = clippedPolygon[0];
+			int32_t area2 = 0;
+			for (uint8_t i = 1; i + 1 < outCount; ++i)
 			{
-				// The triangle covers the whole window.
-				Fill(color);
-			}
-			else  // insideCount == 0, !TriangleCoversWindow
-			{
-				// All vertices are outside the window.
-				//TODO: Check if triangle intersects the window and draw remaining are with polygon sub-division.
+				p1 = clippedPolygon[i];
+				p2 = clippedPolygon[i + 1];
+
+				// Skip degenerate triangles
+				area2 = int32_t(p1.x - p0.x) * int32_t(p2.y - p0.y) - int32_t(p2.x - p0.x) * int32_t(p1.y - p0.y);
+				if (area2 != 0)
+				{
+					Surface.TriangleFill(color, p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
+				}
 			}
 		}
 
@@ -383,41 +362,8 @@ namespace IntegerWorld
 		}
 
 		/// <summary>
-		/// Determines if a point (x, y) lies inside the triangle defined by (x1, y1), (x2, y2), and (x3, y3).
-		/// </summary>
-		/// <param name="x">X coordinate of the point to test.</param>
-		/// <param name="y">Y coordinate of the point to test.</param>
-		/// <param name="x1">X coordinate of the first triangle vertex.</param>
-		/// <param name="y1">Y coordinate of the first triangle vertex.</param>
-		/// <param name="x2">X coordinate of the second triangle vertex.</param>
-		/// <param name="y2">Y coordinate of the second triangle vertex.</param>
-		/// <param name="x3">X coordinate of the third triangle vertex.</param>
-		/// <param name="y3">Y coordinate of the third triangle vertex.</param>
-		/// <returns>True if the point (x, y) is inside the triangle; otherwise, false.</returns>
-		static bool PointInTriangle(const int16_t x, const  int16_t y,
-			const int16_t x1, const  int16_t y1,
-			const int16_t x2, const  int16_t y2,
-			const int16_t x3, const  int16_t y3)
-		{
-			const int32_t d1 = int32_t(x - x2) * (y1 - y2) - int32_t(x1 - x2) * (y - y2);
-			const int32_t d2 = int32_t(x - x3) * (y2 - y3) - int32_t(x2 - x3) * (y - y3);
-			const int32_t d3 = int32_t(x - x1) * (y3 - y1) - int32_t(x3 - x1) * (y - y1);
-
-			const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-			const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-			return !has_neg && !has_pos;
-		}
-
-		/// <summary>
 		/// Determines if the triangle defined by (x1, y1), (x2, y2), and (x3, y3) completely covers the current drawing window.
 		/// </summary>
-		/// <param name="x1">X coordinate of the first triangle vertex.</param>
-		/// <param name="y1">Y coordinate of the first triangle vertex.</param>
-		/// <param name="x2">X coordinate of the second triangle vertex.</param>
-		/// <param name="y2">Y coordinate of the second triangle vertex.</param>
-		/// <param name="x3">X coordinate of the third triangle vertex.</param>
-		/// <param name="y3">Y coordinate of the third triangle vertex.</param>
 		/// <returns>True if the triangle fully contains all four corners of the window; otherwise, false.</returns>
 		bool TriangleCoversWindow(
 			const int16_t x1, const int16_t y1,
@@ -430,140 +376,35 @@ namespace IntegerWorld
 				PointInTriangle(SurfaceWidth - 1, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3);
 		}
 
-		template<typename PixelShader>
-		void BresenhamFlatTopFill(const int16_t x1, const int16_t y1,
-			const int16_t x2, const int16_t y2,
-			const int16_t x3, const int16_t y3,
-			PixelShader&& pixelShader)
+		uint8_t ClipTriangleToWindow(const point2d_t(&tri)[3], point2d_t* out)
 		{
-			Rgb8::color_t color{};
-
-			if (y1 == y3)
+			// Initialize with triangle vertices
+			uint8_t countA = 3;
+			for (uint8_t i = 0; i < 3; ++i)
 			{
-				if (x1 == x3)
-				{
-					// Degenerate triangle, point only.
-					if (pixelShader(color, x1, y1))
-					{
-						Surface.Pixel(color, x1, y1);
-					}
-				}
-				else
-				{
-					// Degenerate triangle, raster horizontal line only.
-					const int8_t xSign = x1 <= x3 ? 1 : -1;
-					int_fast16_t x = x1;
-					do
-					{
-						if (pixelShader(color, x, y1))
-						{
-							Surface.Pixel(color, x, y1);
-						}
-						x += xSign;
-					} while (x != x3);
-				}
+				clipScratchA[i] = tri[i];
 			}
-			else
+
+			// Clip sequentially: Left, Right, Top, Bottom
+			uint8_t countB = ClipAgainstEdge(clipScratchA, countA, clipScratchB, ClipEdgeEnum::Left, SurfaceWidth, SurfaceHeight);
+			if (countB == 0) return 0;
+
+			countA = ClipAgainstEdge(clipScratchB, countB, clipScratchA, ClipEdgeEnum::Right, SurfaceWidth, SurfaceHeight);
+			if (countA == 0) return 0;
+
+			countB = ClipAgainstEdge(clipScratchA, countA, clipScratchB, ClipEdgeEnum::Top, SurfaceWidth, SurfaceHeight);
+			if (countB == 0) return 0;
+
+			countA = ClipAgainstEdge(clipScratchB, countB, clipScratchA, ClipEdgeEnum::Bottom, SurfaceWidth, SurfaceHeight);
+			if (countA == 0) return 0;
+
+			// Copy to out
+			for (uint8_t i = 0; i < countA; ++i)
 			{
-				// Calculate inverse slopes in fixed-point
-				const int32_t invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
-				const int32_t invSlope1 = (int32_t(x3 - x2) << BRESENHAM_SCALE) / (y3 - y2);
-
-				// Starting x positions in fixed-point
-				int32_t ax = int32_t(x3) << BRESENHAM_SCALE;
-				int32_t bx = ax;
-
-				// Loop variables.
-				int16_t xEnd{};
-				const int16_t yEnd = y1 - 1;
-				int_fast16_t x{};
-				int_fast16_t y = y3;
-				do
-				{
-					x = ax >> BRESENHAM_SCALE;
-					xEnd = bx >> BRESENHAM_SCALE;
-					const int8_t xSign = x <= xEnd ? 1 : -1;
-					xEnd += xSign;
-					do
-					{
-						if (pixelShader(color, x, y))
-						{
-							Surface.Pixel(color, x, y);
-						}
-						x += xSign;
-					} while (x != xEnd);
-
-					ax -= invSlope1;
-					bx -= invSlope2;
-					y--;
-				} while (y != yEnd);
+				out[i] = clipScratchA[i];
 			}
-		}
 
-		template<typename PixelShader>
-		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
-		{
-			Rgb8::color_t color{};
-
-			if (y1 == y2)
-			{
-				if (x1 == x2)
-				{
-					// Degenerate triangle, point only.
-					if (pixelShader(color, x2, y2))
-					{
-						Surface.Pixel(color, x2, y2);
-					}
-				}
-				else
-				{
-					// Degenerate triangle, raster horizontal line only.
-					const int8_t xSign = x1 <= x2 ? 1 : -1;
-					int_fast16_t x = x1;
-					do
-					{
-						if (pixelShader(color, x, y2))
-						{
-							Surface.Pixel(color, x, y2);
-						}
-						x += xSign;
-					} while (x != x2);
-				}
-			}
-			else
-			{
-				// Calculate inverse slopes in fixed-point
-				const int32_t invSlope2 = (int32_t(x3 - x1) << BRESENHAM_SCALE) / (y3 - y1);
-				const int32_t invSlope1 = (int32_t(x2 - x1) << BRESENHAM_SCALE) / (y2 - y1);
-
-				// Starting x positions in fixed-point
-				int32_t ax = int32_t(x1) << BRESENHAM_SCALE;
-				int32_t bx = ax;
-
-				// Loop variables.
-				int16_t xEnd{};
-				int_fast16_t x{};
-				int_fast16_t y = y1;
-				do
-				{
-					x = ax >> BRESENHAM_SCALE;
-					xEnd = bx >> BRESENHAM_SCALE;
-					const int8_t xSign = x <= xEnd ? 1 : -1;
-					xEnd += xSign;
-					do
-					{
-						if (pixelShader(color, x, y))
-						{
-							Surface.Pixel(color, x, y);
-						}
-						x += xSign;
-					} while (x != xEnd);
-
-					ax += invSlope1;
-					bx += invSlope2;
-					y++;
-				} while (y != y2);
-			}
+			return countA;
 		}
 	};
 }

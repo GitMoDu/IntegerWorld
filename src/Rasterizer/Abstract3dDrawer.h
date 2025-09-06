@@ -16,6 +16,9 @@ namespace IntegerWorld
 	template<typename SurfaceType>
 	class Abstract3dDrawer : public Abstract2dRasterizer<SurfaceType>
 	{
+	protected:
+		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
+
 	public:
 		// Re-expose 2D overloads to prevent hiding by the 3D Draw* overloads below.
 		using Abstract2dRasterizer<SurfaceType>::Fill;
@@ -46,7 +49,7 @@ namespace IntegerWorld
 		/// <param name="point">3D vertex with x/y in screen space and z for visibility.</param>
 		void DrawPoint(const Rgb8::color_t color, const vertex16_t& point)
 		{
-			if (point.z >= 0)
+			if (point.z > 0)
 			{
 				DrawPixel(color, point.x, point.y);
 			}
@@ -66,7 +69,7 @@ namespace IntegerWorld
 			if (start.z == end.z)
 			{
 				// Screen plane 2D line, only need to check one point for bounds.
-				if (start.z >= 0)
+				if (start.z > 0)
 				{
 					DrawLine(color, start.x, start.y, end.x, end.y);
 				}
@@ -78,8 +81,8 @@ namespace IntegerWorld
 			else
 			{
 				uint8_t inBounds = 0;
-				inBounds += start.z >= 0;
-				inBounds += end.z >= 0;
+				inBounds += start.z > 0;
+				inBounds += end.z > 0;
 
 				if (inBounds == 0)
 				{
@@ -185,7 +188,7 @@ namespace IntegerWorld
 		/// <returns>True if visible in the current window.</returns>
 		bool IsInsideWindow(const vertex16_t& point) const
 		{
-			return point.z >= 0 && Abstract2dRasterizer<SurfaceType>::IsInsideWindow(point.x, point.y);
+			return point.z > 0 && Abstract2dRasterizer<SurfaceType>::IsInsideWindow(point.x, point.y);
 		}
 	};
 }

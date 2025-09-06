@@ -14,6 +14,11 @@ namespace IntegerWorld
 	template<typename SurfaceType>
 	class Abstract2dRasterizer : public Abstract2dDrawer<SurfaceType>
 	{
+	protected:
+		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
+		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceWidth;
+		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceHeight;
+
 	public:
 		Abstract2dRasterizer(SurfaceType& surface)
 			: Abstract2dDrawer<SurfaceType>(surface)
@@ -130,6 +135,33 @@ namespace IntegerWorld
 		template<typename PixelShader>
 		void RasterTriangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
+			// Early triangle culling - check if triangle is degenerate
+			if ((x1 == x2 && y1 == y2) || (x1 == x3 && y1 == y3) || (x2 == x3 && y2 == y3)) {
+				// Handle degenerate cases (point or line)
+				if (x1 == x2 && y1 == y2) {
+					if (x1 == x3 && y1 == y3) {
+						// Single point
+						Rgb8::color_t color{};
+						if (IsInsideWindow(x1, y1) && pixelShader(color, x1, y1)) {
+							Surface.Pixel(color, x1, y1);
+						}
+					}
+					else {
+						// Line from (x1,y1) to (x3,y3)
+						RasterLine(x1, y1, x3, y3, pixelShader);
+					}
+				}
+				else if (x1 == x3 && y1 == y3) {
+					// Line from (x1,y1) to (x2,y2)
+					RasterLine(x1, y1, x2, y2, pixelShader);
+				}
+				else {
+					// Line from (x2,y2) to (x3,y3)
+					RasterLine(x2, y2, x3, y3, pixelShader);
+				}
+				return;
+			}
+
 			// Count how many vertices are inside the window
 			const bool in1 = IsInsideWindow(x1, y1);
 			const bool in2 = IsInsideWindow(x2, y2);
@@ -208,10 +240,29 @@ namespace IntegerWorld
 					pbx, pby,
 					pcx, pcy, pixelShader);
 			}
-			else  // insideCount == 0, !TriangleCoversWindow
+			else  // insideCount == 0
 			{
 				// All vertices are outside the window.
-				//TODO: Check if triangle intersects the window and draw remaining are with polygon sub-division.
+				// Check if triangle intersects the window
+				// Quick rejection test - check if all vertices are on the same side of the window
+				uint8_t out1 = 0, out2 = 0, out3 = 0;
+				if (x1 < 0) out1 |= 1; else if (x1 >= SurfaceWidth) out1 |= 2;
+				if (y1 < 0) out1 |= 4; else if (y1 >= SurfaceHeight) out1 |= 8;
+				if (x2 < 0) out2 |= 1; else if (x2 >= SurfaceWidth) out2 |= 2;
+				if (y2 < 0) out2 |= 4; else if (y2 >= SurfaceHeight) out2 |= 8;
+				if (x3 < 0) out3 |= 1; else if (x3 >= SurfaceWidth) out3 |= 2;
+				if (y3 < 0) out3 |= 4; else if (y3 >= SurfaceHeight) out3 |= 8;
+
+				// If all vertices are on the same side, the triangle doesn't intersect the window
+				if ((out1 & out2 & out3) != 0)
+					return;
+
+				// Complex case: clip triangle against window
+				// For this implementation, we'll handle edge cases by clipping lines
+				// and rendering the resulting segments
+				RasterLine(x1, y1, x2, y2, pixelShader);
+				RasterLine(x2, y2, x3, y3, pixelShader);
+				RasterLine(x3, y3, x1, y1, pixelShader);
 			}
 		}
 
@@ -433,6 +484,99 @@ namespace IntegerWorld
 				// Draw the two sub-triangles
 				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, y2, pixelShader);
 				BresenhamFlatTopFill(x2, y2, Vi_x, y2, x3, y3, pixelShader);
+			}
+		}
+
+	private:
+		// Optimized flat-bottom triangle fill
+		template<typename PixelShader>
+		void BresenhamFlatBottomFill(const int16_t x1, const int16_t y1,
+			const int16_t x2, const int16_t y2,
+			const int16_t x3, const int16_t y3,
+			PixelShader&& pixelShader)
+		{
+			// Pre-calculate slopes in 16.16 fixed point format
+			const int32_t dx1 = ((int32_t)(x2 - x1) << 16) / (y2 - y1);
+			const int32_t dx2 = ((int32_t)(x3 - x1) << 16) / (y3 - y1);
+
+			// Initialize scanline starting x-coordinates in fixed point
+			int32_t sx1 = (int32_t)x1 << 16;
+			int32_t sx2 = sx1;
+
+			Rgb8::color_t color{};
+
+			// Scan all lines from top to bottom
+			for (int16_t y = y1; y <= y2; y++)
+			{
+				int16_t startX = (sx1 + 0x8000) >> 16; // round to nearest pixel
+				int16_t endX = (sx2 + 0x8000) >> 16;   // round to nearest pixel
+
+				// Ensure left-to-right drawing order
+				if (startX > endX)
+				{
+					int16_t temp = startX;
+					startX = endX;
+					endX = temp;
+				}
+
+				// Draw the scanline
+				for (int16_t x = startX; x <= endX; x++)
+				{
+					if (pixelShader(color, x, y))
+					{
+						Surface.Pixel(color, x, y);
+					}
+				}
+
+				// Update edge x-coordinates for the next scanline
+				sx1 += dx1;
+				sx2 += dx2;
+			}
+		}
+
+		// Optimized flat-top triangle fill
+		template<typename PixelShader>
+		void BresenhamFlatTopFill(const int16_t x1, const int16_t y1,
+			const int16_t x2, const int16_t y2,
+			const int16_t x3, const int16_t y3,
+			PixelShader&& pixelShader)
+		{
+			// Pre-calculate slopes in 16.16 fixed point format
+			const int32_t dx1 = ((int32_t)(x3 - x1) << 16) / (y3 - y1);
+			const int32_t dx2 = ((int32_t)(x3 - x2) << 16) / (y3 - y2);
+
+			// Initialize scanline starting x-coordinates in fixed point
+			int32_t sx1 = (int32_t)x3 << 16;
+			int32_t sx2 = sx1;
+
+			Rgb8::color_t color{};
+
+			// Scan all lines from bottom to top
+			for (int16_t y = y3; y >= y1; y--)
+			{
+				int16_t startX = (sx1 + 0x8000) >> 16; // round to nearest pixel
+				int16_t endX = (sx2 + 0x8000) >> 16;   // round to nearest pixel
+
+				// Ensure left-to-right drawing order
+				if (startX > endX)
+				{
+					int16_t temp = startX;
+					startX = endX;
+					endX = temp;
+				}
+
+				// Draw the scanline
+				for (int16_t x = startX; x <= endX; x++)
+				{
+					if (pixelShader(color, x, y))
+					{
+						Surface.Pixel(color, x, y);
+					}
+				}
+
+				// Update edge x-coordinates for the next scanline
+				sx1 -= dx1;
+				sx2 -= dx2;
 			}
 		}
 	};
