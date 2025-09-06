@@ -15,6 +15,8 @@ namespace IntegerWorld
 		static constexpr uint8_t DownShift = GetBitShifts(Range);
 
 	private:
+		frustum_plane_t nearPlane;
+
 		int16_t ViewWidthHalf = 0;
 		int16_t ViewHeightHalf = 0;
 
@@ -159,10 +161,23 @@ namespace IntegerWorld
 			};
 
 			// Calculate plane corners.
-			frustum_plane_t nearPlane{};
 			CalculateFrustumCorners(nearCenter, right, up, nearHalfWidth, nearHalfHeight, nearPlane);
 
-			//TODO: Calculate culling planes.
+			// Calculate culling planes.
+			// Near plane (facing inside the frustum)
+			CalculatePlane(nearPlane.topLeft, nearPlane.topRight, nearPlane.bottomLeft, frustum.cullingNearPlane);
+
+			// Left plane (using origin, top-left and bottom-left)
+			CalculatePlane(frustum.origin, nearPlane.topLeft, nearPlane.bottomLeft, frustum.cullingLeftPlane);
+
+			// Right plane (using origin, bottom-right and top-right)
+			CalculatePlane(frustum.origin, nearPlane.bottomRight, nearPlane.topRight, frustum.cullingRightPlane);
+
+			// Top plane (using origin, top-right and top-left)
+			CalculatePlane(frustum.origin, nearPlane.topRight, nearPlane.topLeft, frustum.cullingTopPlane);
+
+			// Bottom plane (using origin, bottom-left and bottom-right)
+			CalculatePlane(frustum.origin, nearPlane.bottomLeft, nearPlane.bottomRight, frustum.cullingBottomPlane);
 		}
 
 		void Project(vertex16_t& cameraToscreen)
@@ -192,29 +207,78 @@ namespace IntegerWorld
 			cameraToscreen.z = distanceDenum;
 		}
 
-		// Calculate the four corners of the plane using the center point and the right/up vectors
+	private:
+		/// <summary>
+		/// Calculate the four corners of the plane using the center point and the right/up vectors
+		/// </summary>
 		void CalculateFrustumCorners(const vertex16_t& center, const vertex16_t& right, const vertex16_t& up,
 			const int16_t halfWidth, const int16_t halfHeight, frustum_plane_t& plane)
 		{
 			// Top-left corner
-			plane.topLeft.x = center.x - int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.topLeft.y = center.y - int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.topLeft.z = center.z - int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topLeft.x = center.x - int16_t(SignedRightShift(int32_t(right.x) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.x) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.topLeft.y = center.y - int16_t(SignedRightShift(int32_t(right.y) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.y) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.topLeft.z = center.z - int16_t(SignedRightShift(int32_t(right.z) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.z) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
 
 			// Top-right corner
-			plane.topRight.x = center.x + int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.topRight.y = center.y + int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.topRight.z = center.z + int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) - int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.topRight.x = center.x + int16_t(SignedRightShift(int32_t(right.x) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.x) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.topRight.y = center.y + int16_t(SignedRightShift(int32_t(right.y) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.y) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.topRight.z = center.z + int16_t(SignedRightShift(int32_t(right.z) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				- int16_t(SignedRightShift(int32_t(up.z) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
 
 			// Bottom-right corner
-			plane.bottomRight.x = center.x + int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.bottomRight.y = center.y + int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.bottomRight.z = center.z + int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomRight.x = center.x + int16_t(SignedRightShift(int32_t(right.x) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.x) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.bottomRight.y = center.y + int16_t(SignedRightShift(int32_t(right.y) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.y) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.bottomRight.z = center.z + int16_t(SignedRightShift(int32_t(right.z) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.z) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
 
 			// Bottom-left corner
-			plane.bottomLeft.x = center.x - int16_t(int32_t(right.x) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.x) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.bottomLeft.y = center.y - int16_t(int32_t(right.y) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.y) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
-			plane.bottomLeft.z = center.z - int16_t(int32_t(right.z) * halfWidth >> GetBitShifts(VERTEX16_UNIT)) + int16_t(int32_t(up.z) * halfHeight >> GetBitShifts(VERTEX16_UNIT));
+			plane.bottomLeft.x = center.x - int16_t(SignedRightShift(int32_t(right.x) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.x) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.bottomLeft.y = center.y - int16_t(SignedRightShift(int32_t(right.y) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.y) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+			plane.bottomLeft.z = center.z - int16_t(SignedRightShift(int32_t(right.z) * halfWidth, GetBitShifts(VERTEX16_UNIT)))
+				+ int16_t(SignedRightShift(int32_t(up.z) * halfHeight, GetBitShifts(VERTEX16_UNIT)));
+		}
+
+		/// <summary>
+		/// Calculate a plane from three points
+		/// </summary>
+		void CalculatePlane(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, plane16_t& plane)
+		{
+			// Calculate two vectors in the plane
+			const vertex16_t v1
+			{
+				int16_t(b.x - a.x),
+				int16_t(b.y - a.y),
+				int16_t(b.z - a.z)
+			};
+
+			const vertex16_t v2
+			{
+				int16_t(c.x - a.x),
+				int16_t(c.y - a.y),
+				int16_t(c.z - a.z)
+			};
+
+			// Calculate the normal using cross product
+			plane.x = int16_t(SignedRightShift((int32_t(v1.y) * v2.z) - (int32_t(v1.z) * v2.y), GetBitShifts(VERTEX16_UNIT)));
+			plane.y = int16_t(SignedRightShift((int32_t(v1.z) * v2.x) - (int32_t(v1.x) * v2.z), GetBitShifts(VERTEX16_UNIT)));
+			plane.z = int16_t(SignedRightShift((int32_t(v1.x) * v2.y) - (int32_t(v1.y) * v2.x), GetBitShifts(VERTEX16_UNIT)));
+
+			// Normalize the normal vector (important for distance calculation)
+			NormalizeVertex16(plane);
+
+			// Calculate the plane distance: -dot(normal, point)
+			plane.distance = -(int32_t)(SignedRightShift((int32_t(plane.x) * a.x) +
+				(int32_t(plane.y) * a.y) +
+				(int32_t(plane.z) * a.z), GetBitShifts(VERTEX16_UNIT)));
 		}
 	};
 }
