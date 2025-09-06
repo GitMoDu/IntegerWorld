@@ -6,15 +6,6 @@
 
 namespace IntegerWorld
 {
-	enum class pixel_blend_mode_t : uint8_t
-	{
-		Alpha,		// Blends the new color with the existing pixel color using alpha blending.
-		Add,		// Adds the new color to the existing pixel color.
-		Subtract,	// Subtracts the new color from the existing pixel color.
-		Multiply,	// Multiplies the new color with the existing pixel color.
-		Screen		// Blends the new color with the existing pixel color using the screen blend mode.
-	};
-
 	/// <summary>
 	/// Interface for output framebuffer/screen.
 	/// </summary>
