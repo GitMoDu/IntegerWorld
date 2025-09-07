@@ -22,7 +22,7 @@ namespace IntegerWorld
 	template<uint16_t vertexCount,
 		typename vertex_t = point_cloud_vertex_t,
 		typename primitive_t = lit_point_primitive_t,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling>
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling>
 	class LitPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>
 	{
 	private:
@@ -197,7 +197,7 @@ namespace IntegerWorld
 	};
 
 	template<uint16_t vertexCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling>
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling>
 	class FlatPointCloudObject : public AbstractTransformObject<vertexCount, vertexCount, point_cloud_vertex_t, flat_point_primitive_t>
 	{
 	private:

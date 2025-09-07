@@ -154,11 +154,28 @@ namespace IntegerWorld
 	protected:
 		uint16_t EdgeCount;
 
+	protected:
+		/// <summary>
+		/// Load object data into working buffers.
+		/// </summary>
+		virtual void LoadObjectData(const frustum_t& frustum) = 0;
+
 	public:
 		AbstractDynamicEdgeObject()
 			: Base()
 			, EdgeCount(edgeCount)
 		{
+		}
+
+		/// <summary>
+		/// Override ObjectShade to load object data after base transform.
+		/// </summary>
+		/// <param name="frustum"></param>
+		virtual void ObjectShade(const frustum_t& frustum)
+		{
+			Base::ObjectShade(frustum);
+
+			LoadObjectData(frustum);
 		}
 
 	protected:
@@ -187,11 +204,11 @@ namespace IntegerWorld
 	/// Parameterized Base Class Pattern allows code-reuse for static and dynamic edge objects with zero overhead.
 	/// </summary>
 	/// <typeparam name="BaseEdgeObject">AbstractDynamicEdgeObject or AbstractStaticEdgeObject.</typeparam>
-	/// <typeparam name="frustumCulling">Specifies the frustum culling mode (default: ObjectCulling).</typeparam>
-	/// <typeparam name="edgeDrawMode">Specifies the edge drawing mode (default: NoCulling).</typeparam>
+	/// <typeparam name="frustumCulling">Specifies the frustum culling mode.</typeparam>
+	/// <typeparam name="edgeDrawMode">Specifies the edge drawing mode.</typeparam>
 	template<typename BaseEdgeObject,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
-		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
+		FrustumCullingEnum frustumCulling,
+		EdgeDrawModeEnum edgeDrawMode>
 	class TemplateEdgeObject : public BaseEdgeObject
 	{
 	public:
@@ -458,10 +475,10 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">The max number of vertices in the edge object.</typeparam>
 	/// <typeparam name="edgeCount">The max number of edges in the edge object.</typeparam>
-	/// <typeparam name="frustumCulling">The frustum culling mode to use, defaulting to ObjectCulling (FrustumCullingEnum).</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use, defaulting to PrimitiveCulling (FrustumCullingEnum).</typeparam>
 	/// <typeparam name="edgeDrawMode">The edge draw mode to use, defaulting to NoCulling (EdgeDrawModeEnum).</typeparam>
 	template<uint16_t vertexCount, uint16_t edgeCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
 	using DynamicEdgeObject = TemplateEdgeObject<AbstractDynamicEdgeObject<vertexCount, edgeCount>, frustumCulling, edgeDrawMode>;
 
@@ -470,10 +487,10 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">The number of vertices in the object .</typeparam>
 	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
-	/// <typeparam name="frustumCulling">The frustum culling mode to use. Defaults to ObjectCulling.</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use. Defaults to PrimitiveCulling.</typeparam>
 	/// <typeparam name="edgeDrawMode">The edge drawing mode to use. Defaults to NoCulling.</typeparam>
 	template<uint16_t vertexCount, uint16_t edgeCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
 	class StaticEdgeObject : public TemplateEdgeObject<AbstractStaticEdgeObject<vertexCount, edgeCount>, frustumCulling, edgeDrawMode>
 	{
@@ -496,10 +513,10 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
 	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
-	/// <typeparam name="frustumCulling">The frustum culling mode to use (default: ObjectCulling).</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode to use (default: PrimitiveCulling).</typeparam>
 	/// <typeparam name="edgeDrawMode">The edge draw mode to use (default: NoCulling).</typeparam>
 	template<uint16_t vertexCount, uint16_t edgeCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
 	class DynamicEdgeSingleColorSingleMaterialObject : public DynamicEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>
 	{
@@ -529,10 +546,10 @@ namespace IntegerWorld
 	/// </summary>
 	/// <typeparam name="vertexCount">The number of vertices in the object.</typeparam>
 	/// <typeparam name="edgeCount">The number of edges in the object.</typeparam>
-	/// <typeparam name="frustumCulling">The frustum culling mode (default: ObjectCulling).</typeparam>
+	/// <typeparam name="frustumCulling">The frustum culling mode (default: PrimitiveCulling).</typeparam>
 	/// <typeparam name="edgeDrawMode">The edge draw mode (default: NoCulling).</typeparam>
 	template<uint16_t vertexCount, uint16_t edgeCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		EdgeDrawModeEnum edgeDrawMode = EdgeDrawModeEnum::NoCulling>
 	class StaticEdgeSingleColorSingleMaterialObject : public StaticEdgeObject<vertexCount, edgeCount, frustumCulling, edgeDrawMode>
 	{

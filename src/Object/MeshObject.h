@@ -449,8 +449,8 @@ namespace IntegerWorld
 	/// <typeparam name="frustumCulling">Frustum culling mode (default: ObjectCulling).</typeparam>
 	/// <typeparam name="meshCulling">Mesh culling mode (default: BackfaceCullling).</typeparam>
 	template<typename BaseMeshObject,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
-		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
+		FrustumCullingEnum frustumCulling,
+		MeshCullingEnum meshCulling>
 	class TemplateMeshWorldObject : public BaseMeshObject
 	{
 	public:
@@ -707,7 +707,7 @@ namespace IntegerWorld
 	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class StaticMeshObject : public TemplateMeshWorldObject<
 		AbstractStaticMeshObject<vertexCount, triangleCount>, frustumCulling, meshCulling>
@@ -739,7 +739,7 @@ namespace IntegerWorld
 	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount, uint8_t LevelsOfDetail,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class StaticMeshLodObject : public TemplateMeshWorldObject<
 		AbstractStaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail>, frustumCulling, meshCulling>
@@ -787,7 +787,7 @@ namespace IntegerWorld
 	/// <typeparam name="hasNormals">If true, a normals buffer is available and used.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
 		bool hasNormals = false,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	using DynamicMeshObject = TemplateMeshWorldObject<
 		AbstractDynamicMeshObject<vertexCount, triangleCount, hasNormals>,
@@ -801,7 +801,7 @@ namespace IntegerWorld
 	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class StaticMeshSingleColorSingleMaterialObject : public StaticMeshObject<vertexCount, triangleCount, frustumCulling, meshCulling>
 	{
@@ -844,7 +844,7 @@ namespace IntegerWorld
 	/// <typeparam name="hasNormals">If true, the dynamic normals buffer is available and used.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount,
 		bool hasNormals = false,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class DynamicMeshSingleColorSingleMaterialObject : public DynamicMeshObject<vertexCount, triangleCount, hasNormals, frustumCulling, meshCulling>
 	{
@@ -880,7 +880,7 @@ namespace IntegerWorld
 	/// <typeparam name="frustumCulling">Frustum culling mode.</typeparam>
 	/// <typeparam name="meshCulling">Mesh culling mode.</typeparam>
 	template<uint16_t vertexCount, uint16_t triangleCount, uint8_t LevelsOfDetail,
-		FrustumCullingEnum frustumCulling = FrustumCullingEnum::ObjectCulling,
+		FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
 		MeshCullingEnum meshCulling = MeshCullingEnum::BackfaceCullling>
 	class StaticMeshLodSingleColorSingleMaterialObject : public StaticMeshLodObject<vertexCount, triangleCount, LevelsOfDetail, frustumCulling, meshCulling>
 	{
