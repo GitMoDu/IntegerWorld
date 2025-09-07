@@ -150,14 +150,6 @@ namespace IntegerWorld
 		int16_t Z;
 	};
 
-	struct frustum_plane_t
-	{
-		vertex16_t topLeft;
-		vertex16_t topRight;
-		vertex16_t bottomLeft;
-		vertex16_t bottomRight;
-	};
-
 	struct plane16_t : vertex16_t
 	{
 		int16_t distance;
@@ -175,26 +167,26 @@ namespace IntegerWorld
 		vertex16_t origin;
 		uint32_t radiusSquared;
 
-		bool IsPointInside(const vertex16_t& point) const
+		bool IsPointInside(const vertex16_t& point, const uint16_t planeTolerance = VERTEX16_UNIT / 10) const
 		{
 			// Check against near plane. Z axis points forward, so point must be in front of near plane.
 			if (PlaneDistanceToPoint(cullingNearPlane, point) < 0)
 				return false;
 
 			// Check against left plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingLeftPlane, point) > 0)
+			if (PlaneDistanceToPoint(cullingLeftPlane, point) - planeTolerance > 0)
 				return false;
 
 			// Check against right plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingRightPlane, point) > 0)
+			if (PlaneDistanceToPoint(cullingRightPlane, point) - planeTolerance > 0)
 				return false;
 
 			// Check against top plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingTopPlane, point) > 0)
+			if (PlaneDistanceToPoint(cullingTopPlane, point) - planeTolerance > 0)
 				return false;
 
 			// Check against bottom plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingBottomPlane, point) > 0)
+			if (PlaneDistanceToPoint(cullingBottomPlane, point) - planeTolerance > 0)
 				return false;
 
 			// Sphere culling - distance check.
@@ -220,15 +212,6 @@ namespace IntegerWorld
 			// Add the plane distance (which is negative of dot(normal, planePoint))
 			return dotProduct + plane.distance;
 		}
-	};
-
-	struct frustum_view_t
-	{
-		rotation_angle_t rotation;
-		frustum_plane_t nearPlane;
-		frustum_plane_t farPlane;
-		vertex16_t origin;
-		uint16_t radius;
 	};
 
 	enum class FrustumCullingEnum : uint8_t

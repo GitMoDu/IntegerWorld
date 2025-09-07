@@ -15,6 +15,15 @@ namespace IntegerWorld
 		static constexpr uint8_t DownShift = GetBitShifts(Range);
 
 	private:
+		struct frustum_plane_t
+		{
+			vertex16_t topLeft;
+			vertex16_t topRight;
+			vertex16_t bottomLeft;
+			vertex16_t bottomRight;
+		};
+
+	private:
 		frustum_plane_t nearPlane;
 
 		int16_t ViewWidthHalf = 0;
@@ -63,64 +72,6 @@ namespace IntegerWorld
 			return distanceNum;
 		}
 
-		void GetFrustumView(const vertex16_t& cameraPosition,
-			const rotation_angle_t& cameraRotation,
-			frustum_view_t& frustum)
-		{
-			// View distance in world units
-			const uint16_t viewShift = distanceNum;
-
-			// Set frustum origin to apparent camera position.
-			frustum.origin = cameraPosition;
-
-			// Set the camera rotation.
-			frustum.rotation = cameraRotation;
-
-			// Build camera rotation transform.
-			transform16_rotate_t camRot{};
-			CalculateTransformRotation(camRot, cameraRotation);
-
-			// Camera-space basis vectors.
-			vertex16_t forward = { 0, 0, VERTEX16_UNIT };
-			vertex16_t right = { VERTEX16_UNIT, 0, 0 };
-			vertex16_t up = { 0, VERTEX16_UNIT, 0 };
-
-			// Rotate them into world space using the same intrinsic XYZ convention.
-			ApplyTransformRotation(camRot, forward);
-			ApplyTransformRotation(camRot, right);
-			ApplyTransformRotation(camRot, up);
-
-			// Near / far distances (keeps behavior consistent with the other overload)
-			const int16_t nearDist = viewShift >> 5;
-			const int16_t farDist = Range / 2;
-			const int16_t scaleDenum = viewShift >> 5;
-
-			// View dimensions at near/far planes.
-			const int16_t nearHalfWidth = (int32_t(nearDist) * ViewWidthHalf) / scaleDenum;
-			const int16_t nearHalfHeight = (int32_t(nearDist) * ViewHeightHalf) / scaleDenum;
-			const int16_t farHalfWidth = (int32_t(farDist) * ViewWidthHalf) / scaleDenum;
-			const int16_t farHalfHeight = (int32_t(farDist) * ViewHeightHalf) / scaleDenum;
-
-			// Plane centers.
-			const vertex16_t nearCenter
-			{
-				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
-				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * nearDist, DownShift))),
-				int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * nearDist, DownShift)))
-			};
-
-			const vertex16_t farCenter
-			{
-				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * farDist, DownShift))),
-				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * farDist, DownShift))),
-				int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * farDist, DownShift)))
-			};
-
-			// Calculate plane corners.
-			CalculateFrustumCorners(nearCenter, right, up, nearHalfWidth, nearHalfHeight, frustum.nearPlane);
-			CalculateFrustumCorners(farCenter, right, up, farHalfWidth, farHalfHeight, frustum.farPlane);
-		}
-
 		void GetFrustum(const camera_state_t& cameraControls, frustum_t& frustum)
 		{
 			// Keep original radius squared calculation
@@ -149,16 +100,12 @@ namespace IntegerWorld
 			ApplyTransformRotation(camRot, right);
 			ApplyTransformRotation(camRot, up);
 
-			// Near distance.
-			const int16_t nearDist = viewShift >> 5;
-			const int16_t scaleDenum = viewShift >> 5;
-
-			// View dims at near plane.
-			const int16_t nearHalfWidth = (int32_t(nearDist) * ViewWidthHalf) / scaleDenum;
-			const int16_t nearHalfHeight = (int32_t(nearDist) * ViewHeightHalf) / scaleDenum;
+			// Near distance. Scaled down by 32 to keep intermediate results in 32-bit range.
+			const int16_t nearDist = distanceNum >> 5;
+			const int16_t scaleDenum = distanceNum >> 5;
 
 			// Calculate plane center.
-			const vertex16_t nearCenter =
+			const vertex16_t nearCenter
 			{
 				int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
 				int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * nearDist, DownShift))),
@@ -166,7 +113,7 @@ namespace IntegerWorld
 			};
 
 			// Calculate plane corners.
-			CalculateFrustumCorners(nearCenter, right, up, nearHalfWidth, nearHalfHeight, nearPlane);
+			CalculateFrustumCorners(nearCenter, right, up, ViewWidthHalf, ViewHeightHalf, nearPlane);
 
 			// Calculate culling planes.
 			// Near plane (facing inside the frustum)
@@ -183,12 +130,6 @@ namespace IntegerWorld
 
 			// Bottom plane (using origin, bottom-left and bottom-right)
 			CalculatePlane(frustum.origin, nearPlane.bottomLeft, nearPlane.bottomRight, frustum.cullingBottomPlane);
-
-			// Apply tolerance to expand the frustum walls and ceiling slightly.
-			frustum.cullingLeftPlane.distance -= planeTolerance;
-			frustum.cullingRightPlane.distance -= planeTolerance;
-			frustum.cullingTopPlane.distance -= planeTolerance;
-			frustum.cullingBottomPlane.distance -= planeTolerance;
 		}
 
 		void Project(vertex16_t& cameraToscreen)
