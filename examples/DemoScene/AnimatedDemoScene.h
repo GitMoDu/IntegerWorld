@@ -13,7 +13,7 @@ using namespace IntegerWorld;
 class AnimatedDemoScene : private TS::Task
 {
 public:
-	static constexpr uint16_t ObjectsCount = 9;
+	static constexpr uint8_t ObjectsCount = 9;
 
 	// Worst case scenario for all objects, with minimal back-face culling there's more than enough room for the few extra calls (lights).
 	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Sphere::TriangleCount
@@ -24,7 +24,7 @@ public:
 private:
 	static constexpr Rgb8::color_t Light1Color = Rgb8::RED;
 	static constexpr Rgb8::color_t Light2Color = Rgb8::GREEN;
-	static constexpr Rgb8::color_t GlobalLightColor = 0x9E8C76;
+	static constexpr Rgb8::color_t GlobalLightColor = 0xEDE9CB;
 	static constexpr Rgb8::color_t AmbientLightColor = 0x18232D;
 
 	static constexpr uint32_t FloorColorPeriodMicros = 3000000000;
@@ -37,7 +37,7 @@ private:
 	static constexpr int16_t DistanceUnit = Assets::Shapes::SHAPE_UNIT;
 	static constexpr int16_t BaseDistance = (VERTEX16_UNIT * 15) / 10;
 	static constexpr int16_t ShapeMove = (DistanceUnit * 30) / 10;
-	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
+	static constexpr int16_t ShapeMoveZ = ShapeMove / 2;
 	static constexpr uint16_t LightDimension = DistanceUnit / 3;
 
 	static constexpr uint16_t LightMinDistance = 0;
@@ -64,7 +64,7 @@ private:
 	LightsShader<LightsCount> SceneShader{};
 
 	// Sphere has a diffuse material.
-	Assets::Objects::SphereMeshObject ObjectSphere{};
+	Assets::Objects::SphereMeshLodObject ObjectSphere{};
 
 	// Star has a reflective, slightly metallic material with animated color.
 	Assets::Objects::StarMeshObject ObjectStar{};
@@ -109,37 +109,42 @@ public:
 
 	bool Start(IEngineRenderer& engineRenderer, const int16_t width, const int16_t height)
 	{
-		// Add all render objects to the pipeline, including light sources.
+		// Clear all objects from the renderer.
 		engineRenderer.ClearObjects();
 
+		// Add all scene objects to the pipeline.
 		if (!engineRenderer.AddObject(&Background)
-			|| !engineRenderer.AddObject(&Light1)
-			|| !engineRenderer.AddObject(&Light2)
 			|| !engineRenderer.AddObject(&Light1BillboardObject)
 			|| !engineRenderer.AddObject(&Light2BillboardObject)
 			|| !engineRenderer.AddObject(&ObjectSphere)
 			|| !engineRenderer.AddObject(&ObjectStar)
 			|| !engineRenderer.AddObject(&ObjectCube)
-			|| !engineRenderer.AddObject(&ObjectFloor))
+			|| !engineRenderer.AddObject(&ObjectFloor)
+			)
 		{
 			SetAnimationEnabled(false);
 			return false;
 		}
 
-
 		// Configure animation based on surface dimensions.
 		ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * width) / height;
 
-		// Place lights.
-		Light1.Translation.x = -((ShapeMoveX * 3) / 10);
-		Light1.Translation.y = -(DistanceUnit * 2) / 10;
-		Light1.Translation.z = ((DistanceUnit * 15) / 10);
-		Light2.Translation.x = -Light1.Translation.x;
-		Light2.Translation.y = Light1.Translation.y;
-		Light2.Translation.z = Light1.Translation.z;
+		// Lights track the camera position.
+		Light1.SetCameraPosition(&engineRenderer.GetCameraControls()->Position);
+		Light2.SetCameraPosition(&engineRenderer.GetCameraControls()->Position);
+		GlobalLight.SetCameraPosition(&engineRenderer.GetCameraControls()->Position);
 
-		Light1BillboardObject.Translation = Light1.Translation;
-		Light2BillboardObject.Translation = Light2.Translation;
+		// Place lights.
+		Light1.WorldPosition.x = -((ShapeMoveX * 3) / 10);
+		Light1.WorldPosition.y = -(DistanceUnit * 2) / 10;
+		Light1.WorldPosition.z = ((DistanceUnit * 15) / 10);
+		Light2.WorldPosition.x = -Light1.WorldPosition.x;
+		Light2.WorldPosition.y = Light1.WorldPosition.y;
+		Light2.WorldPosition.z = Light1.WorldPosition.z;
+
+		// Place the billboards on the lights' position.
+		Light1BillboardObject.Translation = Light1.WorldPosition;
+		Light2BillboardObject.Translation = Light2.WorldPosition;
 		Light1BillboardObject.SetDimensions(LightDimension, LightDimension);
 		Light2BillboardObject.SetDimensions(LightDimension, LightDimension);
 
@@ -149,7 +154,7 @@ public:
 		ObjectFloor.Resize = Resize::GetResize16(uint8_t(32), uint8_t(1));
 		ObjectFloor.Translation.x = Scale(ObjectFloor.Resize, int16_t(-DistanceUnit / 5));
 		ObjectFloor.Translation.y = (DistanceUnit * 3) / 5;
-		ObjectFloor.Translation.z = 0;// (BaseDistance * 1) / 5;
+		ObjectFloor.Translation.z = 0;
 		ObjectFloor.Rotation.x = Trigonometry::ANGLE_90;
 
 		// Set the ambient color.
@@ -176,8 +181,8 @@ public:
 		Billboard2Shader.LightSource = &Light2;
 
 		// Configure object materials.
-		ObjectStar.Material = material_t{ 0, UFRACTION8_1X / 4, UFRACTION8_1X / 2 , UFRACTION8_1X / 8 };
-		ObjectSphere.Material = material_t{ 0,UFRACTION8_1X, 0, 0 };
+		ObjectStar.Material = material_t{ 0, UFRACTION8_1X / 4, UFRACTION8_1X, UFRACTION8_1X / 4 };
+		ObjectSphere.Material = material_t{ 0, UFRACTION8_1X, 0,0 };
 
 		// Configure background.
 		Background.FragmentShader = &BackgroundShader;
@@ -188,6 +193,8 @@ public:
 
 		// Start the animation.
 		SetAnimationEnabled(true);
+
+
 		return true;
 	}
 
@@ -234,9 +241,7 @@ private:
 		ObjectSphere.Translation.z = BaseDistance + Scale(zMoveFraction1, ShapeMoveZ);
 		ObjectStar.Translation.z = BaseDistance + Scale(zMoveFraction2, ShapeMoveZ);
 		ObjectCube.Translation.z = BaseDistance + Scale(zMoveFraction3, ShapeMoveZ);
-
 	}
-
 
 public:
 	void SetSceneShader(const bool enabled = true)
@@ -247,8 +252,6 @@ public:
 			ObjectStar.SceneShader = &SceneShader;
 			ObjectCube.SceneShader = &SceneShader;
 			ObjectFloor.SceneShader = &SceneShader;
-			Light1.SceneShader = &SceneShader;
-			Light2.SceneShader = &SceneShader;
 			Background.SceneShader = &SceneShader;
 		}
 		else
@@ -257,8 +260,6 @@ public:
 			ObjectStar.SceneShader = nullptr;
 			ObjectCube.SceneShader = nullptr;
 			ObjectFloor.SceneShader = nullptr;
-			Light1.SceneShader = nullptr;
-			Light2.SceneShader = nullptr;
 			Background.SceneShader = nullptr;
 		}
 	}
@@ -295,13 +296,12 @@ public:
 		ObjectSphere.FragmentShader = &MeshZShader;
 		ObjectStar.FragmentShader = &MeshZShader;
 		ObjectCube.FragmentShader = &MeshZShader;
+		ObjectFloor.FragmentShader = &PointZShader;
 
 		Light1BillboardObject.FragmentShader = nullptr;
 		Light2BillboardObject.FragmentShader = nullptr;
 
-		Background.Color = MeshZShader.FarColor;
-		PointZShader.NearColor = MeshZShader.NearColor;
-		PointZShader.FarColor = MeshZShader.FarColor;
+		Background.Color = Rgb8::BLACK;
 	}
 
 	void SetNormalShader()
@@ -384,6 +384,8 @@ public:
 
 				AnimationStart += skipped;
 				TS::Task::enable();
+
+				AnimateObjects(micros() - AnimationStart);
 			}
 			else
 			{

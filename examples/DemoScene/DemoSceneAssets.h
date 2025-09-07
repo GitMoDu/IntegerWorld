@@ -2,11 +2,9 @@
 #define _DEMO_SCENE_ASSETS_h
 
 #include <IntegerWorld.h>
-#include <ArduinoGraphicsDrawer.h>
 
 namespace Assets
 {
-	using namespace Egfx;
 	using namespace IntegerWorld;
 
 	namespace Palletes
@@ -212,6 +210,201 @@ namespace Assets
 
 			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 		}
+
+		namespace SphereLod
+		{
+			namespace LoD0
+			{
+				static constexpr int16_t UpSize = 1;
+
+				static constexpr int16_t DownSize = 1;
+
+				static constexpr vertex16_t Vertices[] PROGMEM
+				{
+					{(UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+				};
+
+				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+
+				static constexpr triangle_face_t Triangles[] PROGMEM
+				{
+					{ 2, 3, 4 },
+					{ 3, 5, 6 },
+					{ 6, 7, 4 },
+					{ 4, 3, 6 },
+					{ 3, 8, 5 },
+					{ 9, 10, 1 },
+					{ 6, 10, 7 },
+					{ 1, 6, 5 },
+					{ 1, 10, 6 },
+					{ 8, 15, 14 },
+					{ 15, 3, 2 },
+					{ 8, 3, 15 },
+					{ 17, 18, 19 },
+					{ 21, 22, 23 },
+					{ 11, 24, 25 },
+					{ 13, 14, 25 },
+					{ 25, 24, 13 },
+					{ 25, 12, 11 },
+					{ 14, 15, 25 },
+					{ 15, 2, 12 },
+					{ 12, 25, 15 },
+					{ 20, 26, 27 },
+					{ 26, 28, 29 },
+					{ 29, 27, 26 },
+					{ 13, 30, 14 },
+					{ 29, 13, 16 },
+					{ 30, 29, 28 },
+					{ 30, 13, 29 },
+					{ 31, 32, 9 },
+					{ 26, 31, 28 },
+					{ 20, 32, 26 },
+					{ 32, 31, 26 },
+					{ 19, 33, 17 },
+					{ 34, 35, 23 },
+					{ 35, 36, 23 },
+					{ 4, 37, 2 },
+					{ 7, 38, 4 },
+					{ 38, 35, 37 },
+					{ 37, 4, 38 },
+					{ 11, 12, 34 },
+					{ 37, 12, 2 },
+					{ 35, 34, 37 },
+					{ 22, 11, 34 },
+					{ 34, 23, 22 },
+					{ 23, 39, 21 },
+					{ 19, 39, 36 },
+					{ 23, 36, 39 },
+					{ 21, 39, 41 },
+					{ 18, 39, 19 },
+					{ 18, 41, 39 },
+					{ 16, 13, 24 },
+					{ 9, 32, 17 },
+					{ 32, 20, 18 },
+					{ 18, 17, 32 },
+					{ 30, 28, 0 },
+					{ 28, 31, 0 },
+					{ 31, 9, 1 },
+					{ 1, 0, 31 },
+					{ 27, 29, 16 },
+					{ 16, 40, 27 },
+					{ 40, 21, 41 },
+					{ 41, 20, 27 },
+					{ 27, 40, 41 },
+					{ 24, 40, 16 },
+					{ 22, 24, 11 },
+					{ 40, 22, 21 },
+					{ 40, 24, 22 },
+					{ 41, 18, 20 },
+					{ 34, 12, 37 },
+					{ 36, 33, 19 },
+					{ 38, 36, 35 },
+					{ 7, 33, 38 },
+					{ 33, 36, 38 },
+					{ 7, 10, 33 },
+					{ 10, 9, 17 },
+					{ 17, 33, 10 },
+					{ 5, 8, 0 },
+					{ 14, 30, 8 },
+					{ 30, 0, 8 },
+					{ 0, 1, 5 },
+				};
+
+				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			}
+
+			namespace LoD1
+			{
+				static constexpr int16_t UpSize = 105;
+
+				static constexpr int16_t DownSize = 100;
+
+				static constexpr vertex16_t Vertices[] PROGMEM
+				{
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1217)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1217)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+				};
+
+				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+
+				static constexpr triangle_face_t Triangles[] PROGMEM
+				{
+					{ 0, 1, 2 },
+					{ 3, 0, 2 },
+					{ 2, 4, 3 },
+					{ 2, 5, 4 },
+					{ 1, 5, 2 },
+					{ 6, 7, 8 },
+					{ 8, 9, 6 },
+					{ 9, 10, 6 },
+					{ 10, 11, 6 },
+					{ 11, 7, 6 },
+					{ 11, 0, 3 },
+					{ 1, 10, 9 },
+					{ 3, 7, 11 },
+					{ 1, 0, 10 },
+					{ 3, 4, 7 },
+					{ 0, 11, 10 },
+					{ 4, 8, 7 },
+					{ 4, 5, 8 },
+					{ 5, 9, 8 },
+					{ 5, 1, 9 },
+				};
+
+				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			}
+		}
 	}
 
 	namespace Shaders
@@ -264,23 +457,26 @@ namespace Assets
 
 						if (distanceFraction < UFRACTION8_1X)
 						{
-							const uint32_t distancePower = ((uint32_t(x) * (x)) + (uint_fast16_t(y) * (y)));
-							const ufraction8_t distanceFraction = Fraction::GetUFraction8(distancePower, radiusPower);
-							const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
+							/*const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+							color = Rgb8::Color(
+								Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);*/
 
-							if (distanceFraction < UFRACTION8_1X)
-							{
-								const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
-								color = Rgb8::Color(
-									Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);
-							}
+							const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+							color = Rgb8::Color(
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent)),
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent)),
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent)));
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY - y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY - y);
 						}
 					}
 				}
@@ -319,22 +515,21 @@ namespace Assets
 	{
 		using namespace Shapes;
 
-		struct StarMeshObject : public MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
+		struct StarMeshObject : public StaticMeshSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount, FrustumCullingEnum::PrimitiveCulling>
 		{
-			StarMeshObject() : MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
+			StarMeshObject() : StaticMeshSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount, FrustumCullingEnum::PrimitiveCulling>(
 				Star::Vertices,
 				Star::Triangles) {
 			}
 		};
 
-		struct CubeMeshObject : public MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>
+		struct CubeMeshObject : public StaticMeshObject<Cube::VertexCount, Cube::TriangleCount, FrustumCullingEnum::PrimitiveCulling>
 		{
 			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
 
-			CubeMeshObject() : MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>(
+			CubeMeshObject() : StaticMeshObject<Cube::VertexCount, Cube::TriangleCount, FrustumCullingEnum::PrimitiveCulling>(
 				Cube::Vertices,
-				Cube::Triangles,
-				Cube::Normals) {
+				Cube::Triangles) {
 			}
 
 		protected:
@@ -345,79 +540,35 @@ namespace Assets
 			}
 		};
 
-		struct CubeEdgeObject : public EdgeObject<Cube::VertexCount, Cube::EdgeCount>
+		class SphereMeshLodObject : public StaticMeshLodSingleColorSingleMaterialObject<Assets::Shapes::SphereLod::LoD0::VertexCount,
+			Assets::Shapes::SphereLod::LoD0::TriangleCount, 2, FrustumCullingEnum::PrimitiveCulling>
 		{
-			CubeEdgeObject()
-				: EdgeObject<Cube::VertexCount, Cube::EdgeCount>(
-					Cube::Vertices,
-					Cube::Edges) {
-			}
-		};
+		private:
+			using Base = StaticMeshLodSingleColorSingleMaterialObject<Assets::Shapes::SphereLod::LoD0::VertexCount,
+				Assets::Shapes::SphereLod::LoD0::TriangleCount, 2, FrustumCullingEnum::PrimitiveCulling>;
 
-		struct OctahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
-		{
-			OctahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
-				Octahedron::Vertices,
-				Octahedron::Triangles,
-				Octahedron::Normals) {
-			}
-		};
-
-		struct OctahedronEdgeObject : public EdgeObject<Octahedron::VertexCount, Octahedron::EdgeCount>
-		{
-			OctahedronEdgeObject()
-				: EdgeObject<Octahedron::VertexCount, Octahedron::EdgeCount>(
-					Octahedron::Vertices,
-					Octahedron::Edges) {
-			}
-		};
-
-		struct IcosahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
-		{
-			IcosahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
-				Icosahedron::Vertices,
-				Icosahedron::Triangles,
-				Icosahedron::Normals) {
-			}
-		};
-
-		struct IcosahedronEdgeObject : public EdgeObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>
-		{
-			IcosahedronEdgeObject() : EdgeObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>(
-				Icosahedron::Vertices,
-				Icosahedron::Edges) {
-			}
-		};
-
-		struct SphereMeshObject : public MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
-		{
-			SphereMeshObject() : MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
-				Sphere::Vertices,
-				Sphere::Triangles,
-				Sphere::Normals
-			) {
-			}
-		};
-
-		class SpherePointCloudObject : public LitPointCloudObject<Sphere::VertexCount>
-		{
 		public:
-			SpherePointCloudObject() : LitPointCloudObject<Sphere::VertexCount>(Sphere::Vertices) {}
-
-		protected:
-			virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
+			SphereMeshLodObject() : Base()
 			{
-				fragment.color = Rgb8::WHITE;
-				fragment.material.Diffuse = UFRACTION8_1X;
-				fragment.material.Emissive = 0;
-				fragment.material.Specular = 0;
-				fragment.material.Metallic = 0;
+				Base::SetSourcesLevelOfDetail(16000,
+					Assets::Shapes::SphereLod::LoD0::Vertices, Assets::Shapes::SphereLod::LoD0::VertexCount,
+					Assets::Shapes::SphereLod::LoD0::Triangles, Assets::Shapes::SphereLod::LoD0::TriangleCount);
+
+				Base::SetSourcesLevelOfDetail(VERTEX16_RANGE,
+					Assets::Shapes::SphereLod::LoD1::Vertices, Assets::Shapes::SphereLod::LoD1::VertexCount,
+					Assets::Shapes::SphereLod::LoD1::Triangles, Assets::Shapes::SphereLod::LoD1::TriangleCount);
+
+				SetRenderDistanceMinimum(0);
 			}
 		};
 
-		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount>
+		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount, FrustumCullingEnum::PrimitiveCulling>
 		{
-			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount>(Grid8x8::Vertices) {}
+			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount,
+				FrustumCullingEnum::PrimitiveCulling>
+				(Grid8x8::Vertices)
+			{
+			}
 		};
 	}
 

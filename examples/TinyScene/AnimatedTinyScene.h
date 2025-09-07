@@ -13,6 +13,7 @@ class AnimatedTinyScene : private TS::Task
 {
 public:
 	static constexpr uint16_t RenderObjectCount = 2;
+
 #if defined(DEMO_SCENE_EDGE_OBJECT)
 	static constexpr uint16_t MaxDrawCallCount = Assets::Shapes::Cube::TriangleCount + Assets::Shapes::Octahedron::EdgeCount;
 #else
@@ -24,7 +25,7 @@ private:
 	static constexpr uint32_t ShapeMovePeriodMicros = 11111111;
 
 	static constexpr int16_t DistanceUnit = Assets::Shapes::SHAPE_UNIT;
-	static constexpr int16_t BaseDistance = (VERTEX16_UNIT * 7) / 10;
+	static constexpr int16_t BaseDistance = (uint32_t(VERTEX16_UNIT) * 2) / 3;
 	static constexpr int16_t ShapeMove = (DistanceUnit * 15) / 10;
 	static constexpr int16_t ShapeMoveZ = ShapeMove / 3;
 
@@ -44,7 +45,7 @@ private:
 
 	// Mesh triangle objects.
 	Assets::Objects::CubeMeshObject ObjectCube{};
-	Assets::Objects::TemplateFakeYShadeMeshObject<16, Assets::Objects::OctahedronMeshObject> ObjectOctahedron{};
+	Assets::Objects::TemplateOffsetShadeMeshObject<8, Assets::Objects::OctahedronMeshObject> ObjectOctahedron{};
 #endif
 
 	// Track animation color style.
@@ -68,7 +69,7 @@ public:
 		// Add all render objects to the pipeline.
 		engineRenderer.ClearObjects();
 
-		uint8_t fovPercent = 75;
+		uint8_t fovPercent = 33;
 		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * (100 - fovPercent)) / 100);
 
 		if (!engineRenderer.AddObject(&ObjectCube)
@@ -90,13 +91,9 @@ public:
 		// Adjust animation on 1 bit color output.
 		if (Monochrome)
 		{
-			ObjectCube.Color = Rgb8::COLOR_WHITE;
-			ObjectOctahedron.Color = Rgb8::COLOR_WHITE;
+			ObjectCube.Color = Rgb8::WHITE;
+			ObjectOctahedron.Color = Rgb8::WHITE;
 		}
-
-		// Set edge draw mode for each object.
-		ObjectCube.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
-		ObjectOctahedron.EdgeDrawMode = EdgeDrawModeEnum::NoCulling;
 #endif	
 
 		TS::Task::enable();
@@ -112,7 +109,7 @@ private:
 		{
 			// Rainbow color pattern with HSV color.
 			const ufraction16_t colorFraction = GetUFraction16((uint32_t)(timestamp % (ShapeColorPeriodMicros + 1)), ShapeColorPeriodMicros);
-			ObjectOctahedron.Color = Rgb8::HsvColor(colorFraction, UINT8_MAX, UINT8_MAX);
+			ObjectOctahedron.Color = Rgb8::ColorHsvFraction(colorFraction, UFRACTION16_1X, UFRACTION16_1X);
 		}
 #endif
 

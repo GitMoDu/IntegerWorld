@@ -5,7 +5,6 @@
 
 namespace Assets
 {
-	using namespace Egfx;
 	using namespace IntegerWorld;
 
 	namespace Palletes
@@ -263,23 +262,26 @@ namespace Assets
 
 						if (distanceFraction < UFRACTION8_1X)
 						{
-							const uint32_t distancePower = ((uint32_t(x) * (x)) + (uint_fast16_t(y) * (y)));
-							const ufraction8_t distanceFraction = Fraction::GetUFraction8(distancePower, radiusPower);
-							const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
+							/*const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+							color = Rgb8::Color(
+								Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
+								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);*/
 
-							if (distanceFraction < UFRACTION8_1X)
-							{
-								const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
-								color = Rgb8::Color(
-									Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
-									uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
-								rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);
-							}
+							const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+							color = Rgb8::Color(
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent)),
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent)),
+								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent)));
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY + y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY - y);
+							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY - y);
 						}
 					}
 				}
@@ -344,10 +346,10 @@ namespace Assets
 			}
 		};
 
-		struct CubeEdgeObject : public EdgeObject<Cube::VertexCount, Cube::EdgeCount>
+		struct CubeEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Cube::VertexCount, Cube::EdgeCount>
 		{
 			CubeEdgeObject()
-				: EdgeObject<Cube::VertexCount, Cube::EdgeCount>(
+				: StaticEdgeSingleColorSingleMaterialObject<Cube::VertexCount, Cube::EdgeCount>(
 					Cube::Vertices,
 					Cube::Edges) {
 			}
@@ -362,12 +364,10 @@ namespace Assets
 			}
 		};
 
-		struct OctahedronEdgeObject : public EdgeObject<Octahedron::VertexCount, Octahedron::EdgeCount>
+		struct OctahedronEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::EdgeCount>
 		{
-			OctahedronEdgeObject()
-				: EdgeObject<Octahedron::VertexCount, Octahedron::EdgeCount>(
-					Octahedron::Vertices,
-					Octahedron::Edges) {
+			OctahedronEdgeObject() : StaticEdgeSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::EdgeCount>(
+				Octahedron::Vertices, Octahedron::Edges) {
 			}
 		};
 
@@ -380,9 +380,9 @@ namespace Assets
 			}
 		};
 
-		struct IcosahedronEdgeObject : public EdgeObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>
+		struct IcosahedronEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>
 		{
-			IcosahedronEdgeObject() : EdgeObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>(
+			IcosahedronEdgeObject() : StaticEdgeSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>(
 				Icosahedron::Vertices,
 				Icosahedron::Edges) {
 			}
@@ -414,9 +414,13 @@ namespace Assets
 			}
 		};
 
-		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount>
+		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount, FrustumCullingEnum::PrimitiveCulling>
 		{
-			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount>(Grid8x8::Vertices) {}
+			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount,
+				FrustumCullingEnum::PrimitiveCulling>
+				(Grid8x8::Vertices)
+			{
+			}
 		};
 	}
 
