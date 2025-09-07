@@ -167,7 +167,7 @@ namespace IntegerWorld
 		vertex16_t origin;
 		uint32_t radiusSquared;
 
-		bool IsPointInside(const vertex16_t& point, const uint16_t planeTolerance = VERTEX16_UNIT / 10) const
+		bool IsPointInside(const vertex16_t& point, const uint16_t planeTolerance = VERTEX16_UNIT / 16) const
 		{
 			// Check against near plane. Z axis points forward, so point must be in front of near plane.
 			if (PlaneDistanceToPoint(cullingNearPlane, point) < 0)
@@ -266,14 +266,6 @@ namespace IntegerWorld
 		uint32_t RasterizeWait = 0;
 		uint32_t Rasterize = 0;
 
-		uint16_t ObjectShades = 0;
-		uint16_t VertexShades = 0;
-		uint16_t WorldShades = 0;
-		uint16_t WorldTransforms = 0;
-		uint16_t CameraTransforms = 0;
-		uint16_t ScreenProjects = 0;
-		uint16_t ScreenShades = 0;
-
 		uint16_t FragmentsDrawn = 0;
 
 		uint32_t GetRenderDuration() const
@@ -293,13 +285,6 @@ namespace IntegerWorld
 		void Clear()
 		{
 			FragmentsDrawn = 0;
-			ObjectShades = 0;
-			WorldTransforms = 0;
-			VertexShades = 0;
-			WorldShades = 0;
-			CameraTransforms = 0;
-			ScreenProjects = 0;
-			ScreenShades = 0;
 
 			FrameDuration = 0;
 			FramePreparation = 0;

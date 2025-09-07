@@ -267,9 +267,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.ObjectShades++;
-#endif
 					Objects[ObjectIndex]->ObjectShade(CameraFrustum);
 					ObjectIndex++;
 					if (ObjectIndex >= ObjectCount)
@@ -291,9 +288,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.VertexShades++;
-#endif
 					if (Objects[ObjectIndex]->VertexShade(ItemIndex))
 					{
 						ItemIndex = 0;
@@ -322,9 +316,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.WorldTransforms++;
-#endif
 					if (Objects[ObjectIndex]->WorldTransform(ItemIndex))
 					{
 						ItemIndex = 0;
@@ -353,9 +344,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.WorldShades++;
-#endif
 					if (Objects[ObjectIndex]->WorldShade(CameraFrustum, ItemIndex))
 					{
 						ItemIndex = 0;
@@ -384,9 +372,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.CameraTransforms++;
-#endif
 					if (Objects[ObjectIndex]->CameraTransform(CameraTransform, ItemIndex))
 					{
 						ItemIndex = 0;
@@ -415,9 +400,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.ScreenProjects++;
-#endif
 					if (Objects[ObjectIndex]->ScreenProject(ViewProjector, ItemIndex))
 					{
 						ItemIndex = 0;
@@ -446,9 +428,6 @@ namespace IntegerWorld
 				MeasureStart = micros();
 				for (uint_fast16_t i = 0; i < BatchSize; i++)
 				{
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-					Status.ScreenShades++;
-#endif
 					if (Objects[ObjectIndex]->ScreenShade(ItemIndex))
 					{
 						ItemIndex = 0;

@@ -48,71 +48,51 @@ namespace IntegerWorld
 				}
 				Serial.println(F(" FPS"));
 
-#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Serial.print(F("\tFramePreparation "));
-				Serial.print(RendererStatus.FramePreparation);
-				Serial.println(F("us"));
-				Serial.print(F("\tObjectShade("));
-				Serial.print(RendererStatus.ObjectShades);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.ObjectShade);
-				Serial.println(F("us"));
-				Serial.print(F("\tVertexShade("));
-				Serial.print(RendererStatus.VertexShades);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.VertexShade);
-				Serial.println(F("us"));
-				Serial.print(F("\tWorldTransform("));
-				Serial.print(RendererStatus.WorldTransforms);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.WorldTransform);
-				Serial.println(F("us"));
-				Serial.print(F("\tWorldShade("));
-				Serial.print(RendererStatus.WorldShades);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.WorldShade);
-				Serial.println(F("us"));
-				Serial.print(F("\tCameraTransform("));
-				Serial.print(RendererStatus.CameraTransforms);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.CameraTransform);
-				Serial.println(F("us"));
-				Serial.print(F("\tScreenProject("));
-				Serial.print(RendererStatus.ScreenProjects);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.ScreenProject);
-				Serial.println(F("us"));
-				Serial.print(F("\tScreenShade("));
-				Serial.print(RendererStatus.ScreenShades);
-				Serial.print(F(") "));
-				Serial.print(RendererStatus.ScreenShade);
-				Serial.println(F("us"));
-				Serial.print(F("\tFragmentCollect "));
-				Serial.print(RendererStatus.FragmentCollect);
-				Serial.println(F("us"));
-				Serial.print(F("\tFragmentSort "));
-				Serial.print(RendererStatus.FragmentSort);
-				Serial.println(F("us"));
-
-				if (RendererStatus.RasterizeWait >= 0)
-				{
-					Serial.print(F("\tRasterWait: "));
-					Serial.print(RendererStatus.RasterizeWait);
-					Serial.println(F("us"));
-				}
-#else
-#endif
 				Serial.print(F("\tRaster("));
 				Serial.print(RendererStatus.FragmentsDrawn);
-				Serial.print(F(") "));
+				Serial.print(F(")\t"));
 				Serial.print(RendererStatus.Rasterize);
 				Serial.println(F("us"));
 
-				Serial.print(F("\tRender Total: "));
+				Serial.print(F("\tRender Total\t"));
 				Serial.print(RendererStatus.GetRenderDuration());
 				Serial.println(F("us"));
 
-				Serial.println();
+#if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
+				Serial.print(F("\tFramePreparation\t"));
+				Serial.print(RendererStatus.FramePreparation);
+				Serial.println(F("us"));
+				Serial.print(F("\tObjectShade\t"));
+				Serial.print(RendererStatus.ObjectShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tVertexShade\t"));
+				Serial.print(RendererStatus.VertexShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tWorldTransform\t"));
+				Serial.print(RendererStatus.WorldTransform);
+				Serial.println(F("us"));
+				Serial.print(F("\tWorldShade\t"));
+				Serial.print(RendererStatus.WorldShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tCameraTransform\t"));
+				Serial.print(RendererStatus.CameraTransform);
+				Serial.println(F("us"));
+				Serial.print(F("\tScreenProject\t"));
+				Serial.print(RendererStatus.ScreenProject);
+				Serial.println(F("us"));
+				Serial.print(F("\tScreenShade\t"));
+				Serial.print(RendererStatus.ScreenShade);
+				Serial.println(F("us"));
+				Serial.print(F("\tFragmentCollect\t"));
+				Serial.print(RendererStatus.FragmentCollect);
+				Serial.println(F("us"));
+				Serial.print(F("\tFragmentSort\t"));
+				Serial.print(RendererStatus.FragmentSort);
+				Serial.println(F("us"));
+				Serial.print(F("\tRasterWait\t"));
+				Serial.print(RendererStatus.RasterizeWait);
+				Serial.println(F("us"));
+#endif
 				Serial.println();
 			}
 
