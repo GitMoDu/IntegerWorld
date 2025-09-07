@@ -407,7 +407,7 @@ namespace IntegerWorld
 				Levels[LodCount].TrianglesSource = trianglesSource;
 				Levels[LodCount].NormalsSource = normalsSource;
 				Levels[LodCount].SquareDistanceThreshold = uint32_t(maxDistance) * maxDistance;
-				Levels[LodCount].VertexCount = lodTriangleCount;
+				Levels[LodCount].VertexCount = lodVertexCount;
 				Levels[LodCount].TriangleCount = lodTriangleCount;
 				LodCount++;
 
