@@ -397,8 +397,8 @@ namespace IntegerWorld
 		/// <param name="triangleCount">Effective triangle count when this LOD is active.</param>
 		/// <param name="normalsSource">Optional pointer to per-triangle normals for this LOD (nullptr to disable precomputed normals).</param>
 		void SetSourcesLevelOfDetail(const uint16_t maxDistance,
-			const vertex16_t* verticesSource, const uint16_t vertexCount,
-			const triangle_face_t* trianglesSource, const uint16_t triangleCount,
+			const vertex16_t* verticesSource, const uint16_t lodVertexCount,
+			const triangle_face_t* trianglesSource, const uint16_t lodTriangleCount,
 			const vertex16_t* normalsSource = nullptr)
 		{
 			if (LodCount < LevelsOfDetail)
@@ -407,8 +407,8 @@ namespace IntegerWorld
 				Levels[LodCount].TrianglesSource = trianglesSource;
 				Levels[LodCount].NormalsSource = normalsSource;
 				Levels[LodCount].SquareDistanceThreshold = uint32_t(maxDistance) * maxDistance;
-				Levels[LodCount].VertexCount = vertexCount;
-				Levels[LodCount].TriangleCount = triangleCount;
+				Levels[LodCount].VertexCount = lodTriangleCount;
+				Levels[LodCount].TriangleCount = lodTriangleCount;
 				LodCount++;
 
 				// Keep thresholds ordered for selection in ObjectShade.
@@ -767,12 +767,12 @@ namespace IntegerWorld
 		/// <param name="triangleCount">Effective triangle count for this LOD.</param>
 		/// <param name="normalsSource">Optional pointer to per-triangle normals for this LOD.</param>
 		StaticMeshLodObject(const uint16_t maxDistance,
-			const vertex16_t* verticesSource, const uint16_t vertexCount,
-			const triangle_face_t* trianglesSource, const uint16_t triangleCount,
+			const vertex16_t* verticesSource, const uint16_t lodVertexCount,
+			const triangle_face_t* trianglesSource, const uint16_t lodTriangleCount,
 			const vertex16_t* normalsSource = nullptr)
 			: Base()
 		{
-			Base::SetSourcesLevelOfDetail(maxDistance, verticesSource, vertexCount, trianglesSource, triangleCount, normalsSource);
+			Base::SetSourcesLevelOfDetail(maxDistance, verticesSource, lodVertexCount, trianglesSource, lodTriangleCount, normalsSource);
 		}
 	};
 
