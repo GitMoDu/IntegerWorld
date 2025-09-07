@@ -249,6 +249,9 @@ namespace IntegerWorld
 	private:
 		using Base = AbstractStaticMeshObject<vertexCount, triangleCount>;
 
+	protected:
+		using Base::WorldPosition;
+
 	private:
 		/// <summary>
 		/// Single Level-of-Detail entry containing selection threshold and data sources.
@@ -659,7 +662,7 @@ namespace IntegerWorld
 			if (FragmentShader == nullptr)
 				return;
 
-			const auto triangle = GetTriangle(primitiveIndex);
+			const auto triangle = BaseMeshObject::GetTriangle(primitiveIndex);
 			const auto primitive = Primitives[primitiveIndex];
 
 			TriangleFragment.normalWorld = primitive.worldNormal;

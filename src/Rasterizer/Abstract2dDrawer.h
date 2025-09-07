@@ -19,6 +19,7 @@ namespace IntegerWorld
 		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
 		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceWidth;
 		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceHeight;
+		using AbstractSurfaceRasterizer<SurfaceType>::IsInsideWindow;
 
 	protected:
 		using point2d_t = TriangleRasterHelper::point2d_t;
@@ -370,10 +371,10 @@ namespace IntegerWorld
 			const int16_t x2, const int16_t y2,
 			const int16_t x3, const int16_t y3) const
 		{
-			return PointInTriangle(0, 0, x1, y1, x2, y2, x3, y3) &&
-				PointInTriangle(SurfaceWidth - 1, 0, x1, y1, x2, y2, x3, y3) &&
-				PointInTriangle(0, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3) &&
-				PointInTriangle(SurfaceWidth - 1, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3);
+			return TriangleRasterHelper::PointInTriangle(0, 0, x1, y1, x2, y2, x3, y3) &&
+				TriangleRasterHelper::PointInTriangle(SurfaceWidth - 1, 0, x1, y1, x2, y2, x3, y3) &&
+				TriangleRasterHelper::PointInTriangle(0, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3) &&
+				TriangleRasterHelper::PointInTriangle(SurfaceWidth - 1, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3);
 		}
 
 		uint8_t ClipTriangleToWindow(const point2d_t(&tri)[3], point2d_t* out)

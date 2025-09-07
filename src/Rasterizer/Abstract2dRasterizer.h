@@ -15,9 +15,15 @@ namespace IntegerWorld
 	class Abstract2dRasterizer : public Abstract2dDrawer<SurfaceType>
 	{
 	protected:
+		using AbstractSurfaceRasterizer<SurfaceType>::BRESENHAM_SCALE;
+
+	protected:
 		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
 		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceWidth;
 		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceHeight;
+		using AbstractSurfaceRasterizer<SurfaceType>::IsInsideWindow;
+
+		using Abstract2dDrawer<SurfaceType>::ClipEndpointToWindow;
 
 	public:
 		Abstract2dRasterizer(SurfaceType& surface)
