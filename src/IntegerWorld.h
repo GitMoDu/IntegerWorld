@@ -12,10 +12,10 @@
 #include "Object/Shader.h"
 #include "Object/ExtraShaders.h"
 
-#include "Scene/LightsShader.h"
+#include "Scene/AbstractSceneShader.h"
 
-#include "LightSources/PointLight.h"
-#include "LightSources/DirectionalLight.h"
+#include "Lights/LightsShader.h"
+
 
 #include "Engine/EngineRenderTask.h"
 #include "Engine/PerformanceLogTask.h"
