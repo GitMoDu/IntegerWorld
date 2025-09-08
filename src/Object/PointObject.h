@@ -33,7 +33,7 @@ namespace IntegerWorld
 	{
 	public:
 		rotation_angle_t Rotation{};
-		resize16_t Resize = RESIZE16_1X;
+		Scale16::factor_t Resize = Scale16::SCALE_1X;
 
 	protected:
 		transform16_scale_rotate_translate_t MeshTransform{};
