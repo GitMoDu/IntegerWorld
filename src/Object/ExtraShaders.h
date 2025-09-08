@@ -7,6 +7,9 @@ namespace IntegerWorld
 {
 	struct TriangleDitherFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
+	public:
+		ISceneShader* SceneShader = nullptr;
+
 	private:
 		struct MonochromeDitherShaderFunctor
 		{
@@ -49,11 +52,11 @@ namespace IntegerWorld
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			FragmentColor = fragment.color;
-			if (sceneShader != nullptr)
-				sceneShader->Shade(FragmentColor, fragment.material);
+			if (SceneShader != nullptr)
+				SceneShader->Shade(FragmentColor, fragment.material);
 			MonochromeDitherShader.SetColor(FragmentColor);
 			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
 		}
@@ -61,13 +64,19 @@ namespace IntegerWorld
 
 	struct TriangleGradientFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
+	public:
+		ISceneShader* SceneShader = nullptr;
+
+		Rgb8::color_t ColorA = Rgb8::RED; // Vertex A color (red)
+		Rgb8::color_t ColorB = Rgb8::GREEN; // Vertex B color (green)
+		Rgb8::color_t ColorC = Rgb8::BLUE; // Vertex C color (blue)
+
 	private:
 		struct GradientShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
 			scene_shade_t Shade{};
 			const material_t* material = nullptr;
 			//const triangle_fragment_t* fragment = nullptr;
-			ISceneShader* sceneShader = nullptr;
 			Rgb8::color_t ColorA = Rgb8::RED; // Vertex A color (red)
 			Rgb8::color_t ColorB = Rgb8::GREEN; // Vertex B color (green)
 			Rgb8::color_t ColorC = Rgb8::BLUE; // Vertex C color (blue)
@@ -90,11 +99,6 @@ namespace IntegerWorld
 					((w0 * Rgb8::Green(ColorA)) + (w1 * Rgb8::Green(ColorB)) + (w2 * Rgb8::Green(ColorC))) / TriangleArea,
 					((w0 * Rgb8::Blue(ColorA)) + (w1 * Rgb8::Blue(ColorB)) + (w2 * Rgb8::Blue(ColorC))) / TriangleArea);
 
-				if (sceneShader != nullptr)
-				{
-					sceneShader->Shade(color, *material, Shade);
-				}
-
 				return true;
 			}
 		} GradientShader{};
@@ -102,19 +106,27 @@ namespace IntegerWorld
 	public:
 		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, const Rgb8::color_t colorC)
 		{
-			GradientShader.ColorA = colorA;
-			GradientShader.ColorB = colorB;
-			GradientShader.ColorC = colorC;
+			ColorA = colorA;
+			ColorB = colorB;
+			ColorC = colorC;
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
-			GradientShader.material = &fragment.material;
-			GradientShader.Shade.normal = fragment.normalWorld;
-			GradientShader.Shade.position = fragment.world;
-			GradientShader.sceneShader = sceneShader;
 			if (GradientShader.SetFragmentData(fragment))
 			{
+				GradientShader.material = &fragment.material;
+				GradientShader.Shade.normal = fragment.normalWorld;
+				GradientShader.Shade.position = fragment.world;
+				GradientShader.ColorA = ColorA;
+				GradientShader.ColorB = ColorB;
+				GradientShader.ColorC = ColorC;
+				if (SceneShader != nullptr)
+				{
+					SceneShader->Shade(GradientShader.ColorA, fragment.material, GradientShader.Shade);
+					SceneShader->Shade(GradientShader.ColorB, fragment.material, GradientShader.Shade);
+					SceneShader->Shade(GradientShader.ColorC, fragment.material, GradientShader.Shade);
+				}
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
 			}
 		}
@@ -122,6 +134,9 @@ namespace IntegerWorld
 
 	struct TriangleBarycentricStripeFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
+	public:
+		ISceneShader* SceneShader = nullptr;
+
 	private:
 		struct StripeShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
@@ -146,16 +161,18 @@ namespace IntegerWorld
 	public:
 		static constexpr material_t shine{ 0,0,UFRACTION8_1X, UFRACTION8_1X / 1 };
 
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			StripeShader.ColorA = Rgb8::WHITE;
 			StripeShader.ColorB = fragment.color;
-			Shade.normal = fragment.normalWorld;
-			Shade.position = fragment.world;
-			if (sceneShader != nullptr)
+
+			if (SceneShader != nullptr)
 			{
-				sceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
-				sceneShader->Shade(StripeShader.ColorB, shine, Shade);
+				Shade.normal = fragment.normalWorld;
+				Shade.position = fragment.world;
+
+				SceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
+				SceneShader->Shade(StripeShader.ColorB, shine, Shade);
 			}
 			if (StripeShader.SetFragmentData(fragment))
 			{
@@ -166,6 +183,9 @@ namespace IntegerWorld
 
 	struct TriangleBarycentricCheckerFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
+	public:
+		ISceneShader* SceneShader = nullptr;
+
 	private:
 		struct SquareShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
@@ -215,24 +235,37 @@ namespace IntegerWorld
 			}
 		};
 
-		SquareShaderFunctor CheckerShader{};
+		DistortedShaderFunctor CheckerShader{};
 
 	public:
 		Rgb8::color_t ColorA = Rgb8::WHITE;
-
 		Rgb8::color_t ColorB = Rgb8::BLACK;
+
+	private:
+		scene_shade_t Shade{};
 
 		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, uint8_t size = 8)
 		{
-			CheckerShader.ColorA = colorA;
-			CheckerShader.ColorB = colorB;
+			ColorA = colorA;
+			ColorB = colorB;
 			CheckerShader.CheckerSize = size;
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			if (CheckerShader.SetFragmentData(fragment))
 			{
+				CheckerShader.ColorA = ColorA;
+				CheckerShader.ColorB = ColorB;
+
+				if (SceneShader != nullptr)
+				{
+					Shade.normal = fragment.normalWorld;
+					Shade.position = fragment.world;
+					Shade.z = fragment.z;
+					SceneShader->Shade(CheckerShader.ColorA, fragment.material, Shade);
+					SceneShader->Shade(CheckerShader.ColorB, fragment.material, Shade);
+				}
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, CheckerShader);
 			}
 		}
@@ -240,6 +273,16 @@ namespace IntegerWorld
 
 	struct TriangleBarycentricBandFragmentShader : IFragmentShader<triangle_fragment_t>
 	{
+	public:
+		ISceneShader* SceneShader = nullptr;
+
+		Rgb8::color_t ColorA = Rgb8::RED;
+		Rgb8::color_t ColorB = Rgb8::GREEN;
+		Rgb8::color_t ColorC = Rgb8::BLUE;
+
+	private:
+		scene_shade_t Shade{};
+
 	private:
 		struct BandShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
@@ -267,15 +310,29 @@ namespace IntegerWorld
 	public:
 		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, const Rgb8::color_t colorC)
 		{
-			BandShader.ColorA = colorA;
-			BandShader.ColorB = colorB;
-			BandShader.ColorC = colorC;
+			ColorA = colorA;
+			ColorB = colorB;
+			ColorC = colorC;
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			if (BandShader.SetFragmentData(fragment))
 			{
+				BandShader.ColorA = ColorA;
+				BandShader.ColorB = ColorB;
+				BandShader.ColorC = ColorC;
+
+				if (SceneShader != nullptr)
+				{
+					Shade.normal = fragment.normalWorld;
+					Shade.position = fragment.world;
+					Shade.z = fragment.z;
+					SceneShader->Shade(BandShader.ColorA, fragment.material, Shade);
+					SceneShader->Shade(BandShader.ColorB, fragment.material, Shade);
+					SceneShader->Shade(BandShader.ColorC, fragment.material, Shade);
+				}
+
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, BandShader);
 			}
 		}
