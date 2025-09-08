@@ -163,7 +163,7 @@ namespace IntegerWorld
 		const vertex16_t direction = { int16_t(0), VERTEX16_UNIT, int16_t(0) },
 		const uint16_t rangeMin = 0,
 		const uint16_t rangeMax = VERTEX16_RANGE,
-		const ufraction16_t parameter = UFraction16::FRACTION_1X)
+		const ufraction16_t parameter = UFRACTION16_1X)
 	{
 		return light_source_t{
 			position,
