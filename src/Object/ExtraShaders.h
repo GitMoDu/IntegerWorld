@@ -52,14 +52,9 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			FragmentColor = fragment.color;
-			sceneShader->Shade(FragmentColor, fragment.material);
+			if (sceneShader != nullptr)
+				sceneShader->Shade(FragmentColor, fragment.material);
 			MonochromeDitherShader.SetColor(FragmentColor);
-			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
-			MonochromeDitherShader.SetColor(fragment.color);
 			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
 		}
 	};
@@ -69,7 +64,7 @@ namespace IntegerWorld
 	private:
 		struct GradientShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			world_position_normal_shade_t Shade{};
+			scene_shade_t Shade{};
 			const material_t* material = nullptr;
 			//const triangle_fragment_t* fragment = nullptr;
 			ISceneShader* sceneShader = nullptr;
@@ -115,21 +110,9 @@ namespace IntegerWorld
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
 			GradientShader.material = &fragment.material;
-			GradientShader.Shade.normalWorld = fragment.normalWorld;
-			GradientShader.Shade.positionWorld = fragment.world;
+			GradientShader.Shade.normal = fragment.normalWorld;
+			GradientShader.Shade.position = fragment.world;
 			GradientShader.sceneShader = sceneShader;
-			if (GradientShader.SetFragmentData(fragment))
-			{
-				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
-			}
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
-			GradientShader.material = &fragment.material;
-			GradientShader.Shade.normalWorld = fragment.normalWorld;
-			GradientShader.Shade.positionWorld = fragment.world;
-			GradientShader.sceneShader = nullptr;
 			if (GradientShader.SetFragmentData(fragment))
 			{
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
@@ -158,29 +141,22 @@ namespace IntegerWorld
 		} StripeShader{};
 
 	public:
-		world_position_normal_shade_t Shade{};
+		scene_shade_t Shade{};
 
 	public:
 		static constexpr material_t shine{ 0,0,UFRACTION8_1X, UFRACTION8_1X / 1 };
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
-			StripeShader.ColorA = fragment.color;
-			StripeShader.ColorB = fragment.color;
-			Shade.normalWorld = fragment.normalWorld;
-			Shade.positionWorld = fragment.world;
-			sceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
-			sceneShader->Shade(StripeShader.ColorB, shine, Shade);
-			if (StripeShader.SetFragmentData(fragment))
-			{
-				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, StripeShader);
-			}
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
 			StripeShader.ColorA = Rgb8::WHITE;
 			StripeShader.ColorB = fragment.color;
+			Shade.normal = fragment.normalWorld;
+			Shade.position = fragment.world;
+			if (sceneShader != nullptr)
+			{
+				sceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
+				sceneShader->Shade(StripeShader.ColorB, shine, Shade);
+			}
 			if (StripeShader.SetFragmentData(fragment))
 			{
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, StripeShader);
@@ -255,10 +231,6 @@ namespace IntegerWorld
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
 		{
-			FragmentShade(rasterizer, fragment);
-		}
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
 			if (CheckerShader.SetFragmentData(fragment))
 			{
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, CheckerShader);
@@ -301,10 +273,6 @@ namespace IntegerWorld
 		}
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			if (BandShader.SetFragmentData(fragment))
 			{

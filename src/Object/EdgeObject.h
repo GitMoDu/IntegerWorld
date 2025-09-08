@@ -446,14 +446,7 @@ namespace IntegerWorld
 
 			GetFragment(EdgeFragment, primitiveIndex);
 
-			if (SceneShader != nullptr)
-			{
-				FragmentShader->FragmentShade(rasterizer, EdgeFragment, SceneShader);
-			}
-			else
-			{
-				FragmentShader->FragmentShade(rasterizer, EdgeFragment);
-			}
+			FragmentShader->FragmentShade(rasterizer, EdgeFragment, SceneShader);
 		}
 
 	protected:

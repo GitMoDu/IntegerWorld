@@ -7,6 +7,22 @@ namespace IntegerWorld
 {
 	struct AbstractPixelShader
 	{
+		static uint8_t GetZ8(const int16_t& z, const int16_t rangeMin = 1024, const int16_t rangeMax = 24576)
+		{
+			if (z >= rangeMax)
+			{
+				return 0;
+			}
+			else if (z <= rangeMin)
+			{
+				return UINT8_MAX;
+			}
+			else
+			{
+				return UINT8_MAX - ((uint32_t(z - rangeMin) * UINT8_MAX) / uint32_t((rangeMax - rangeMin)));
+			}
+		}
+
 		static ufraction16_t GetZFraction(const int16_t& z, const int16_t rangeMin = 1024, const int16_t rangeMax = 24576)
 		{
 			if (z >= rangeMax)
@@ -151,7 +167,7 @@ namespace IntegerWorld
 				const vertex16_t& b = fragment.triangleScreenB;
 				const vertex16_t& c = fragment.triangleScreenC;
 
-				// Standard CW area formula. TODO: refactor as CCW
+				// Standard CW area formula.
 				// Compute denominator (twice the area of the triangle)
 				TriangleArea = (int32_t(b.y - c.y) * (a.x - c.x)) + (int32_t(c.x - b.x) * (a.y - c.y));
 
@@ -199,127 +215,106 @@ namespace IntegerWorld
 		};
 	};
 
-	struct BackgroundFlatFillShader : public IFragmentShader<flat_background_fragment_t>
+	struct BackgroundFlatFillShader final : public IFragmentShader<flat_background_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const flat_background_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const flat_background_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			sceneShader->Shade(FragmentColor, fragment.material);
+			if (sceneShader != nullptr)
+				sceneShader->Shade(FragmentColor, fragment.material);
 			rasterizer.Fill(FragmentColor);
 		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const flat_background_fragment_t& fragment) final
-		{
-			rasterizer.Fill(fragment.color);
-		}
 	};
 
-	struct PointPositionFragmentShader : IFragmentShader<point_fragment_t>
+	struct PointPositionFragmentShader final : IFragmentShader<point_normal_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
-		world_position_shade_t Shade{};
+		scene_shade_t Shade{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
+		void f(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			Shade.positionWorld = fragment.world;
-			sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			if (sceneShader != nullptr)
+			{
+				Shade.position = fragment.world;
+				Shade.z = fragment.screen.z;
+				sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			}
 			rasterizer.DrawPoint(FragmentColor, fragment.screen);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
-		{
-			rasterizer.DrawPoint(fragment.color, fragment.screen);
 		}
 	};
 
-	template<typename point_fragment_type_t = point_fragment_t>
-	struct PointPixelFixedColorFragmentShader : IFragmentShader<point_fragment_type_t>
+	template<typename point_fragment_type_t = point_normal_fragment_t>
+	struct PointPixelFixedColorFragmentShader final : IFragmentShader<point_fragment_type_t>
 	{
 	public:
 		Rgb8::color_t Color = Rgb8::WHITE;
 
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_type_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_type_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_type_t& fragment, ISceneShader* sceneShader)
 		{
 			rasterizer.DrawPixel(Color, fragment.screen.x, fragment.screen.y);
 		}
 	};
 
-	struct TriangleFillFragmentShader : IFragmentShader<triangle_fragment_t>
+	struct TriangleFillFragmentShader final : IFragmentShader<triangle_fragment_t>
 	{
 	private:
-		world_position_normal_shade_t Shade{};
+		scene_shade_t Shade{};
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			Shade.normalWorld = fragment.normalWorld;
-			Shade.positionWorld = fragment.world;
+			if (sceneShader != nullptr)
+			{
+				Shade.normal = fragment.normalWorld;
+				Shade.position = fragment.world;
+				Shade.z = fragment.z;
 
-			sceneShader->Shade(FragmentColor, fragment.material, Shade);
+				sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			}
 			rasterizer.DrawTriangle(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
-			rasterizer.DrawTriangle(fragment.color, fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
-		}
 	};
 
-	struct TriangleWireframeFragmentShader : IFragmentShader<triangle_fragment_t>
+	struct TriangleWireframeFragmentShader final : IFragmentShader<triangle_fragment_t>
 	{
 	private:
-		world_position_normal_shade_t Shade{};
+		scene_shade_t Shade{};
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			Shade.positionWorld = fragment.world;
-			Shade.normalWorld = fragment.normalWorld;
-			sceneShader->Shade(FragmentColor, fragment.material, Shade);
-			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB);
-			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenC);
-			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenB, fragment.triangleScreenC);
-		}
+			Shade.position = fragment.world;
+			Shade.normal = fragment.normalWorld;
+			Shade.z = fragment.z;
 
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
-		{
-			FragmentColor = fragment.color;
-			Shade.positionWorld = fragment.world;
-			Shade.normalWorld = fragment.normalWorld;
+			if (sceneShader != nullptr)
+			{
+				sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			}
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenB);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenA, fragment.triangleScreenC);
 			rasterizer.DrawLine(FragmentColor, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
 	};
 
-	struct BillboardPlaceholderFragmentShader : IFragmentShader<billboard_fragment_t>
+	struct BillboardPlaceholderFragmentShader final : IFragmentShader<billboard_fragment_t>
 	{
 	public:
 		Rgb8::color_t Color = Rgb8::WHITE;
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			// Rectangle edges
 			rasterizer.DrawLine(Color, fragment.topLeftX, fragment.topLeftY, fragment.bottomRightX, fragment.topLeftY);
@@ -333,37 +328,31 @@ namespace IntegerWorld
 		}
 	};
 
-	struct PointNormalFragmentShader : IFragmentShader<point_normal_fragment_t>
+	struct PointNormalFragmentShader final : IFragmentShader<point_normal_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
-		world_position_normal_shade_t Shade{};
+		scene_shade_t Shade{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			Shade.normalWorld = fragment.normal;
-			Shade.positionWorld = fragment.world;
 
-			sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			if (sceneShader != nullptr)
+			{
+				Shade.normal = fragment.normal;
+				Shade.position = fragment.world;
+				Shade.z = fragment.screen.z;
+				sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			}
 			rasterizer.DrawPoint(FragmentColor, fragment.screen);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment) final
-		{
-			rasterizer.DrawPoint(fragment.color, fragment.screen);
 		}
 	};
 
-	struct PointZFragmentShader : IFragmentShader<point_fragment_t>
+	struct PointZFragmentShader final : IFragmentShader<point_normal_fragment_t>
 	{
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z);
 
@@ -374,14 +363,9 @@ namespace IntegerWorld
 		}
 	};
 
-	struct TriangleFillZFragmentShader : IFragmentShader<triangle_fragment_t>
+	struct TriangleFillZFragmentShader final : IFragmentShader<triangle_fragment_t>
 	{
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			const uint16_t z = int16_t(((int32_t)fragment.triangleScreenA.z + fragment.triangleScreenB.z + fragment.triangleScreenC.z) / 3);
 			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z);
@@ -391,19 +375,28 @@ namespace IntegerWorld
 		}
 	};
 
-	struct TriangleInterpolateZFragmentShader : IFragmentShader<triangle_fragment_t>
+	struct TriangleInterpolateZFragmentShader final : IFragmentShader<triangle_fragment_t>
 	{
 	private:
 		struct ZInterpolatorShaderFunctor : AbstractPixelShader::AbstractTriangleZFunctor
 		{
 			bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 			{
+				if (TriangleArea == 0)
+				{
+					return false;
+				}
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 				const int32_t w1 = (int32_t(CmAy) * (x - Cx)) + (int32_t(AmCx) * (y - Cy));
 				const int32_t w2 = TriangleArea - w0 - w1;
 				const int16_t z = ((w0 * Az) + (w1 * Bz) + (w2 * Cz)) / TriangleArea;
-				const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z);
-				const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+
+				if (z <= 0)
+				{
+					return false;
+				}
+
+				const uint8_t gray = Curves::Power2U8<>::Get(AbstractPixelShader::GetZ8(z));
 
 				color = Rgb8::Color(gray, gray, gray);
 
@@ -412,12 +405,7 @@ namespace IntegerWorld
 		} ZShader{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			if (ZShader.SetFragmentData(fragment))
 			{
@@ -426,18 +414,13 @@ namespace IntegerWorld
 		}
 	};
 
-	struct TriangleFillNormalFragmentShader : IFragmentShader<triangle_fragment_t>
+	struct TriangleFillNormalFragmentShader final : IFragmentShader<triangle_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = Rgb8::Color(
 				AbstractPixelShader::GetNormal8((int16_t)fragment.normalWorld.x),
@@ -447,7 +430,7 @@ namespace IntegerWorld
 		}
 	};
 
-	struct PointFixedNormalFragmentShader : IFragmentShader<point_normal_fragment_t>
+	struct PointFixedNormalFragmentShader final : IFragmentShader<point_normal_fragment_t>
 	{
 	private:
 		Rgb8::color_t Color = Rgb8::WHITE;
@@ -457,59 +440,46 @@ namespace IntegerWorld
 		{
 			vertex16_t normalized(normal);
 			NormalizeVertex16(normalized);
-
 			Color = Rgb8::Color(AbstractPixelShader::GetNormal8((int16_t)normalized.x),
 				AbstractPixelShader::GetNormal8((int16_t)normalized.y),
 				AbstractPixelShader::GetNormal8((int16_t)normalized.z));
 		}
 
-		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const point_normal_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			rasterizer.DrawPixel(Color, fragment.screen.x, fragment.screen.y);
 		}
 	};
 
-	struct EdgeFragmentShader : IFragmentShader<edge_fragment_t>
+	struct EdgeFragmentShader final : IFragmentShader<edge_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment, ISceneShader* sceneShader) final
-		{
-			FragmentShade(rasterizer, fragment);
-		}
-
-		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment) final
+		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
 			rasterizer.DrawLine(FragmentColor, fragment.start, fragment.end);
 		}
 	};
 
-	struct EdgeLitFragmentShader : IFragmentShader<edge_fragment_t>
+	struct EdgeLitFragmentShader final : IFragmentShader<edge_fragment_t>
 	{
 	private:
 		Rgb8::color_t FragmentColor{};
-		world_position_shade_t Shade{};
+		scene_shade_t Shade{};
 
 	public:
-		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment, ISceneShader* sceneShader) final
+		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment, ISceneShader* sceneShader)
 		{
 			FragmentColor = fragment.color;
-			Shade.positionWorld = fragment.world;
-			sceneShader->Shade(FragmentColor, fragment.material, Shade);
-			rasterizer.DrawLine(FragmentColor, fragment.start, fragment.end);
-		}
+			Shade.position = fragment.world;
+			Shade.z = fragment.z;
 
-		void FragmentShade(WindowRasterizer& rasterizer, const edge_fragment_t& fragment) final
-		{
-			rasterizer.DrawLine(fragment.color, fragment.start, fragment.end);
+			if (sceneShader != nullptr)
+				sceneShader->Shade(FragmentColor, fragment.material, Shade);
+			rasterizer.DrawLine(FragmentColor, fragment.start, fragment.end);
 		}
 	};
 }

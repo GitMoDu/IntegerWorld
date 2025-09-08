@@ -16,25 +16,18 @@ namespace IntegerWorld
 	struct ISceneShader
 	{
 		virtual void Shade(Rgb8::color_t& color, const material_t& material) = 0;
-		virtual void Shade(Rgb8::color_t& color, const material_t& material, const world_position_shade_t& shade) = 0;
-		virtual void Shade(Rgb8::color_t& color, const material_t& material, const world_position_normal_shade_t& shade) = 0;
+		virtual void Shade(Rgb8::color_t& color, const material_t& material, const scene_shade_t& shade) = 0;
 	};
 
-	struct ILightSource
-	{
-		virtual void GetLightColor(Rgb8::color_t& color) = 0;
-		virtual void GetLighting(Rgb8::color_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_shade_t& shade) = 0;
-		virtual void GetLighting(Rgb8::color_t& lightColor, ufraction16_t& diffuse, ufraction16_t& specular, const world_position_normal_shade_t& shade) = 0;
-	};
-
+	/// <summary>
+	/// Template defined interface for fragment shaders.
+	/// </summary>
+	/// <typeparam name="fragment_t">The fragment type.</typeparam>
 	template<typename fragment_t>
 	struct IFragmentShader
 	{
-		// Shade with scene shader.
+		// Draw the fragment using the provided rasterizer and optional scene shader.
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment, ISceneShader* sceneShader) = 0;
-
-		// Shade without scene shader.
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment) = 0;
 	};
 
 

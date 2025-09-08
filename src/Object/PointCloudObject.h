@@ -174,19 +174,12 @@ namespace IntegerWorld
 				PointFragment.normal = primitive.worldNormal;
 				PointFragment.screen = Vertices[primitiveIndex];
 
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment);
-				}
+				FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
 			}
 		}
 
 	protected:
-		virtual void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
+		virtual void GetFragment(point_normal_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
 			fragment.material.Emissive = 0;
@@ -213,13 +206,13 @@ namespace IntegerWorld
 		using Base::WorldPosition;
 
 	public:
-		IFragmentShader<point_fragment_t>* FragmentShader = nullptr;
+		IFragmentShader<point_normal_fragment_t>* FragmentShader = nullptr;
 
 	private:
 		const vertex16_t* VerticesSource;
 
 	private:
-		point_fragment_t PointFragment{};
+		point_normal_fragment_t PointFragment{};
 
 	public:
 		FlatPointCloudObject(const vertex16_t vertices[vertexCount])
@@ -310,25 +303,16 @@ namespace IntegerWorld
 				PointFragment.world = primitive.worldPosition;
 				PointFragment.screen = Vertices[primitiveIndex];
 
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, PointFragment);
-				}
+				FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
 			}
 		}
 
 	protected:
-		virtual void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
+		virtual void GetFragment(point_normal_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
-			fragment.material.Emissive = 0;
-			fragment.material.Diffuse = UFRACTION8_1X;
-			fragment.material.Specular = 0;
-			fragment.material.Metallic = 0;
+			fragment.material = { 0, UFRACTION8_1X , 0,0 };
+			fragment.normal = { 0, 0, 0 };
 		}
 	};
 }

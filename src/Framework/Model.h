@@ -9,6 +9,29 @@
 
 namespace IntegerWorld
 {
+	enum class FrustumCullingEnum : uint8_t
+	{
+		NoCulling,
+		ObjectCulling,
+		PrimitiveCulling,
+		ObjectAndPrimitiveCulling
+	};
+
+	struct material_t
+	{
+		ufraction8_t Emissive;
+		ufraction8_t Diffuse;
+		ufraction8_t Specular;
+		ufraction8_t Metallic;
+	};
+
+	struct scene_shade_t
+	{
+		vertex16_t position;
+		vertex16_t normal;
+		int16_t z;
+	};
+
 	struct edge_line_t
 	{
 		uint16_t start;
@@ -22,39 +45,17 @@ namespace IntegerWorld
 		uint16_t v3;
 	};
 
-	struct material_t
-	{
-		ufraction8_t Emissive;
-		ufraction8_t Diffuse;
-		ufraction8_t Specular;
-		ufraction8_t Metallic;
-	};
-
-	struct world_position_shade_t
-	{
-		vertex16_t positionWorld;
-	};
-
-	struct world_position_normal_shade_t : world_position_shade_t
-	{
-		vertex16_t normalWorld;
-	};
-
 	struct base_fragment_t
 	{
 		material_t material;
 		Rgb8::color_t color;
 	};
 
-	struct point_fragment_t : base_fragment_t
+	struct point_normal_fragment_t : base_fragment_t
 	{
 		vertex16_t world;
-		vertex16_t screen;
-	};
-
-	struct point_normal_fragment_t : point_fragment_t
-	{
 		vertex16_t normal;
+		vertex16_t screen;
 	};
 
 	struct edge_fragment_t : base_fragment_t
@@ -62,6 +63,7 @@ namespace IntegerWorld
 		vertex16_t world;
 		vertex16_t start;
 		vertex16_t end;
+		int16_t z;
 	};
 
 	struct billboard_fragment_t
@@ -71,6 +73,7 @@ namespace IntegerWorld
 		int16_t topLeftY;
 		int16_t bottomRightX;
 		int16_t bottomRightY;
+		int16_t z;
 	};
 
 	struct triangle_fragment_t : base_fragment_t
@@ -80,6 +83,7 @@ namespace IntegerWorld
 		vertex16_t triangleScreenA;
 		vertex16_t triangleScreenB;
 		vertex16_t triangleScreenC;
+		int16_t z;
 	};
 
 	struct flat_background_fragment_t : base_fragment_t
@@ -117,10 +121,6 @@ namespace IntegerWorld
 	struct base_primitive_t
 	{
 		int16_t z;
-	};
-
-	struct mesh_primitive_t : base_primitive_t
-	{
 	};
 
 	struct mesh_world_primitive_t : base_primitive_t
@@ -213,15 +213,6 @@ namespace IntegerWorld
 			return dotProduct + plane.distance;
 		}
 	};
-
-	enum class FrustumCullingEnum : uint8_t
-	{
-		NoCulling,
-		ObjectCulling,
-		PrimitiveCulling,
-		ObjectAndPrimitiveCulling
-	};
-
 
 	/// <summary>
 	/// Minimal render information for each frame.

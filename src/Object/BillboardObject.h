@@ -196,15 +196,7 @@ namespace IntegerWorld
 
 			if (FragmentShader != nullptr)
 			{
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, fragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, fragment);
-
-				}
+				FragmentShader->FragmentShade(rasterizer, fragment, SceneShader);
 			}
 		}
 	};

@@ -50,25 +50,16 @@ namespace IntegerWorld
 			BackgroundFragment.material = Material;
 			if (FragmentShader != nullptr)
 			{
-				if (SceneShader != nullptr)
-				{
-					FragmentShader->FragmentShade(rasterizer, BackgroundFragment, SceneShader);
-				}
-				else
-				{
-					FragmentShader->FragmentShade(rasterizer, BackgroundFragment);
-				}
+				FragmentShader->FragmentShade(rasterizer, BackgroundFragment, SceneShader);
 			}
 		}
 
 	protected:
-		void GetFragment(point_fragment_t& fragment, const uint16_t primitiveIndex)
+		void GetFragment(point_normal_fragment_t& fragment, const uint16_t primitiveIndex)
 		{
 			fragment.color = Rgb8::WHITE;
-			fragment.material.Emissive = 0;
-			fragment.material.Diffuse = UFRACTION8_1X;
-			fragment.material.Specular = 0;
-			fragment.material.Metallic = 0;
+			fragment.material = { 0, UFRACTION8_1X , 0,0 };
+			fragment.normal = { 0, 0, 0 };
 		}
 	};
 }

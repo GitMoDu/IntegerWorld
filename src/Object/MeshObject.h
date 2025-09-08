@@ -667,6 +667,7 @@ namespace IntegerWorld
 
 			TriangleFragment.normalWorld = primitive.worldNormal;
 			TriangleFragment.world = primitive.worldPosition;
+			TriangleFragment.z = primitive.z;
 
 			TriangleFragment.triangleScreenA = Vertices[triangle.v1];
 			TriangleFragment.triangleScreenB = Vertices[triangle.v2];
@@ -674,14 +675,7 @@ namespace IntegerWorld
 
 			GetFragment(TriangleFragment, primitiveIndex);
 
-			if (SceneShader != nullptr)
-			{
-				FragmentShader->FragmentShade(rasterizer, TriangleFragment, SceneShader);
-			}
-			else
-			{
-				FragmentShader->FragmentShade(rasterizer, TriangleFragment);
-			}
+			FragmentShader->FragmentShade(rasterizer, TriangleFragment, SceneShader);
 		}
 
 	protected:
