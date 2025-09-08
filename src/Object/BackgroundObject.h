@@ -7,11 +7,6 @@ namespace IntegerWorld
 {
 	class FlatBackgroundObject : public AbstractObject
 	{
-		using BaseObject = AbstractObject;
-
-	public:
-		using BaseObject::SceneShader;
-
 	public:
 		IFragmentShader<flat_background_fragment_t>* FragmentShader = nullptr;
 
@@ -26,8 +21,7 @@ namespace IntegerWorld
 		flat_background_fragment_t BackgroundFragment{};
 
 	public:
-		FlatBackgroundObject()
-			: BaseObject()
+		FlatBackgroundObject() : AbstractObject()
 		{
 		}
 
@@ -50,7 +44,7 @@ namespace IntegerWorld
 			BackgroundFragment.material = Material;
 			if (FragmentShader != nullptr)
 			{
-				FragmentShader->FragmentShade(rasterizer, BackgroundFragment, SceneShader);
+				FragmentShader->FragmentShade(rasterizer, BackgroundFragment);
 			}
 		}
 

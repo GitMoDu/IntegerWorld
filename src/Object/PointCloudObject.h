@@ -28,9 +28,6 @@ namespace IntegerWorld
 	private:
 		using Base = AbstractTransformObject<vertexCount, vertexCount, vertex_t, primitive_t>;
 
-	public:
-		using Base::SceneShader;
-
 	protected:
 		using Base::Vertices;
 		using Base::Primitives;
@@ -174,7 +171,7 @@ namespace IntegerWorld
 				PointFragment.normal = primitive.worldNormal;
 				PointFragment.screen = Vertices[primitiveIndex];
 
-				FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
+				FragmentShader->FragmentShade(rasterizer, PointFragment);
 			}
 		}
 
@@ -195,9 +192,6 @@ namespace IntegerWorld
 	{
 	private:
 		using Base = AbstractTransformObject<vertexCount, vertexCount, point_cloud_vertex_t, flat_point_primitive_t>;
-
-	public:
-		using Base::SceneShader;
 
 	protected:
 		using Base::Vertices;
@@ -303,7 +297,7 @@ namespace IntegerWorld
 				PointFragment.world = primitive.worldPosition;
 				PointFragment.screen = Vertices[primitiveIndex];
 
-				FragmentShader->FragmentShade(rasterizer, PointFragment, SceneShader);
+				FragmentShader->FragmentShade(rasterizer, PointFragment);
 			}
 		}
 

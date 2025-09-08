@@ -453,9 +453,6 @@ namespace IntegerWorld
 		MeshCullingEnum meshCulling>
 	class TemplateMeshWorldObject : public BaseMeshObject
 	{
-	public:
-		using BaseMeshObject::SceneShader;
-
 	protected:
 		using BaseMeshObject::Vertices;
 		using BaseMeshObject::Primitives;
@@ -675,7 +672,7 @@ namespace IntegerWorld
 
 			GetFragment(TriangleFragment, primitiveIndex);
 
-			FragmentShader->FragmentShade(rasterizer, TriangleFragment, SceneShader);
+			FragmentShader->FragmentShade(rasterizer, TriangleFragment);
 		}
 
 	protected:

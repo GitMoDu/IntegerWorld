@@ -27,7 +27,7 @@ namespace IntegerWorld
 	struct IFragmentShader
 	{
 		// Draw the fragment using the provided rasterizer and optional scene shader.
-		virtual void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment, ISceneShader* sceneShader) = 0;
+		virtual void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment) = 0;
 	};
 
 

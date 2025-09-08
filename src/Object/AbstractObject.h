@@ -8,13 +8,9 @@ namespace IntegerWorld
 {
 	/// <summary>
 	/// Abstract Render Object.
-	/// Host this object's SceneShader SurfaceShader (material+lights).
 	/// </summary>
 	class AbstractObject : public IRenderObject
 	{
-	public:
-		ISceneShader* SceneShader = nullptr;
-
 	public:
 		AbstractObject() : IRenderObject() {}
 

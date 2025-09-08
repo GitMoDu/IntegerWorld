@@ -211,9 +211,6 @@ namespace IntegerWorld
 		EdgeDrawModeEnum edgeDrawMode>
 	class TemplateEdgeObject : public BaseEdgeObject
 	{
-	public:
-		using BaseEdgeObject::SceneShader;
-
 	protected:
 		using BaseEdgeObject::Vertices;
 		using BaseEdgeObject::Primitives;
@@ -446,7 +443,7 @@ namespace IntegerWorld
 
 			GetFragment(EdgeFragment, primitiveIndex);
 
-			FragmentShader->FragmentShade(rasterizer, EdgeFragment, SceneShader);
+			FragmentShader->FragmentShade(rasterizer, EdgeFragment);
 		}
 
 	protected:
