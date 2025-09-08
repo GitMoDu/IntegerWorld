@@ -25,7 +25,7 @@ namespace IntegerWorld
 		using point2d_t = TriangleRasterHelper::point2d_t;
 		using ClipEdgeEnum = TriangleRasterHelper::ClipEdgeEnum;
 
-	private:
+	protected:
 		// Temporary buffers for Sutherland–Hodgman clipping (triangle in, convex polygon out).
 		point2d_t clipInputTriangle[3];
 		point2d_t clippedPolygon[8];
@@ -225,7 +225,7 @@ namespace IntegerWorld
 			clipInputTriangle[0] = { x1, y1 };
 			clipInputTriangle[1] = { x2, y2 };
 			clipInputTriangle[2] = { x3, y3 };
-			const uint8_t outCount = ClipTriangleToWindow(clipInputTriangle, clippedPolygon);
+			const uint8_t outCount = ClipTriangleToWindow();
 
 			if (outCount == 0)
 			{
@@ -377,13 +377,17 @@ namespace IntegerWorld
 				TriangleRasterHelper::PointInTriangle(SurfaceWidth - 1, SurfaceHeight - 1, x1, y1, x2, y2, x3, y3);
 		}
 
-		uint8_t ClipTriangleToWindow(const point2d_t(&tri)[3], point2d_t* out)
+		/// <summary>
+		/// Clips a triangle to the boundaries of the window and outputs the resulting polygon vertices.
+		/// </summary>
+		/// <returns>The number of vertices in the resulting clipped polygon. Returns 0 if the triangle is completely outside the window.</returns>
+		uint8_t ClipTriangleToWindow()
 		{
 			// Initialize with triangle vertices
 			uint8_t countA = 3;
 			for (uint8_t i = 0; i < 3; ++i)
 			{
-				clipScratchA[i] = tri[i];
+				clipScratchA[i] = clipInputTriangle[i];
 			}
 
 			// Clip sequentially: Left, Right, Top, Bottom
@@ -402,7 +406,7 @@ namespace IntegerWorld
 			// Copy to out
 			for (uint8_t i = 0; i < countA; ++i)
 			{
-				out[i] = clipScratchA[i];
+				clippedPolygon[i] = clipScratchA[i];
 			}
 
 			return countA;
