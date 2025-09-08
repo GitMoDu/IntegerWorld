@@ -28,7 +28,7 @@ namespace IntegerWorld
 			{
 
 				const ufraction16_t gray = ((uint32_t(Rgb8::Red(color)) * 299) + (uint32_t(Rgb8::Green(color)) * 587) + (uint32_t(Rgb8::Blue(color)) * 114)) / 1000;
-				Intensity = Fraction::Scale(gray, uint8_t(15));
+				Intensity = UFraction16::Fraction(gray, uint8_t(15));
 			}
 
 		public:

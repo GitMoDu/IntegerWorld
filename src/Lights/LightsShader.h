@@ -16,7 +16,7 @@ namespace IntegerWorld
 	///
 	/// Shading model:
 	/// - Diffuse: Lambert, using max(dot(N, L), 0).
-	/// - Specular: Blinn–Phong, using H = normalize(L + V), requires CameraPosition and a valid normal.
+	/// - Specular: Blinnï¿½Phong, using H = normalize(L + V), requires CameraPosition and a valid normal.
 	/// - Metallic: tints the specular term by the Metallic factor.
 	/// </summary>
 	class LightsShader : public AbstractLightsShader
@@ -172,8 +172,8 @@ namespace IntegerWorld
 					{
 						GetWeightsLambertBlinnPhong(shade.normal, HalfVector, diffuseWeight, specularWeight);
 						// Attenuate both diffuse and specular by distance.
-						diffuseWeight = Fraction::Scale(proximityFraction, diffuseWeight);
-						specularWeight = Fraction::Scale(proximityFraction, specularWeight);
+						diffuseWeight = UFraction16::Fraction(proximityFraction, diffuseWeight);
+						specularWeight = UFraction16::Fraction(proximityFraction, specularWeight);
 					}
 					else
 					{
@@ -189,8 +189,8 @@ namespace IntegerWorld
 					{
 						GetWeightsLambertBlinnPhong(shade.normal, HalfVector, diffuseWeight, specularWeight);
 						// Attenuate by cone and distance.
-						diffuseWeight = Fraction::Scale(coneFraction, Fraction::Scale(proximityFraction, diffuseWeight));
-						specularWeight = Fraction::Scale(coneFraction, Fraction::Scale(proximityFraction, specularWeight));
+						diffuseWeight = UFraction16::Fraction(coneFraction, UFraction16::Fraction(proximityFraction, diffuseWeight));
+						specularWeight = UFraction16::Fraction(coneFraction, UFraction16::Fraction(proximityFraction, specularWeight));
 					}
 					else
 					{
@@ -217,8 +217,8 @@ namespace IntegerWorld
 				}
 
 				// Scale by material properties.
-				diffuseWeight = Fraction::Scale(material.Diffuse, diffuseWeight);
-				specularWeight = Fraction::Scale(material.Specular, specularWeight);
+				diffuseWeight = UFraction16::Fraction(material.Diffuse, diffuseWeight);
+				specularWeight = UFraction16::Fraction(material.Specular, specularWeight);
 
 				// Fetch light color components.
 				const Rgb8::component_t lightR = Rgb8::Red(light.Color);
@@ -228,20 +228,20 @@ namespace IntegerWorld
 				// Apply diffuse contribution (albedo scaled by light color).
 				if (diffuseWeight > 0)
 				{
-					ColorMix(Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentR) * lightR) >> 8)),
-						Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentG) * lightG) >> 8)),
-						Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentB) * lightB) >> 8)));
+					ColorMix(UFraction16::Fraction(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentR) * lightR) >> 8)),
+						UFraction16::Fraction(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentG) * lightG) >> 8)),
+						UFraction16::Fraction(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentB) * lightB) >> 8)));
 				}
 
 				// Apply specular contribution (metallic-tinted).
 				if (specularWeight > 0)
 				{
-					ColorMix(Fraction::Scale(specularWeight,
-						Fraction::Interpolate(material.Metallic, lightR, Fraction::Scale(specularWeight, FragmentR))),
-						Fraction::Scale(specularWeight,
-							Fraction::Interpolate(material.Metallic, lightG, Fraction::Scale(specularWeight, FragmentG))),
-						Fraction::Scale(specularWeight,
-							Fraction::Interpolate(material.Metallic, lightB, Fraction::Scale(specularWeight, FragmentB))));
+					ColorMix(UFraction16::Fraction(specularWeight,
+						Fraction::Interpolate(material.Metallic, lightR, UFraction16::Fraction(specularWeight, FragmentR))),
+						UFraction16::Fraction(specularWeight,
+							Fraction::Interpolate(material.Metallic, lightG, UFraction16::Fraction(specularWeight, FragmentG))),
+						UFraction16::Fraction(specularWeight,
+							Fraction::Interpolate(material.Metallic, lightB, UFraction16::Fraction(specularWeight, FragmentB))));
 				}
 			}
 
@@ -262,19 +262,19 @@ namespace IntegerWorld
 			if (material.Emissive > 0)
 			{
 				// Apply emissivity first.
-				ShadeR = Fraction::Scale(material.Emissive, FragmentR);
-				ShadeG = Fraction::Scale(material.Emissive, FragmentG);
-				ShadeB = Fraction::Scale(material.Emissive, FragmentB);
+				ShadeR = UFraction16::Fraction(material.Emissive, FragmentR);
+				ShadeG = UFraction16::Fraction(material.Emissive, FragmentG);
+				ShadeB = UFraction16::Fraction(material.Emissive, FragmentB);
 			}
 
 			// Apply ambient light next (scaled by material.Diffuse).
 			if (material.Diffuse > 0)
 			{
-				ColorMix(Fraction::Scale(material.Diffuse,
+				ColorMix(UFraction16::Fraction(material.Diffuse,
 					uint8_t((uint16_t(FragmentR) * Rgb8::Red(AmbientLight)) >> 8)),
-					Fraction::Scale(material.Diffuse,
+					UFraction16::Fraction(material.Diffuse,
 						uint8_t((uint16_t(FragmentG) * Rgb8::Green(AmbientLight)) >> 8)),
-					Fraction::Scale(material.Diffuse,
+					UFraction16::Fraction(material.Diffuse,
 						uint8_t((uint16_t(FragmentB) * Rgb8::Blue(AmbientLight)) >> 8)));
 			}
 		}

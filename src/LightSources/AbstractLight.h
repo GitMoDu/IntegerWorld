@@ -42,11 +42,11 @@ namespace IntegerWorld
 			}
 			else if (distance < RangeMin)
 			{
-				return UFRACTION16_1X;
+				return UFraction16::FRACTION_1X;
 			}
 			else
 			{
-				return UFRACTION16_1X - Fraction::GetUFraction16(uint32_t(distance - RangeMin), uint32_t((RangeMax - RangeMin)));
+				return UFraction16::FRACTION_1X - ((UFraction16::FRACTION_1X * (uint32_t)(distance - RangeMin)) / (uint32_t)(RangeMax - RangeMin));
 			}
 		}
 	};
@@ -59,9 +59,9 @@ namespace IntegerWorld
 		static constexpr uint8_t DOT_SHIFTS = GetBitShifts(VERTEX16_DOT);
 
 		/// <summary>
-		/// Bit shifts required for UFRACTION16_1X.
+		/// Bit shifts required for UFraction16::FRACTION_1X.
 		/// </summary>
-		static constexpr uint8_t FRAC_SHIFTS = GetBitShifts(UFRACTION16_1X);
+		static constexpr uint8_t FRAC_SHIFTS = GetBitShifts(UFraction16::FRACTION_1X);
 
 		/// <summary>
 		/// Shifts required to convert from a (positive) 32 bit dot product to 16 bit ufraction.
@@ -78,7 +78,7 @@ namespace IntegerWorld
 						+ ((int32_t)vector.z * vector.z))
 						* falloffWeight) >> (GetBitShifts(VERTEX16_RANGE) + 1));
 
-			return Fraction::GetUFraction16((uint16_t)VERTEX16_UNIT, (uint16_t)MaxValue(distance, (uint16_t)VERTEX16_UNIT));
+			return (UFraction16::FRACTION_1X * (uint16_t)VERTEX16_UNIT) / (uint16_t)MaxValue(distance, (uint16_t)VERTEX16_UNIT);
 		}
 	};
 }
