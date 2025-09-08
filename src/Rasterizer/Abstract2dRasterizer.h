@@ -15,15 +15,25 @@ namespace IntegerWorld
 	class Abstract2dRasterizer : public Abstract2dDrawer<SurfaceType>
 	{
 	protected:
-		using AbstractSurfaceRasterizer<SurfaceType>::BRESENHAM_SCALE;
+		using Abstract2dDrawer<SurfaceType>::BRESENHAM_SCALE;
 
 	protected:
-		using AbstractSurfaceRasterizer<SurfaceType>::Surface;
-		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceWidth;
-		using AbstractSurfaceRasterizer<SurfaceType>::SurfaceHeight;
-		using AbstractSurfaceRasterizer<SurfaceType>::IsInsideWindow;
+		using Abstract2dDrawer<SurfaceType>::Surface;
+		using Abstract2dDrawer<SurfaceType>::SurfaceWidth;
+		using Abstract2dDrawer<SurfaceType>::SurfaceHeight;
+		using Abstract2dDrawer<SurfaceType>::IsInsideWindow;
 
 		using Abstract2dDrawer<SurfaceType>::ClipEndpointToWindow;
+		using Abstract2dDrawer<SurfaceType>::ClipTriangleToWindow;
+
+	protected:
+		using Abstract2dDrawer<SurfaceType>::clipInputTriangle;
+		using Abstract2dDrawer<SurfaceType>::clippedPolygon;
+		using Abstract2dDrawer<SurfaceType>::clipScratchA;
+		using Abstract2dDrawer<SurfaceType>::clipScratchB;
+		using Abstract2dDrawer<SurfaceType>::p0;
+		using Abstract2dDrawer<SurfaceType>::p1;
+		using Abstract2dDrawer<SurfaceType>::p2;
 
 	public:
 		Abstract2dRasterizer(SurfaceType& surface)
@@ -141,33 +151,6 @@ namespace IntegerWorld
 		template<typename PixelShader>
 		void RasterTriangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
-			// Early triangle culling - check if triangle is degenerate
-			if ((x1 == x2 && y1 == y2) || (x1 == x3 && y1 == y3) || (x2 == x3 && y2 == y3)) {
-				// Handle degenerate cases (point or line)
-				if (x1 == x2 && y1 == y2) {
-					if (x1 == x3 && y1 == y3) {
-						// Single point
-						Rgb8::color_t color{};
-						if (IsInsideWindow(x1, y1) && pixelShader(color, x1, y1)) {
-							Surface.Pixel(color, x1, y1);
-						}
-					}
-					else {
-						// Line from (x1,y1) to (x3,y3)
-						RasterLine(x1, y1, x3, y3, pixelShader);
-					}
-				}
-				else if (x1 == x3 && y1 == y3) {
-					// Line from (x1,y1) to (x2,y2)
-					RasterLine(x1, y1, x2, y2, pixelShader);
-				}
-				else {
-					// Line from (x2,y2) to (x3,y3)
-					RasterLine(x2, y2, x3, y3, pixelShader);
-				}
-				return;
-			}
-
 			// Count how many vertices are inside the window
 			const bool in1 = IsInsideWindow(x1, y1);
 			const bool in2 = IsInsideWindow(x2, y2);
@@ -233,18 +216,62 @@ namespace IntegerWorld
 					ax = x3; ay = y3; bx = x1; by = y1; cx = x2; cy = y2;
 				}
 
-				// Clip edge AB
-				int16_t pbx = bx, pby = by;
-				ClipEndpointToWindow(pbx, pby, ax, ay);
+				// Use Sutherland-Hodgman clipping like in DrawTriangle
+				clipInputTriangle[0] = { ax, ay };
+				clipInputTriangle[1] = { bx, by };
+				clipInputTriangle[2] = { cx, cy };
+				const uint8_t outCount = ClipTriangleToWindow();
 
-				// Clip edge AC
-				int16_t pcx = cx, pcy = cy;
-				ClipEndpointToWindow(pcx, pcy, ax, ay);
+				if (outCount == 0)
+				{
+					return; // Fully outside after clipping
+				}
+				else if (outCount == 1)
+				{
+					// Collapsed to a point
+					Rgb8::color_t color{};
+					if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y) &&
+						pixelShader(color, clippedPolygon[0].x, clippedPolygon[0].y))
+					{
+						Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
+					}
+					return;
+				}
+				else if (outCount == 2)
+				{
+					// Collapsed to a line
+					if (clippedPolygon[0].x == clippedPolygon[1].x && clippedPolygon[0].y == clippedPolygon[1].y)
+					{
+						Rgb8::color_t color{};
+						if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y) &&
+							pixelShader(color, clippedPolygon[0].x, clippedPolygon[0].y))
+						{
+							Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
+						}
+					}
+					else
+					{
+						RasterLine(clippedPolygon[0].x, clippedPolygon[0].y,
+							clippedPolygon[1].x, clippedPolygon[1].y, pixelShader);
+					}
+					return;
+				}
 
-				// Draw the clipped triangle
-				TriangleYRaster(ax, ay,
-					pbx, pby,
-					pcx, pcy, pixelShader);
+				// General convex polygon (up to 6 vertices) -> triangulate as a fan
+				p0 = clippedPolygon[0];
+				int32_t area2 = 0;
+				for (uint8_t i = 1; i + 1 < outCount; ++i)
+				{
+					p1 = clippedPolygon[i];
+					p2 = clippedPolygon[i + 1];
+
+					// Skip degenerate triangles
+					area2 = int32_t(p1.x - p0.x) * int32_t(p2.y - p0.y) - int32_t(p2.x - p0.x) * int32_t(p1.y - p0.y);
+					if (area2 != 0)
+					{
+						TriangleYRaster(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, pixelShader);
+					}
+				}
 			}
 			else  // insideCount == 0
 			{
@@ -443,6 +470,40 @@ namespace IntegerWorld
 		template<typename PixelShader>
 		void TriangleYOrderedRaster(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
+			// First check for completely degenerate triangles (all y values equal)
+			if (y1 == y2 && y2 == y3)
+			{
+				// Handle as a horizontal line or point
+				Rgb8::color_t color{};
+
+				// Check if it's a single point or a horizontal line
+				if (x1 == x2 && x2 == x3)
+				{
+					// Single point
+					if (pixelShader(color, x1, y1))
+					{
+						Surface.Pixel(color, x1, y1);
+					}
+				}
+				else
+				{
+					// Find leftmost and rightmost x
+					int16_t xMin = min(min(x1, x2), x3);
+					int16_t xMax = max(max(x1, x2), x3);
+
+					// Draw horizontal line
+					for (int16_t x = xMin; x <= xMax; x++)
+					{
+						if (pixelShader(color, x, y1))
+						{
+							Surface.Pixel(color, x, y1);
+						}
+					}
+				}
+				return;
+			}
+
+			// Original code for non-degenerate cases
 			if (y2 == y3) // Flat bottom.
 			{
 				BresenhamFlatBottomFill(x1, y1, x2, y2, x3, y3, pixelShader);
