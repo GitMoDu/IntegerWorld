@@ -9,6 +9,9 @@
 
 namespace IntegerWorld
 {
+	using namespace IntegerSignal::FixedPoint::ScalarFraction;
+	using namespace IntegerSignal::FixedPoint::FactorScale;
+
 	enum class FrustumCullingEnum : uint8_t
 	{
 		NoCulling,

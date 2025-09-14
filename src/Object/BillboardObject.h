@@ -5,6 +5,8 @@
 
 namespace IntegerWorld
 {
+	using namespace IntegerSignal::FixedPoint::FactorScale;
+
 	enum class BillboardScaleModeEnum : uint8_t
 	{
 		ScreenSpace,	// Fixed pixel size
@@ -20,19 +22,19 @@ namespace IntegerWorld
 	{
 	public:
 		int16_t ZOverride = -VERTEX16_UNIT;
-		Scale16::factor_t Resize = Scale16::SCALE_1X;
+		scale16_t Resize = SCALE16_1X;
 		static constexpr BillboardScaleModeEnum BillboardScaleMode = billboardScaleMode;
 
 	public:
 		IFragmentShader<billboard_fragment_t>* FragmentShader = nullptr;
 
 	protected:
-		Scale16::factor_t Proportion = Scale16::SCALE_1X;
+		scale16_t Proportion = SCALE16_1X;
 		uint16_t HeightScaled = 0;
 		billboard_primitive_t Primitive{};
 		vertex16_t Top{};
 
-		Scale16::factor_t ProportionCopy;
+		scale16_t ProportionCopy;
 		uint16_t Height;
 
 	private:
@@ -41,7 +43,7 @@ namespace IntegerWorld
 	public:
 		BillboardObject()
 			: TranslationObject()
-			, Proportion(Scale16::SCALE_1X)
+			, Proportion(SCALE16_1X)
 			, Height(1)
 		{
 		}

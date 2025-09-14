@@ -9,8 +9,8 @@
 namespace IntegerWorld
 {
 	using namespace IntegerSignal::Trigonometry;
-	using namespace IntegerSignal::FixedPoint::Fraction;
-	using namespace IntegerSignal::FixedPoint::Scale;
+	using namespace IntegerSignal::FixedPoint::FactorScale;
+	using namespace IntegerSignal::FixedPoint::ScalarFraction;
 
 	struct rotation_angle_t
 	{
@@ -21,27 +21,27 @@ namespace IntegerWorld
 
 	struct transform16_rotate_t
 	{
-		Fraction16::scalar_t CosX{};
-		Fraction16::scalar_t SinX{};
-		Fraction16::scalar_t CosY{};
-		Fraction16::scalar_t SinY{};
-		Fraction16::scalar_t CosZ{};
-		Fraction16::scalar_t SinZ{};
+		fraction16_t CosX;
+		fraction16_t SinX;
+		fraction16_t CosY;
+		fraction16_t SinY;
+		fraction16_t CosZ;
+		fraction16_t SinZ;
 	};
 
 	struct transform16_rotate_translate_t : transform16_rotate_t
 	{
-		vertex16_t Translation{};
+		vertex16_t Translation;
 	};
 
 	struct transform16_scale_translate_t : transform16_rotate_t
 	{
-		Scale16::factor_t Resize = Scale16::SCALE_1X;
+		scale16_t Resize = Scale16::SCALE_1X;
 	};
 
 	struct transform16_scale_rotate_translate_t : transform16_rotate_translate_t
 	{
-		Scale16::factor_t Resize = Scale16::SCALE_1X;
+		scale16_t Resize = Scale16::SCALE_1X;
 	};
 
 	struct transform16_camera_t : transform16_rotate_translate_t
@@ -74,27 +74,27 @@ namespace IntegerWorld
 	{
 		// Rotate around X-axis (affects Y,Z)
 		const int16_t y1 = vertex.y;
-		vertex.y = Fraction16::Fraction(transform.CosX, y1) - Fraction16::Fraction(transform.SinX, vertex.z);
-		vertex.z = Fraction16::Fraction(transform.SinX, y1) + Fraction16::Fraction(transform.CosX, vertex.z);
+		vertex.y = Fraction(transform.CosX, y1) - Fraction(transform.SinX, vertex.z);
+		vertex.z =Fraction(transform.SinX, y1) +Fraction(transform.CosX, vertex.z);
 
 		// Rotate around Y-axis (affects X,Z)
 		const int16_t x1 = vertex.x;
-		vertex.x = Fraction16::Fraction(transform.CosY, x1) + Fraction16::Fraction(transform.SinY, vertex.z);
-		vertex.z = -Fraction16::Fraction(transform.SinY, x1) + Fraction16::Fraction(transform.CosY, vertex.z);
+		vertex.x = Fraction(transform.CosY, x1) + Fraction(transform.SinY, vertex.z);
+		vertex.z = -Fraction(transform.SinY, x1) + Fraction(transform.CosY, vertex.z);
 
 		// Rotate around Z-axis (affects X,Y)
 		const int16_t x2 = vertex.x;
-		vertex.x = Fraction16::Fraction(transform.CosZ, x2) - Fraction16::Fraction(transform.SinZ, vertex.y);
-		vertex.y = Fraction16::Fraction(transform.SinZ, x2) + Fraction16::Fraction(transform.CosZ, vertex.y);
+		vertex.x = Fraction(transform.CosZ, x2) - Fraction(transform.SinZ, vertex.y);
+		vertex.y = Fraction(transform.SinZ, x2) + Fraction(transform.CosZ, vertex.y);
 	}
 
 	// Applies: Scale, then rotation in XYZ order, then Translation.
 	static void ApplyTransform(const transform16_scale_rotate_translate_t& transform, vertex16_t& vertex)
 	{
 		// Scale geometry.
-		vertex.x = Scale16::Scale(transform.Resize, vertex.x);
-		vertex.y = Scale16::Scale(transform.Resize, vertex.y);
-		vertex.z = Scale16::Scale(transform.Resize, vertex.z);
+		vertex.x = Scale(transform.Resize, vertex.x);
+		vertex.y = Scale(transform.Resize, vertex.y);
+		vertex.z = Scale(transform.Resize, vertex.z);
 
 		// Apply rotation.
 		ApplyTransform(static_cast<const transform16_rotate_t&>(transform), vertex);
@@ -123,18 +123,18 @@ namespace IntegerWorld
 	{
 		// Z^-1 (Roll)
 		const int16_t x2 = vertex.x;
-		vertex.x = Fraction16::Fraction(transform.CosZ, x2) + Fraction16::Fraction(transform.SinZ, vertex.y);
-		vertex.y = -Fraction16::Fraction(transform.SinZ, x2) + Fraction16::Fraction(transform.CosZ, vertex.y);
+		vertex.x = Fraction(transform.CosZ, x2) + Fraction(transform.SinZ, vertex.y);
+		vertex.y = -Fraction(transform.SinZ, x2) + Fraction(transform.CosZ, vertex.y);
 
 		// Y^-1 (Yaw)
 		const int16_t x1 = vertex.x;
-		vertex.x = Fraction16::Fraction(transform.CosY, x1) - Fraction16::Fraction(transform.SinY, vertex.z);
-		vertex.z = Fraction16::Fraction(transform.SinY, x1) + Fraction16::Fraction(transform.CosY, vertex.z);
+		vertex.x = Fraction(transform.CosY, x1) - Fraction(transform.SinY, vertex.z);
+		vertex.z = Fraction(transform.SinY, x1) + Fraction(transform.CosY, vertex.z);
 
 		// X^-1 (Pitch)
 		const int16_t y1 = vertex.y;
-		vertex.y = Fraction16::Fraction(transform.CosX, y1) + Fraction16::Fraction(transform.SinX, vertex.z);
-		vertex.z = -Fraction16::Fraction(transform.SinX, y1) + Fraction16::Fraction(transform.CosX, vertex.z);
+		vertex.y = Fraction(transform.CosX, y1) + Fraction(transform.SinX, vertex.z);
+		vertex.z = -Fraction(transform.SinX, y1) + Fraction(transform.CosX, vertex.z);
 	}
 
 	// Camera transform (world -> camera):
