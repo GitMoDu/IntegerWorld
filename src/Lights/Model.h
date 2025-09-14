@@ -131,14 +131,17 @@ namespace IntegerWorld
 	/// <param name="direction">The direction vector for light rays (will not be normalized)</param>
 	/// <param name="parameter">Controls diffuse factor when normals are not available</param>
 	/// <returns>A fully configured directional light source</returns>
-	static constexpr light_source_t DirectionalLightSource(
+	static light_source_t DirectionalLightSource(
 		const Rgb8::color_t color = Rgb8::WHITE,
 		const vertex16_t direction = { 0, VERTEX16_UNIT, 0 },
 		const ufraction16_t parameter = ufraction16_t(0))
 	{
+		vertex16_t directionNormalized = direction;
+		NormalizeVertex16(directionNormalized);
+
 		return light_source_t{
 			{ int16_t(0), int16_t(0), int16_t(0) }, // position not used for directional lights
-			direction,
+			directionNormalized,
 			0,     // range not used
 			0,     // range not used
 			color,
@@ -157,7 +160,7 @@ namespace IntegerWorld
 	/// <param name="rangeMax">The maximum distance where light has effect</param>
 	/// <param name="parameter">Controls the radius/angle of the light cone</param>
 	/// <returns>A fully configured spot light source</returns>
-	static constexpr light_source_t SpotLightSource(
+	static light_source_t SpotLightSource(
 		const Rgb8::color_t color = Rgb8::WHITE,
 		const vertex16_t position = { int16_t(0), int16_t(0), int16_t(0) },
 		const vertex16_t direction = { int16_t(0), VERTEX16_UNIT, int16_t(0) },
@@ -165,9 +168,12 @@ namespace IntegerWorld
 		const uint16_t rangeMax = VERTEX16_RANGE,
 		const ufraction16_t parameter = UFRACTION16_1X)
 	{
+		vertex16_t directionNormalized = direction;
+		NormalizeVertex16(directionNormalized);
+
 		return light_source_t{
 			position,
-			direction,
+			directionNormalized,
 			((uint32_t)rangeMin * rangeMin),
 			MaxValue<uint32_t>((uint32_t)rangeMax * rangeMax, ((uint32_t)rangeMin * rangeMin)),
 			color,
