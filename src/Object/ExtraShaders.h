@@ -161,21 +161,21 @@ namespace IntegerWorld
 				const int32_t w0 = (int32_t(BmCy) * (x - Cx)) + (int32_t(CmBx) * (y - Cy));
 
 				// Use w0 for stripes, quantized to StripeCount bands
-				int32_t band = ((w0 * StripeCount) / TriangleArea) & 1;
-				color = (band == 0) ? ColorA : ColorB;
+				const bool band = ((w0 * StripeCount) / TriangleArea) & 1;
+				color = band ? ColorA : ColorB;
 				return true;
 			}
 		} StripeShader{};
 
-	public:
+	private:
 		scene_shade_t Shade{};
+		static constexpr material_t shine{ 0,0,UFRACTION8_1X, UFRACTION8_1X / 1 };
 
 	public:
-		static constexpr material_t shine{ 0,0,UFRACTION8_1X, UFRACTION8_1X / 1 };
 
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
-			StripeShader.ColorA = Rgb8::WHITE;
+			StripeShader.ColorA = fragment.color;
 			StripeShader.ColorB = fragment.color;
 
 			if (SceneShader != nullptr)
@@ -184,8 +184,8 @@ namespace IntegerWorld
 				Shade.position = fragment.world;
 				Shade.z = fragment.z;
 
-				SceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
-				SceneShader->Shade(StripeShader.ColorB, shine, Shade);
+				SceneShader->Shade(StripeShader.ColorA, shine, Shade);
+				SceneShader->Shade(StripeShader.ColorB, fragment.material, Shade);
 			}
 			if (StripeShader.SetFragmentData(fragment))
 			{

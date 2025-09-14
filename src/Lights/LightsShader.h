@@ -220,7 +220,6 @@ namespace IntegerWorld
 					{
 						// No normal available: use provided flat diffuse parameter.
 						diffuseWeight = light.Parameter;
-						specularWeight = 0;
 					}
 					break;
 				default:
