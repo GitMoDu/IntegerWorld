@@ -26,9 +26,14 @@ namespace IntegerWorld
 		public:
 			void SetColor(const Rgb8::color_t color)
 			{
+				// Compute 8-bit luma using integer BT.601 approximation: 0..255.
+				const uint16_t gray =
+					(uint16_t(Rgb8::Red(color)) * 77 +
+						uint16_t(Rgb8::Green(color)) * 150 +
+						uint16_t(Rgb8::Blue(color)) * 29 + 128) >> 8;
 
-				const ufraction16_t gray = ((uint32_t(Rgb8::Red(color)) * 299) + (uint32_t(Rgb8::Green(color)) * 587) + (uint32_t(Rgb8::Blue(color)) * 114)) / 1000;
-				Intensity = Fraction::Scale(gray, uint8_t(15));
+				// Quantize to 16 levels (0..15) for 4x4 Bayer thresholds (0..15).
+				Intensity = uint8_t(gray >> 4);
 			}
 
 		public:
@@ -49,14 +54,22 @@ namespace IntegerWorld
 			}
 		} MonochromeDitherShader{};
 
+
+	private:
 		Rgb8::color_t FragmentColor{};
+		scene_shade_t Shade{};
 
 	public:
 		void FragmentShade(WindowRasterizer& rasterizer, const triangle_fragment_t& fragment) final
 		{
 			FragmentColor = fragment.color;
 			if (SceneShader != nullptr)
-				SceneShader->Shade(FragmentColor, fragment.material);
+			{
+				Shade.normal = fragment.normalWorld;
+				Shade.position = fragment.world;
+				Shade.z = fragment.z;
+				SceneShader->Shade(FragmentColor, fragment.material, Shade);
+			}
 			MonochromeDitherShader.SetColor(FragmentColor);
 			rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, MonochromeDitherShader);
 		}
@@ -74,9 +87,6 @@ namespace IntegerWorld
 	private:
 		struct GradientShaderFunctor : AbstractPixelShader::AbstractTriangleFunctor
 		{
-			scene_shade_t Shade{};
-			const material_t* material = nullptr;
-			//const triangle_fragment_t* fragment = nullptr;
 			Rgb8::color_t ColorA = Rgb8::RED; // Vertex A color (red)
 			Rgb8::color_t ColorB = Rgb8::GREEN; // Vertex B color (green)
 			Rgb8::color_t ColorC = Rgb8::BLUE; // Vertex C color (blue)
@@ -103,6 +113,8 @@ namespace IntegerWorld
 			}
 		} GradientShader{};
 
+		scene_shade_t Shade{};
+
 	public:
 		void SetColors(const Rgb8::color_t colorA, const Rgb8::color_t colorB, const Rgb8::color_t colorC)
 		{
@@ -115,17 +127,17 @@ namespace IntegerWorld
 		{
 			if (GradientShader.SetFragmentData(fragment))
 			{
-				GradientShader.material = &fragment.material;
-				GradientShader.Shade.normal = fragment.normalWorld;
-				GradientShader.Shade.position = fragment.world;
 				GradientShader.ColorA = ColorA;
 				GradientShader.ColorB = ColorB;
 				GradientShader.ColorC = ColorC;
 				if (SceneShader != nullptr)
 				{
-					SceneShader->Shade(GradientShader.ColorA, fragment.material, GradientShader.Shade);
-					SceneShader->Shade(GradientShader.ColorB, fragment.material, GradientShader.Shade);
-					SceneShader->Shade(GradientShader.ColorC, fragment.material, GradientShader.Shade);
+					Shade.normal = fragment.normalWorld;
+					Shade.position = fragment.world;
+					Shade.z = fragment.z;
+					SceneShader->Shade(GradientShader.ColorA, fragment.material, Shade);
+					SceneShader->Shade(GradientShader.ColorB, fragment.material, Shade);
+					SceneShader->Shade(GradientShader.ColorC, fragment.material, Shade);
 				}
 				rasterizer.RasterTriangle(fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC, GradientShader);
 			}
@@ -170,6 +182,7 @@ namespace IntegerWorld
 			{
 				Shade.normal = fragment.normalWorld;
 				Shade.position = fragment.world;
+				Shade.z = fragment.z;
 
 				SceneShader->Shade(StripeShader.ColorA, fragment.material, Shade);
 				SceneShader->Shade(StripeShader.ColorB, shine, Shade);
