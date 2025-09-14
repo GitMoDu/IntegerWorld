@@ -20,19 +20,19 @@ namespace IntegerWorld
 	{
 	public:
 		int16_t ZOverride = -VERTEX16_UNIT;
-		resize16_t Resize = RESIZE16_1X;
+		scale16_t Resize = SCALE16_1X;
 		static constexpr BillboardScaleModeEnum BillboardScaleMode = billboardScaleMode;
 
 	public:
 		IFragmentShader<billboard_fragment_t>* FragmentShader = nullptr;
 
 	protected:
-		resize16_t Proportion = RESIZE16_1X;
+		scale16_t Proportion = SCALE16_1X;
 		uint16_t HeightScaled = 0;
 		billboard_primitive_t Primitive{};
 		vertex16_t Top{};
 
-		resize16_t ProportionCopy;
+		scale16_t ProportionCopy;
 		uint16_t Height;
 
 	private:
@@ -41,7 +41,7 @@ namespace IntegerWorld
 	public:
 		BillboardObject()
 			: TranslationObject()
-			, Proportion(RESIZE16_1X)
+			, Proportion(SCALE16_1X)
 			, Height(1)
 		{
 		}
@@ -49,7 +49,7 @@ namespace IntegerWorld
 		BillboardObject(const uint16_t width, const uint16_t height)
 			: TranslationObject()
 			, Height(height)
-			, Proportion(Resize::GetResize16(width, height))
+			, Proportion(Scale16::GetFactor(width, height))
 		{
 		}
 
@@ -65,7 +65,7 @@ namespace IntegerWorld
 
 		void SetDimensions(const uint16_t width, const uint16_t height)
 		{
-			Proportion = Resize::GetResize16(MaxValue(uint16_t(1), width), MaxValue(uint16_t(1), height));
+			Proportion = Scale16::GetFactor(MaxValue(uint16_t(1), width), MaxValue(uint16_t(1), height));
 			Height = height;
 		}
 
@@ -77,7 +77,7 @@ namespace IntegerWorld
 			ScreenPosition = WorldPosition;
 
 			// Double buffer to ensure consistent billboard widht/height.
-			HeightScaled = Resize::Scale(Resize, Height);
+			HeightScaled = Scale(Resize, Height);
 			ProportionCopy = Proportion;
 
 			// Simple frustum culling based on the center point.
@@ -138,12 +138,12 @@ namespace IntegerWorld
 			{
 			case BillboardScaleModeEnum::ScreenSpace: // Use a fixed pixel height regardless of distance
 				height = HeightScaled;
-				width = Resize::Scale(ProportionCopy, height);
+				width = Scale(ProportionCopy, height);
 				break;
 			case BillboardScaleModeEnum::WorldSpace: // Pixel height based on the distance in screen-space.
 			default:
 				height = Distance16(Top, ScreenPosition);
-				width = Resize::Scale(ProportionCopy, height);
+				width = Scale(ProportionCopy, height);
 				break;
 			}
 

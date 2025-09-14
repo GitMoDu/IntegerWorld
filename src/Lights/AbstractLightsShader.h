@@ -191,7 +191,7 @@ namespace IntegerWorld
 			}
 			else
 			{
-				return UFRACTION16_1X - Fraction::GetUFraction16(
+				return UFRACTION16_1X - UFraction16::GetScalar<uint32_t>(
 					static_cast<uint32_t>(squaredDistance - light.RangeSquaredMin),
 					static_cast<uint32_t>((light.RangeSquaredMax - light.RangeSquaredMin)));
 			}

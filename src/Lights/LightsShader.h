@@ -1,6 +1,8 @@
 #ifndef _INTEGER_WORLD_LIGHTS_SHADER_h
 #define _INTEGER_WORLD_LIGHTS_SHADER_h
 
+//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles.
+
 #include "AbstractLightsShader.h"
 
 namespace IntegerWorld
@@ -28,6 +30,15 @@ namespace IntegerWorld
 	private:
 		// Half-vector H scratch variable for specular calculations.
 		vertex32_t HalfVector{};
+
+#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
+		// Material component toggles for debugging.
+	public:
+		bool Ambient = true;
+		bool Emissive = true;
+		bool Diffuse = true;
+		bool Specular = true;
+#endif
 
 	public:
 		/// <summary>
@@ -172,8 +183,8 @@ namespace IntegerWorld
 					{
 						GetWeightsLambertBlinnPhong(shade.normal, HalfVector, diffuseWeight, specularWeight);
 						// Attenuate both diffuse and specular by distance.
-						diffuseWeight = Fraction::Scale(proximityFraction, diffuseWeight);
-						specularWeight = Fraction::Scale(proximityFraction, specularWeight);
+						diffuseWeight = Fraction(proximityFraction, diffuseWeight);
+						specularWeight = Fraction(proximityFraction, specularWeight);
 					}
 					else
 					{
@@ -189,8 +200,8 @@ namespace IntegerWorld
 					{
 						GetWeightsLambertBlinnPhong(shade.normal, HalfVector, diffuseWeight, specularWeight);
 						// Attenuate by cone and distance.
-						diffuseWeight = Fraction::Scale(coneFraction, Fraction::Scale(proximityFraction, diffuseWeight));
-						specularWeight = Fraction::Scale(coneFraction, Fraction::Scale(proximityFraction, specularWeight));
+						diffuseWeight = Fraction(coneFraction, Fraction(proximityFraction, diffuseWeight));
+						specularWeight = Fraction(coneFraction, Fraction(proximityFraction, specularWeight));
 					}
 					else
 					{
@@ -217,8 +228,8 @@ namespace IntegerWorld
 				}
 
 				// Scale by material properties.
-				diffuseWeight = Fraction::Scale(material.Diffuse, diffuseWeight);
-				specularWeight = Fraction::Scale(material.Specular, specularWeight);
+				diffuseWeight = Fraction(material.Diffuse, diffuseWeight);
+				specularWeight = Fraction(material.Specular, specularWeight);
 
 				// Fetch light color components.
 				const Rgb8::component_t lightR = Rgb8::Red(light.Color);
@@ -226,22 +237,30 @@ namespace IntegerWorld
 				const Rgb8::component_t lightB = Rgb8::Blue(light.Color);
 
 				// Apply diffuse contribution (albedo scaled by light color).
-				if (diffuseWeight > 0)
+				if (diffuseWeight > 0
+#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
+					&& Diffuse
+#endif
+					)
 				{
-					ColorMix(Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentR) * lightR) >> 8)),
-						Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentG) * lightG) >> 8)),
-						Fraction::Scale(diffuseWeight, static_cast<uint8_t>((uint16_t(FragmentB) * lightB) >> 8)));
+					ColorMix(Fraction(diffuseWeight, static_cast<uint8_t>((static_cast<uint16_t>(FragmentR) * lightR) >> 8)),
+						Fraction(diffuseWeight, static_cast<uint8_t>((static_cast<uint16_t>(FragmentG) * lightG) >> 8)),
+						Fraction(diffuseWeight, static_cast<uint8_t>((static_cast<uint16_t>(FragmentB) * lightB) >> 8)));
 				}
 
 				// Apply specular contribution (metallic-tinted).
-				if (specularWeight > 0)
+				if (specularWeight > 0
+#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
+					&& Specular
+#endif
+					)
 				{
-					ColorMix(Fraction::Scale(specularWeight,
-						Fraction::Interpolate(material.Metallic, lightR, Fraction::Scale(specularWeight, FragmentR))),
-						Fraction::Scale(specularWeight,
-							Fraction::Interpolate(material.Metallic, lightG, Fraction::Scale(specularWeight, FragmentG))),
-						Fraction::Scale(specularWeight,
-							Fraction::Interpolate(material.Metallic, lightB, Fraction::Scale(specularWeight, FragmentB))));
+					ColorMix(Fraction(specularWeight,
+						Interpolate(material.Metallic, lightR, Fraction(specularWeight, FragmentR))),
+						Fraction(specularWeight,
+							Interpolate(material.Metallic, lightG, Fraction(specularWeight, FragmentG))),
+						Fraction(specularWeight,
+							Interpolate(material.Metallic, lightB, Fraction(specularWeight, FragmentB))));
 				}
 			}
 
@@ -259,22 +278,30 @@ namespace IntegerWorld
 			StartShade(color);
 
 			// Start with emissive.
-			if (material.Emissive > 0)
+			if (material.Emissive > 0
+#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
+				&& Emissive
+#endif
+				)
 			{
 				// Apply emissivity first.
-				ShadeR = Fraction::Scale(material.Emissive, FragmentR);
-				ShadeG = Fraction::Scale(material.Emissive, FragmentG);
-				ShadeB = Fraction::Scale(material.Emissive, FragmentB);
+				ShadeR = Fraction(material.Emissive, FragmentR);
+				ShadeG = Fraction(material.Emissive, FragmentG);
+				ShadeB = Fraction(material.Emissive, FragmentB);
 			}
 
 			// Apply ambient light next (scaled by material.Diffuse).
-			if (material.Diffuse > 0)
+			if (material.Diffuse > 0
+#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
+				&& Diffuse
+#endif
+				)
 			{
-				ColorMix(Fraction::Scale(material.Diffuse,
+				ColorMix(Fraction(material.Diffuse,
 					uint8_t((uint16_t(FragmentR) * Rgb8::Red(AmbientLight)) >> 8)),
-					Fraction::Scale(material.Diffuse,
+					Fraction(material.Diffuse,
 						uint8_t((uint16_t(FragmentG) * Rgb8::Green(AmbientLight)) >> 8)),
-					Fraction::Scale(material.Diffuse,
+					Fraction(material.Diffuse,
 						uint8_t((uint16_t(FragmentB) * Rgb8::Blue(AmbientLight)) >> 8)));
 			}
 		}

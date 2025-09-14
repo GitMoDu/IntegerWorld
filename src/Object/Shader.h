@@ -35,7 +35,7 @@ namespace IntegerWorld
 			}
 			else
 			{
-				return UFRACTION16_1X - Fraction::GetUFraction16(uint32_t(z - rangeMin), uint32_t((rangeMax - rangeMin)));
+				return UFRACTION16_1X - UFraction16::GetScalar(uint32_t(z - rangeMin), uint32_t((rangeMax - rangeMin)));
 			}
 		}
 
@@ -65,7 +65,7 @@ namespace IntegerWorld
 			}
 			else
 			{
-				return Fraction::GetUFraction16(normalAbs, range);
+				return UFraction16::GetScalar(normalAbs, range);
 			}
 		}
 
@@ -396,7 +396,7 @@ namespace IntegerWorld
 		{
 			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(fragment.screen.z);
 
-			const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+			const uint8_t gray = Curves::Power2U8<>::Get(Fraction(proximityFraction, uint8_t(UINT8_MAX)));
 
 			rasterizer.DrawPixel(Rgb8::Color(gray, gray, gray),
 				fragment.screen.x, fragment.screen.y);
@@ -409,7 +409,7 @@ namespace IntegerWorld
 		{
 			const uint16_t z = int16_t(((int32_t)fragment.triangleScreenA.z + fragment.triangleScreenB.z + fragment.triangleScreenC.z) / 3);
 			const ufraction16_t proximityFraction = AbstractPixelShader::GetZFraction(z);
-			const uint8_t gray = Curves::Power2U8<>::Get(Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)));
+			const uint8_t gray = Curves::Power2U8<>::Get(Fraction(proximityFraction, uint8_t(UINT8_MAX)));
 			rasterizer.DrawTriangle(Rgb8::Color(gray, gray, gray),
 				fragment.triangleScreenA, fragment.triangleScreenB, fragment.triangleScreenC);
 		}
