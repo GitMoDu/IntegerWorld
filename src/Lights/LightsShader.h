@@ -292,7 +292,7 @@ namespace IntegerWorld
 			// Apply ambient light next (scaled by material.Diffuse).
 			if (material.Diffuse > 0
 #if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
-				&& Diffuse
+				&& Ambient
 #endif
 				)
 			{
