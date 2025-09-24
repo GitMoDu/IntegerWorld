@@ -5,7 +5,7 @@
 
 namespace IntegerWorld
 {
-	namespace DirectX
+	namespace SwapChainDirectX
 	{
 		// HLSL source for vertex and pixel shaders
 		static const char* vsSource = R"(

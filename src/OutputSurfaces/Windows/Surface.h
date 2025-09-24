@@ -1,12 +1,18 @@
 #ifndef _INTEGER_WORLD_DIRECTX_SURFACE_h
 #define _INTEGER_WORLD_DIRECTX_SURFACE_h
 
-#include "SwapChainSurface.h"
+#if defined(WINRT_ASSERT)
+#include "SwapChainSurfaceWinRT.h"
+#else
+#include "SwapChainSurfaceUniversal.h"
+#endif
+
+
 
 namespace IntegerWorld
 {
 	template<int16_t SurfaceWidth, int16_t SurfaceHeight>
-	class DirectXSurface : public DirectX::SwapChainSurface<SurfaceWidth, SurfaceHeight>
+	class DirectXSurface : public SwapChainDirectX::SwapChainSurface<SurfaceWidth, SurfaceHeight>
 	{
 	public:
 		DirectXSurface() = default;
@@ -123,9 +129,9 @@ namespace IntegerWorld
 			Rgb8::color_t src = color;
 			Rgb8::color_t dst = frameBuffer[y * SurfaceWidth + x];
 
-			uint8_t outR = std::min<uint16_t>(Rgb8::Red(src) + Rgb8::Red(dst), 255);
-			uint8_t outG = std::min<uint16_t>(Rgb8::Green(src) + Rgb8::Green(dst), 255);
-			uint8_t outB = std::min<uint16_t>(Rgb8::Blue(src) + Rgb8::Blue(dst), 255);
+			uint8_t outR = static_cast<uint8_t>(std::min<uint16_t>(Rgb8::Red(src) + Rgb8::Red(dst), 255));
+			uint8_t outG = static_cast<uint8_t>(std::min<uint16_t>(Rgb8::Green(src) + Rgb8::Green(dst), 255));
+			uint8_t outB = static_cast<uint8_t>(std::min<uint16_t>(Rgb8::Blue(src) + Rgb8::Blue(dst), 255));
 
 			frameBuffer[y * SurfaceWidth + x] = Rgb8::Color(outR, outG, outB);
 		}

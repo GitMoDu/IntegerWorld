@@ -1,9 +1,10 @@
-#ifndef _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_h
-#define _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_h
+#ifndef _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_UNIVERSAL_h
+#define _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_UNIVERSAL_h
 
-#include "DirectX.h"
+#if !defined(WINRT_ASSERT)
 
 #include "../../Framework/Interface.h"
+#include "SwapChainDirectX.h"
 #include <wrl/client.h>
 #include <d3d11_1.h>
 #include <dxgi1_2.h>
@@ -15,7 +16,7 @@
 
 namespace IntegerWorld
 {
-	namespace DirectX
+	namespace SwapChainDirectX
 	{
 		template<int16_t SurfaceWidth, int16_t SurfaceHeight>
 		class SwapChainSurface : public IOutputSurface
@@ -67,72 +68,68 @@ namespace IntegerWorld
 				{ { 1,  1, 0}, {1, 0} }
 			};
 
+
 			std::mutex surfaceMutex;
 			std::condition_variable surfaceCv;
 
+			std::mutex m_swapChainPanelMutex;
+
 		public:
-			SwapChainSurface() : IOutputSurface()
+			SwapChainSurface()
+				: IOutputSurface()
 			{
 				frameBuffer.resize(SurfaceWidth * SurfaceHeight, 0xFF000000);
 			}
 
-			// Set the SwapChainPanel reference from your UI code
-			void SetSwapChainPanel(Windows::UI::Xaml::Controls::SwapChainPanel^ panel)
+			void SetSwapChainPanel(winrt::Windows::UI::Xaml::Controls::SwapChainPanel& panel)
 			{
-				// Unsubscribe previous handler if any
-				if (swapChainPanel != nullptr)
+				std::lock_guard<std::mutex> lock(m_swapChainPanelMutex);
+
+				if (m_swapChainPanel != nullptr)
 				{
-					swapChainPanel->SizeChanged -= sizeChangedToken;
+					m_swapChainPanel.SizeChanged(m_sizeChangedToken);
 				}
 
-				swapChainPanel = panel;
+				m_swapChainPanel = panel;
 
-				// Subscribe to the SizeChanged event
-				sizeChangedToken = swapChainPanel->SizeChanged +=
-					ref new Windows::UI::Xaml::SizeChangedEventHandler(
-						[this](Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e)
+				m_sizeChangedToken = m_swapChainPanel.SizeChanged(
+					winrt::Windows::UI::Xaml::SizeChangedEventHandler(
+						[this](winrt::Windows::Foundation::IInspectable const& inner, winrt::Windows::UI::Xaml::SizeChangedEventArgs const& events)
 						{
+							std::lock_guard<std::mutex> panelLock(m_swapChainPanelMutex);
 							ResizeSwapChain();
-						});
+						}
+					));
+
 			}
 
 			void OnSwapChainPanelSizeChanged(
-				Windows::UI::Xaml::Controls::SwapChainPanel^ sender,
-				Windows::UI::Xaml::SizeChangedEventArgs^ e)
+				winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& sender,
+				winrt::Windows::UI::Xaml::SizeChangedEventArgs const& e)
 			{
 				ResizeSwapChain();
 			}
 
-		public:// Buffer managment interface.
+		public: // Buffer management interface.
 			bool StartSurface() final
 			{
-				if (!swapChainPanel)
+				std::lock_guard<std::mutex> panelLock(m_swapChainPanelMutex);
+				if (m_swapChainPanel == nullptr)
 					return false;
 
-				bool started = false;
-
-				swapChainPanel->Dispatcher->TryRunAsync(
-					Windows::UI::Core::CoreDispatcherPriority::Normal,
-					ref new Windows::UI::Core::DispatchedHandler([this, &started]()
-						{
-							started = D3dCreateDeviceAndSwapChain();
-							if (started)
-							{
-								CreateFrameResources();
-							}
-							{
-								std::lock_guard<std::mutex> lock(surfaceMutex);
-							}
-							surfaceCv.notify_one();
-						})
-				);
-
+				bool setupOk = D3dCreateDeviceAndSwapChain();
+				OutputDebugStringA(setupOk ? "D3D OK\n" : "D3D FAIL\n");
+				if (setupOk)
 				{
-					std::unique_lock<std::mutex> lock(surfaceMutex);
-					surfaceCv.wait(lock, [&started] { return started; });
+					setupOk &= CreateFrameResources();
+
+					{
+						std::unique_lock<std::mutex> lock(surfaceMutex);
+						surfaceCv.wait_for(lock, std::chrono::seconds(2), [&setupOk] { return setupOk; });
+					}
 				}
 
-				return started;
+				return setupOk;
 			}
 
 			void StopSurface() final
@@ -156,28 +153,27 @@ namespace IntegerWorld
 				frameBuffer.clear();
 
 				// Optionally, unsubscribe from events
-				if (swapChainPanel != nullptr)
 				{
-					swapChainPanel->SizeChanged -= sizeChangedToken;
-					swapChainPanel = nullptr;
+					std::lock_guard<std::mutex> lock(m_swapChainPanelMutex);
+					if (m_swapChainPanel)
+					{
+						m_swapChainPanel.SizeChanged(m_sizeChangedToken);
+						m_swapChainPanel = nullptr;
+					}
 				}
 			}
 
-			/// <summary>
-			/// Flips the rendering surface by presenting the current frame and synchronizing with the UI thread.
-			/// </summary>
 			void FlipSurface() final
 			{
 				UploadFrameBuffer();
 				RenderFrameTexture();
 
-				swapChainPanel->Dispatcher->TryRunAsync(
-					Windows::UI::Core::CoreDispatcherPriority::Normal,
-					ref new Windows::UI::Core::DispatchedHandler([this]()
+				auto asyncOp = m_swapChainPanel.Dispatcher().TryRunAsync(
+					winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
+					winrt::Windows::UI::Core::DispatchedHandler([this]
 						{
 							if (swapChain && frameQuery)
 							{
-								// V-Sync is not needed as a new frame will only start drawing after IsSurfaceReady() returns true.
 								swapChain->Present(0, 0);
 							}
 							{
@@ -193,9 +189,6 @@ namespace IntegerWorld
 				}
 			}
 
-			/// <summary>
-			/// </summary>
-			/// <returns>Returns true if the Direct3D rendering surface is ready for drawing.</returns>
 			bool IsSurfaceReady() final
 			{
 				if (!d3dDevice || !d3dContext || !swapChain || !renderTargetView)
@@ -204,24 +197,10 @@ namespace IntegerWorld
 				if (frameQueryIssued && frameQuery)
 				{
 					HRESULT hr = d3dContext->GetData(frameQuery.Get(), nullptr, 0, D3D11_ASYNC_GETDATA_DONOTFLUSH);
-					if (hr == S_OK)
-					{
-						d3dContext->End(frameQuery.Get());
-						frameQueryIssued = true;
-						return true;
-					}
-					else if (hr == S_FALSE)
-					{
-						// GPU still busy
-					}
-					else
-					{
-						// Query error, treat as not ready
-					}
+					return hr == S_OK;
 				}
 				else
 				{
-
 					d3dContext->End(frameQuery.Get());
 					frameQueryIssued = true;
 				}
@@ -229,20 +208,17 @@ namespace IntegerWorld
 				return false;
 			}
 
-		public:// Buffer window interface.
+		public: // Buffer window interface.
 			void GetSurfaceDimensions(int16_t& width, int16_t& height, uint8_t& colorDepth) final
 			{
 				if (swapChain != nullptr)
 				{
-					//width = static_cast<int16_t>(swapChainPanel->ActualWidth);
-					//height = static_cast<int16_t>(swapChainPanel->ActualHeight);
 					width = SurfaceWidth;
 					height = SurfaceHeight;
-					colorDepth = 32; // Assuming 32-bit color depth (BGRA8)
+					colorDepth = 32; // 32-bit color depth (BGRA8)
 				}
 				else
 				{
-
 					width = 0;
 					height = 0;
 					colorDepth = 0;
@@ -250,7 +226,6 @@ namespace IntegerWorld
 			}
 
 		private:
-			// Call this in FlipSurface after rendering
 			void UploadFrameBuffer()
 			{
 				D3D11_MAPPED_SUBRESOURCE mapped;
@@ -291,7 +266,6 @@ namespace IntegerWorld
 
 			bool D3dCreateDeviceAndSwapChain()
 			{
-				// Create D3D11 device and context
 				UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 #if defined(_DEBUG)
 				creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -320,35 +294,26 @@ namespace IntegerWorld
 					&featureLevel,
 					&baseContext
 				);
+				if (FAILED(hr)) { OutputDebugStringA("D3D11CreateDevice failed\n"); return false; }
 
-				if (FAILED(hr))
-					return false;
-
-				// Query for ID3D11Device1 and ID3D11DeviceContext1
 				hr = baseDevice.As(&d3dDevice);
-				if (FAILED(hr)) return false;
+				if (FAILED(hr)) { OutputDebugStringA("baseDevice.As failed\n"); return false; }
 				hr = baseContext.As(&d3dContext);
-				if (FAILED(hr)) return false;
+				if (FAILED(hr)) { OutputDebugStringA("baseContext.As failed\n"); return false; }
 
-				// Get DXGI device
 				Microsoft::WRL::ComPtr<IDXGIDevice1> dxgiDevice;
 				hr = d3dDevice.As(&dxgiDevice);
-				if (FAILED(hr)) return false;
+				if (FAILED(hr)) { OutputDebugStringA("d3dDevice.As IDXGIDevice1 failed\n"); return false; }
 
-				// Get DXGI adapter
 				Microsoft::WRL::ComPtr<IDXGIAdapter> dxgiAdapter;
 				hr = dxgiDevice->GetAdapter(&dxgiAdapter);
-				if (FAILED(hr)) return false;
+				if (FAILED(hr)) { OutputDebugStringA("GetAdapter failed\n"); return false; }
 
-				// Get DXGI factory
 				Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
-				hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), &dxgiFactory);
-				if (FAILED(hr)) return false;
+				hr = dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(dxgiFactory.GetAddressOf()));
+				if (FAILED(hr)) { OutputDebugStringA("GetParent IDXGIFactory2 failed\n"); return false; }
 
-				// Describe swap chain
 				DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-				swapChainDesc.Width = swapChainPanel->Width; // Use panel size
-				swapChainDesc.Height = swapChainPanel->Height; // Use panel size
 				swapChainDesc.Width = SurfaceWidth;
 				swapChainDesc.Height = SurfaceHeight;
 				swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -361,33 +326,44 @@ namespace IntegerWorld
 				swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 				swapChainDesc.Flags = 0;
 
-				// Create swap chain for SwapChainPanel
 				hr = dxgiFactory->CreateSwapChainForComposition(
 					dxgiDevice.Get(),
 					&swapChainDesc,
 					nullptr,
 					&swapChain
 				);
+				if (FAILED(hr)) { OutputDebugStringA("CreateSwapChainForComposition failed\n"); return false; }
 
-				if (FAILED(hr)) return false;
+				IDXGISwapChain* baseSwapChain = reinterpret_cast<IDXGISwapChain*>(swapChain.GetAddressOf());
 
-				// Associate swap chain with SwapChainPanel
-				Microsoft::WRL::ComPtr<ISwapChainPanelNative> panelNative;
-				hr = reinterpret_cast<IUnknown*>(swapChainPanel)->QueryInterface(__uuidof(ISwapChainPanelNative), &panelNative);
-				if (FAILED(hr)) return false;
+				// capture swapChain into a local ComPtr to use in the UI thread
+				auto swapCopy = swapChain; // ComPtr<IDXGISwapChain1>
 
-				hr = panelNative->SetSwapChain(swapChain.Get());
-				if (FAILED(hr)) return false;
+				// Run QueryInterface/SetSwapChain on the UI thread
+				m_swapChainPanel.Dispatcher().RunAsync(
+					winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
+					winrt::Windows::UI::Core::DispatchedHandler([this, swapCopy]()
+						{
+							Microsoft::WRL::ComPtr<ISwapChainPanelNative> panelNative;
+							::IUnknown* nativeInterface = reinterpret_cast<::IUnknown*>(winrt::get_abi(m_swapChainPanel));
+							HRESULT hr = nativeInterface->QueryInterface(__uuidof(ISwapChainPanelNative),
+								reinterpret_cast<void**>(panelNative.GetAddressOf()));
+							if (SUCCEEDED(hr) && panelNative)
+							{
+								// pass the real COM pointer (Get()).
+								panelNative->SetSwapChain(static_cast<IDXGISwapChain*>(swapCopy.Get()));
+								// panelNative will be released automatically when ComPtr goes out of scope
+							}
+						}));
 
-				// Create render target view
+
 				Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-				hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
-				if (FAILED(hr)) return false;
+				hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
+				if (FAILED(hr)) { OutputDebugStringA("GetBuffer failed\n"); return false; }
 
 				hr = d3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
-				if (FAILED(hr)) return false;
+				if (FAILED(hr)) { OutputDebugStringA("CreateRenderTargetView failed\n"); return false; }
 
-				// After d3dDevice and d3dContext are initialized
 				D3D11_QUERY_DESC queryDesc = {};
 				queryDesc.Query = D3D11_QUERY_EVENT;
 				queryDesc.MiscFlags = 0;
@@ -400,9 +376,9 @@ namespace IntegerWorld
 				return true;
 			}
 
-			void CreateFrameResources()
+			bool CreateFrameResources()
 			{
-				frameBuffer.resize(SurfaceWidth * SurfaceHeight, 0xFF000000); // Opaque black
+				frameBuffer.resize(SurfaceWidth * SurfaceHeight, 0xFF000000);
 
 				D3D11_TEXTURE2D_DESC desc = {};
 				desc.Width = SurfaceWidth;
@@ -420,15 +396,10 @@ namespace IntegerWorld
 				initData.SysMemPitch = SurfaceWidth * sizeof(uint32_t);
 
 				HRESULT hr = d3dDevice->CreateTexture2D(&desc, &initData, &frameTexture);
-				if (FAILED(hr)) { /* handle error */ }
+				if (FAILED(hr)) { return false; }
 
 				d3dDevice->CreateShaderResourceView(frameTexture.Get(), nullptr, &frameSRV);
 
-				// Compile and create shaders, input layout, and vertex buffer
-				// You can compile the HLSL shaders at build time or runtime
-				// For runtime compilation, use D3DCompile from d3dcompiler.h
-
-				// Create sampler state
 				D3D11_SAMPLER_DESC samplerDesc = {};
 				samplerDesc.Filter = D3D11_FILTER_MAXIMUM_ANISOTROPIC;
 				samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -446,52 +417,48 @@ namespace IntegerWorld
 
 				d3dDevice->CreateSamplerState(&samplerDesc, &samplerState);
 
-				// Compile and create vertex shader
 				Microsoft::WRL::ComPtr<ID3DBlob> vsBlob;
-				D3DCompile(DirectX::vsSource, strlen(DirectX::vsSource), nullptr, nullptr, nullptr, "main", "vs_4_0", 0, 0, &vsBlob, nullptr);
+				D3DCompile(SwapChainDirectX::vsSource, strlen(SwapChainDirectX::vsSource), nullptr, nullptr, nullptr, "main", "vs_4_0", 0, 0, &vsBlob, nullptr);
 				d3dDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
 
-				// Compile and create pixel shader
 				Microsoft::WRL::ComPtr<ID3DBlob> psBlob;
-				D3DCompile(DirectX::psSource, strlen(DirectX::psSource), nullptr, nullptr, nullptr, "main", "ps_4_0", 0, 0, &psBlob, nullptr);
+				D3DCompile(SwapChainDirectX::psSource, strlen(SwapChainDirectX::psSource), nullptr, nullptr, nullptr, "main", "ps_4_0", 0, 0, &psBlob, nullptr);
 				d3dDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
 
-				// Create input layout
 				D3D11_INPUT_ELEMENT_DESC layoutDesc[] = {
 					{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 					{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 				};
 				d3dDevice->CreateInputLayout(layoutDesc, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
 
-				// Create vertex buffer for full-screen quad
 				D3D11_BUFFER_DESC vbDesc = {};
 				vbDesc.Usage = D3D11_USAGE_DEFAULT;
 				vbDesc.ByteWidth = sizeof(quadVertices);
 				vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 				D3D11_SUBRESOURCE_DATA vbData = {};
 				vbData.pSysMem = quadVertices;
-				d3dDevice->CreateBuffer(&vbDesc, &vbData, &vertexBuffer);
+
+				hr = d3dDevice->CreateBuffer(&vbDesc, &vbData, &vertexBuffer);
+				if (FAILED(hr)) { return false; }
+
+				return true;
 			}
 
 			void ResizeSwapChain()
 			{
 				if (swapChain)
 				{
-					// Get new size from swapChainPanel
-					auto width = static_cast<UINT>(swapChainPanel->ActualWidth);
-					auto height = static_cast<UINT>(swapChainPanel->ActualHeight);
+					auto width = static_cast<UINT>(m_swapChainPanel.ActualWidth());
+					auto height = static_cast<UINT>(m_swapChainPanel.ActualHeight());
 
-					// Release old render target
 					renderTargetView.Reset();
 
-					// Resize swap chain buffers
 					HRESULT hr = swapChain->ResizeBuffers(
 						2, width, height, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
 					if (SUCCEEDED(hr))
 					{
-						// Recreate render target view
 						Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-						hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
+						hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
 						if (SUCCEEDED(hr))
 						{
 							d3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
