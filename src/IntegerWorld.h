@@ -21,5 +21,6 @@
 #include "Engine/PerformanceLogTask.h"
 
 #include "Assets/Shapes.h"
+#include "Assets/Cameras.h"
 
 #endif
