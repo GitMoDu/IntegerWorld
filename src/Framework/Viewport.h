@@ -38,6 +38,8 @@ namespace IntegerWorld
 
 		uint16_t drawDistance = RangeMax;
 
+		uint8_t frustumShifts = 5;
+
 	public:
 		ViewportProjector() {}
 
@@ -47,6 +49,7 @@ namespace IntegerWorld
 			verticalDenum = viewHeight;
 			ViewWidthHalf = MinValue<uint16_t>(INT16_MAX, uint16_t(viewWidth >> 1));
 			ViewHeightHalf = MinValue<uint16_t>(INT16_MAX, uint16_t(viewHeight >> 1));
+			frustumShifts = UnitShift - GetBitShifts(MaxValue<uint16_t>(viewWidth, viewHeight) / 2);
 		}
 
 		/// <summary>
@@ -59,7 +62,7 @@ namespace IntegerWorld
 
 		void SetDrawDistance(const uint16_t distance)
 		{
-			drawDistance = MinValue(distance, RangeMax);
+			drawDistance = MinValue<uint16_t>(distance, VERTEX16_RANGE);
 		}
 
 		uint16_t GetFocalDistance() const
@@ -104,7 +107,7 @@ namespace IntegerWorld
 			// Calculate the four corners of the near plane.
 			{
 				// Near distance.
-				const int16_t nearDist = distanceNum >> 5;
+				const int16_t nearDist = distanceNum >> frustumShifts;
 
 				// Calculate plane center.
 				const vertex16_t nearCenter
