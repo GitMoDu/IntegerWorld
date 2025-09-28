@@ -24,7 +24,7 @@ namespace Assets
 				{ SHAPE_UNIT / 2,  SHAPE_UNIT / 2,  SHAPE_UNIT / 2},
 				{-SHAPE_UNIT / 2,  SHAPE_UNIT / 2,  SHAPE_UNIT / 2}
 			};
-			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+			static constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
 			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
@@ -36,7 +36,7 @@ namespace Assets
 				{0, 5, 4}, {0, 1, 5}
 			};
 
-			constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			static constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 
 			static constexpr vertex16_t Normals[TriangleCount] PROGMEM
 			{
@@ -55,7 +55,7 @@ namespace Assets
 				{0, 4}, {1, 5}, {2, 6}, {3, 7}
 			};
 
-			constexpr uint8_t EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
+			static constexpr uint8_t EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
 		}
 
 		namespace Octahedron
@@ -69,7 +69,7 @@ namespace Assets
 				{ 0, 0, ((SHAPE_UNIT * 3) / 4)},
 				{ 0, 0, -((SHAPE_UNIT * 3) / 4)}
 			};
-			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+			static constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
 			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
@@ -82,7 +82,7 @@ namespace Assets
 				{1, 3, 5},
 				{1, 5, 2}
 			};
-			constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			static constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 
 			static constexpr edge_line_t Edges[] PROGMEM
 			{
@@ -90,13 +90,13 @@ namespace Assets
 				{1, 2}, {1, 3}, {1, 4}, {1, 5},
 				{2, 4}, {2, 5}, {3, 4}, {3, 5}
 			};
-			constexpr uint8_t EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
+			static constexpr uint8_t EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
 		}
 
 		namespace Icosahedron
 		{
-			constexpr int16_t X = ((int32_t)SHAPE_UNIT * 525731) / 1250000;
-			constexpr int16_t Z = ((int32_t)SHAPE_UNIT * 850651) / 1250000;
+			static constexpr int16_t X = ((int32_t)SHAPE_UNIT * 525731) / 1250000;
+			static constexpr int16_t Z = ((int32_t)SHAPE_UNIT * 850651) / 1250000;
 
 			static constexpr vertex16_t Vertices[] PROGMEM
 			{
@@ -113,7 +113,7 @@ namespace Assets
 				{  Z, -X,  0 },
 				{ -Z, -X,  0 }
 			};
-			constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+			static constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
 			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
@@ -138,7 +138,7 @@ namespace Assets
 				{9, 5, 2},
 				{7, 11, 2}
 			};
-			constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			static constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 
 			static constexpr edge_line_t Edges[] PROGMEM
 			{
@@ -153,7 +153,7 @@ namespace Assets
 				{8, 10},
 				{9, 11}
 			};
-			constexpr auto EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
+			static constexpr auto EdgeCount = sizeof(Edges) / sizeof(edge_line_t);
 		}
 
 		namespace Sphere
@@ -207,7 +207,7 @@ namespace Assets
 				{(UpSize * (int32_t)(746)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1208)) / DownSize},
 				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1420)) / DownSize},
 			};
-			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+			static constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
 			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
@@ -292,7 +292,7 @@ namespace Assets
 				{ 17, 7, 40 },
 				{ 40, 39, 30 },
 			};
-			constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			static constexpr uint8_t TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 		}
 	}
 }
