@@ -210,30 +210,33 @@ namespace IntegerWorld
 			// Calculate two vectors in the plane
 			const vertex16_t v1
 			{
-				int16_t(b.x - a.x),
-				int16_t(b.y - a.y),
-				int16_t(b.z - a.z)
+				static_cast<int16_t>(b.x - a.x),
+				static_cast<int16_t>(b.y - a.y),
+				static_cast<int16_t>(b.z - a.z)
 			};
 
 			const vertex16_t v2
 			{
-				int16_t(c.x - a.x),
-				int16_t(c.y - a.y),
-				int16_t(c.z - a.z)
+				static_cast<int16_t>(c.x - a.x),
+				static_cast<int16_t>(c.y - a.y),
+				static_cast<int16_t>(c.z - a.z)
 			};
 
 			// Calculate the normal using cross product
-			plane.x = int16_t(SignedRightShift((int32_t(v1.y) * v2.z) - (int32_t(v1.z) * v2.y), UnitShift));
-			plane.y = int16_t(SignedRightShift((int32_t(v1.z) * v2.x) - (int32_t(v1.x) * v2.z), UnitShift));
-			plane.z = int16_t(SignedRightShift((int32_t(v1.x) * v2.y) - (int32_t(v1.y) * v2.x), UnitShift));
+			vertex32_t normal32{ (static_cast<int32_t>(v1.y) * v2.z) - (static_cast<int32_t>(v1.z) * v2.y),
+								(static_cast<int32_t>(v1.z) * v2.x) - (static_cast<int32_t>(v1.x) * v2.z),
+								(static_cast<int32_t>(v1.x) * v2.y) - (static_cast<int32_t>(v1.y) * v2.x) };
 
-			// Normalize the normal vector (important for distance calculation)
-			NormalizeVertex16(plane);
+			// Normalize the normal vector.
+			NormalizeVertex32Fast(normal32);
+			plane = { static_cast<int16_t>(normal32.x),
+					static_cast<int16_t>(normal32.y),
+					static_cast<int16_t>(normal32.z) };
 
 			// Calculate the plane distance: -dot(normal, point)
-			plane.distance = -(int32_t)(SignedRightShift((int32_t(plane.x) * a.x) +
-				(int32_t(plane.y) * a.y) +
-				(int32_t(plane.z) * a.z), UnitShift));
+			plane.distance = -static_cast<int32_t>(SignedRightShift((normal32.x * a.x) +
+				(normal32.y * a.y) +
+				(normal32.z * a.z), UnitShift));
 		}
 	};
 }
