@@ -83,7 +83,7 @@ namespace IntegerWorld
 				frameBuffer.resize(SurfaceWidth * SurfaceHeight, 0xFF000000);
 			}
 
-			void SetSwapChainPanel(winrt::Windows::UI::Xaml::Controls::SwapChainPanel& panel)
+			void SetSwapChainPanel(const winrt::Windows::UI::Xaml::Controls::SwapChainPanel& panel)
 			{
 				std::lock_guard<std::mutex> lock(m_swapChainPanelMutex);
 
