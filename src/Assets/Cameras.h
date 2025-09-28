@@ -10,28 +10,27 @@ namespace IntegerWorld
 {
 	namespace Cameras
 	{
-		template<const uint32_t PeriodMillis = 1>
+		template<const uint32_t PeriodMillis = 10>
 		class FreeCameraTask : private TS::Task
 		{
 		private:
-			static constexpr uint16_t Frequency = 1000 / PeriodMillis;
-			static constexpr uint8_t LookGainShifts = 6;
+			static constexpr uint8_t LookGainShifts = 5;
+			static constexpr uint8_t MoveGainShifts = 11;
 
 		public:
-			ufraction16_t LookXSensitivity = UFraction16::GetScalar<int32_t>(300, 1000);
-			ufraction16_t LookYSensitivity = UFraction16::GetScalar<int32_t>(300, 1000);
+			ufraction16_t LookXSensitivity = UFraction16::GetScalar<int32_t>(150, 1000);
+			ufraction16_t LookYSensitivity = UFraction16::GetScalar<int32_t>(150, 1000);
 
-			ufraction16_t MoveXYSensitivity = UFraction16::GetScalar<int32_t>(300, 1000);
-
-			ufraction16_t MoveZSensitivity = UFraction16::GetScalar<int32_t>(300, 1000);
+			ufraction16_t MoveXYSensitivity = UFraction16::GetScalar<int32_t>(150, 1000);
+			ufraction16_t MoveZSensitivity = UFraction16::GetScalar<int32_t>(100, 1000);
 
 		private:
-			Filters::LowPassI16<7> MoveZFilter{};
-			Filters::LowPassI16<7> MoveXFilter{};
-			Filters::LowPassI16<7> MoveYFilter{};
+			Filters::LowPassI16<11> MoveZFilter{};
+			Filters::LowPassI16<11> MoveXFilter{};
+			Filters::LowPassI16<11> MoveYFilter{};
 
-			Filters::LowPassI16<3> LookXFilter{};
-			Filters::LowPassI16<3> LookYFilter{};
+			Filters::EmaI16<3> LookXFilter{};
+			Filters::EmaI16<3> LookYFilter{};
 
 			vertex16_t Position{};
 			int16_t Yaw = 0;
@@ -41,30 +40,43 @@ namespace IntegerWorld
 		public:
 			int16_t Roll = 0;
 
+		private:
+			uint32_t LastUpdate = 0;
+
 		public:
 			FreeCameraTask(TS::Scheduler& scheduler,
 				camera_state_t* cameraControls)
-				: Task(PeriodMillis, TASK_FOREVER, &scheduler, true)
+				: TS::Task(PeriodMillis, TASK_FOREVER, &scheduler, true)
 				, CameraControls(cameraControls)
 			{
 			}
 
 			bool Callback() final
 			{
-				MoveZFilter.Step();
-				MoveXFilter.Step();
-				MoveYFilter.Step();
-				LookXFilter.Step();
-				LookYFilter.Step();
+				const uint32_t timestamp = micros();
+				const int32_t deltaTime = timestamp - LastUpdate;
+				const int32_t deltaScale = deltaTime >> 8;
+
+				LastUpdate = timestamp;
+
+				const uint8_t filterSteps = 1 + ((deltaTime / PeriodMillis) / 1000);
+				for (uint8_t i = 0; i < filterSteps; i++)
+				{
+					MoveZFilter.Step();
+					MoveXFilter.Step();
+					MoveYFilter.Step();
+					LookXFilter.Step();
+					LookYFilter.Step();
+				}
 
 				const int16_t lookX = Fraction(LookXSensitivity, LookXFilter.Get());
 
-				Yaw += (lookX << LookGainShifts) / Frequency;
+				Yaw += (deltaScale * lookX) >> LookGainShifts;
 				Yaw %= ANGLE_RANGE;
 
 				const fraction16_t lookY = Fraction16::GetScalar<int16_t>(LookYFilter.Get(), INT16_MAX);
 				const int16_t lookYScaled = Fraction(Fraction(LookYSensitivity, lookY), ANGLE_180);
-				Pitch += (lookYScaled << LookGainShifts) / Frequency;
+				Pitch += (deltaScale * lookYScaled) >> LookGainShifts;
 
 				// Saturate Pitch to [-ANGLE_90, +ANGLE_90]
 				if (Pitch < -int32_t(ANGLE_90))
@@ -86,9 +98,9 @@ namespace IntegerWorld
 				const fraction16_t cosYaw = Cosine16(Yaw);
 
 				// Move camera in world
-				Position.x += (Fraction(sinYaw, moveForward) + Fraction(cosYaw, moveStrafe)) / Frequency;
-				Position.y += moveUp / Frequency;
-				Position.z += (Fraction(cosYaw, moveForward) + Fraction(fraction16_t(-sinYaw), moveStrafe)) / Frequency;
+				Position.x += (deltaScale * (Fraction(sinYaw, moveForward) + Fraction(cosYaw, moveStrafe))) >> MoveGainShifts;
+				Position.y += (deltaScale * moveUp) >> MoveGainShifts;
+				Position.z += (deltaScale * (Fraction(cosYaw, moveForward) + Fraction(fraction16_t(-sinYaw), moveStrafe))) >> MoveGainShifts;
 
 				if (CameraControls != nullptr)
 				{
@@ -141,6 +153,8 @@ namespace IntegerWorld
 
 				LookXFilter.Clear();
 				LookYFilter.Clear();
+
+				LastUpdate = micros();
 			}
 
 		private:
