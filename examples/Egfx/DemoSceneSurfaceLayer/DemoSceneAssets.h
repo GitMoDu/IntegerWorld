@@ -3,27 +3,13 @@
 
 #include <IntegerWorld.h>
 
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
+#include "CubeTexture.h"
+#endif
+
 namespace Assets
 {
 	using namespace IntegerWorld;
-
-	namespace Palletes
-	{
-		namespace Cube
-		{
-			static constexpr Rgb8::color_t Pallete[Shapes::Cube::TriangleCount]
-			{
-				0xFF0000,
-				0x00FF00,
-				0x0000FF,
-				0xFFFF00,
-				0x00FFFF,
-				0xFF00FF
-			};
-
-			constexpr uint8_t PalleteSize = sizeof(Pallete) / sizeof(Pallete[0]);
-		}
-	}
 
 	namespace Shapes
 	{
@@ -142,97 +128,549 @@ namespace Assets
 		{
 			static constexpr vertex16_t Vertices[] =
 			{
-				{-SHAPE_UNIT / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 3 / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 5 / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 7 / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 9 / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 11 / 28, -SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 13 / 28, -SHAPE_UNIT / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 3 / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 5 / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 7 / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 9 / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 11 / 28, 0},
-				{-SHAPE_UNIT / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 3 / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 5 / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 7 / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 9 / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 11 / 28,  SHAPE_UNIT * 13 / 28, 0},
-				{ SHAPE_UNIT * 13 / 28,  SHAPE_UNIT * 13 / 28, 0}
+				{ -SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 7 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 5 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 3 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 1 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 3 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 5 / 28, 0, -SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 7 / 28, 0, -SHAPE_UNIT * 1 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 1 / 28},
+				{SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 1 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 3 / 28},
+				{SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 3 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 5 / 28},
+				{SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 5 / 28},
+
+				{ -SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{ -SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 1 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 3 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 5 / 28, 0,SHAPE_UNIT * 7 / 28},
+				{SHAPE_UNIT * 7 / 28, 0,SHAPE_UNIT * 7 / 28}
 			};
 
 			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 		}
-	}
 
-	namespace Shaders
-	{
-		struct LightBillboardFragmentShader : IFragmentShader<billboard_fragment_t>
+		namespace SphereLod
 		{
-			ILightSource* LightSource = nullptr;
-
-			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader) final
+			namespace LoD0
 			{
-				FragmentShade(rasterizer, fragment);
+				static constexpr int16_t UpSize = 1;
+
+				static constexpr int16_t DownSize = 1;
+
+				static constexpr vertex16_t Vertices[] PROGMEM
+				{
+					{(UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+				};
+
+				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+
+				static constexpr triangle_face_t Triangles[] PROGMEM
+				{
+					{ 2, 3, 4 },
+					{ 3, 5, 6 },
+					{ 6, 7, 4 },
+					{ 4, 3, 6 },
+					{ 3, 8, 5 },
+					{ 9, 10, 1 },
+					{ 6, 10, 7 },
+					{ 1, 6, 5 },
+					{ 1, 10, 6 },
+					{ 8, 15, 14 },
+					{ 15, 3, 2 },
+					{ 8, 3, 15 },
+					{ 17, 18, 19 },
+					{ 21, 22, 23 },
+					{ 11, 24, 25 },
+					{ 13, 14, 25 },
+					{ 25, 24, 13 },
+					{ 25, 12, 11 },
+					{ 14, 15, 25 },
+					{ 15, 2, 12 },
+					{ 12, 25, 15 },
+					{ 20, 26, 27 },
+					{ 26, 28, 29 },
+					{ 29, 27, 26 },
+					{ 13, 30, 14 },
+					{ 29, 13, 16 },
+					{ 30, 29, 28 },
+					{ 30, 13, 29 },
+					{ 31, 32, 9 },
+					{ 26, 31, 28 },
+					{ 20, 32, 26 },
+					{ 32, 31, 26 },
+					{ 19, 33, 17 },
+					{ 34, 35, 23 },
+					{ 35, 36, 23 },
+					{ 4, 37, 2 },
+					{ 7, 38, 4 },
+					{ 38, 35, 37 },
+					{ 37, 4, 38 },
+					{ 11, 12, 34 },
+					{ 37, 12, 2 },
+					{ 35, 34, 37 },
+					{ 22, 11, 34 },
+					{ 34, 23, 22 },
+					{ 23, 39, 21 },
+					{ 19, 39, 36 },
+					{ 23, 36, 39 },
+					{ 21, 39, 41 },
+					{ 18, 39, 19 },
+					{ 18, 41, 39 },
+					{ 16, 13, 24 },
+					{ 9, 32, 17 },
+					{ 32, 20, 18 },
+					{ 18, 17, 32 },
+					{ 30, 28, 0 },
+					{ 28, 31, 0 },
+					{ 31, 9, 1 },
+					{ 1, 0, 31 },
+					{ 27, 29, 16 },
+					{ 16, 40, 27 },
+					{ 40, 21, 41 },
+					{ 41, 20, 27 },
+					{ 27, 40, 41 },
+					{ 24, 40, 16 },
+					{ 22, 24, 11 },
+					{ 40, 22, 21 },
+					{ 40, 24, 22 },
+					{ 41, 18, 20 },
+					{ 34, 12, 37 },
+					{ 36, 33, 19 },
+					{ 38, 36, 35 },
+					{ 7, 33, 38 },
+					{ 33, 36, 38 },
+					{ 7, 10, 33 },
+					{ 10, 9, 17 },
+					{ 17, 33, 10 },
+					{ 5, 8, 0 },
+					{ 14, 30, 8 },
+					{ 30, 0, 8 },
+					{ 0, 1, 5 },
+				};
+
+				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 			}
 
+			namespace LoD1
+			{
+				static constexpr int16_t UpSize = 105;
+
+				static constexpr int16_t DownSize = 100;
+
+				static constexpr vertex16_t Vertices[] PROGMEM
+				{
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1217)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1217)) / DownSize},
+					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
+				};
+
+				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
+
+				static constexpr triangle_face_t Triangles[] PROGMEM
+				{
+					{ 0, 1, 2 },
+					{ 3, 0, 2 },
+					{ 2, 4, 3 },
+					{ 2, 5, 4 },
+					{ 1, 5, 2 },
+					{ 6, 7, 8 },
+					{ 8, 9, 6 },
+					{ 9, 10, 6 },
+					{ 10, 11, 6 },
+					{ 11, 7, 6 },
+					{ 11, 0, 3 },
+					{ 1, 10, 9 },
+					{ 3, 7, 11 },
+					{ 1, 0, 10 },
+					{ 3, 4, 7 },
+					{ 0, 11, 10 },
+					{ 4, 8, 7 },
+					{ 4, 5, 8 },
+					{ 5, 9, 8 },
+					{ 5, 1, 9 },
+				};
+
+				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
+			}
+		}
+	}
+
+	namespace Palletes
+	{
+		namespace Cube
+		{
+			static constexpr Rgb8::color_t Albedos[]
+			{
+				0xFF0000,
+				0x00FF00,
+				0x0000FF,
+				0xFFFF00,
+				0x00FFFF,
+				0xFF00FF
+			};
+
+			static constexpr uint8_t AlbedoPallete[Shapes::Cube::TriangleCount]
+			{
+				0,0,
+				1,1,
+				2,2,
+				3,3,
+				4,4,
+				5,5
+			};
+		}
+	}
+
+	namespace RenderObjects
+	{
+		using namespace Shapes;
+		using namespace ::IntegerWorld::RenderObjects;
+
+		struct CubeEdgeLineObject : Edge::SimpleStaticEdgeLineObject<Cube::VertexCount, Cube::EdgeCount>
+		{
+			CubeEdgeLineObject()
+				: Edge::SimpleStaticEdgeLineObject<Cube::VertexCount, Cube::EdgeCount>(Cube::Vertices, Cube::Edges)
+			{
+			}
+		};
+
+		struct CubeEdgeVertexObject : Edge::SimpleStaticEdgeVertexObject<Cube::VertexCount, Cube::EdgeCount>
+		{
+			CubeEdgeVertexObject()
+				: Edge::SimpleStaticEdgeVertexObject<Cube::VertexCount, Cube::EdgeCount>(Cube::Vertices, Cube::Edges)
+			{
+			}
+		};
+
+		class CubeMeshTriangleObject
+			: public Mesh::TriangleShadeObject<
+			Cube::VertexCount, Cube::TriangleCount,
+			PrimitiveSources::Vertex::Static::Source,
+			PrimitiveSources::Triangle::Static::Source,
+			FrustumCullingEnum::PrimitiveCulling,
+			FaceCullingEnum::BackfaceCulling,
+			PrimitiveSources::Albedo::Static::PalletedSource>
+		{
+		private:
+			using Base = Mesh::TriangleShadeObject<
+				Cube::VertexCount, Cube::TriangleCount,
+				PrimitiveSources::Vertex::Static::Source,
+				PrimitiveSources::Triangle::Static::Source,
+				FrustumCullingEnum::PrimitiveCulling,
+				FaceCullingEnum::BackfaceCulling,
+				PrimitiveSources::Albedo::Static::PalletedSource>;
+
+		private:
+			PrimitiveSources::Vertex::Static::Source VerticesSource;
+			PrimitiveSources::Triangle::Static::Source TrianglesSource;
+			PrimitiveSources::Albedo::Static::PalletedSource AlbedosSource;
+
+		public:
+			CubeMeshTriangleObject()
+				: VerticesSource(Cube::Vertices)
+				, TrianglesSource(Cube::Triangles)
+				, AlbedosSource(Palletes::Cube::Albedos, Palletes::Cube::AlbedoPallete)
+				, Base(VerticesSource, TrianglesSource, AlbedosSource)
+			{
+			}
+		};
+
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
+		class CubeTexturedTriangleObject
+			: public Mesh::TriangleShadeObject<
+			Cube::VertexCount, Cube::TriangleCount,
+			PrimitiveSources::Vertex::Static::Source,
+			PrimitiveSources::Triangle::Static::Source,
+			FrustumCullingEnum::PrimitiveCulling,
+			FaceCullingEnum::BackfaceCulling,
+			PrimitiveSources::Albedo::Static::FullSource,
+			PrimitiveSources::Material::DiffuseMaterialSource,
+			PrimitiveSources::Normal::Static::NoSource,
+			PrimitiveSources::Uv::Static::Source>
+		{
+		private:
+			using Base = Mesh::TriangleShadeObject<
+				Cube::VertexCount, Cube::TriangleCount,
+				PrimitiveSources::Vertex::Static::Source,
+				PrimitiveSources::Triangle::Static::Source,
+				FrustumCullingEnum::PrimitiveCulling,
+				FaceCullingEnum::BackfaceCulling,
+				PrimitiveSources::Albedo::Static::FullSource,
+				PrimitiveSources::Material::DiffuseMaterialSource,
+				PrimitiveSources::Normal::Static::NoSource,
+				PrimitiveSources::Uv::Static::Source>;
+
+		private:
+			PrimitiveSources::Vertex::Static::Source VerticesSource;
+			PrimitiveSources::Triangle::Static::Source TrianglesSource;
+			PrimitiveSources::Uv::Static::Source UvsSource;
+
+		public:
+			CubeTexturedTriangleObject()
+				: VerticesSource(Cube::Vertices)
+				, TrianglesSource(Cube::Triangles)
+				, UvsSource(Assets::Uvs::Cube::UVs)
+				, Base(VerticesSource, TrianglesSource,
+					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
+					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
+					const_cast<PrimitiveSources::Normal::Static::NoSource&>(PrimitiveSources::Normal::NormalNoSourceInstance),
+					UvsSource)
+			{
+			}
+		};
+
+		class CubeTexturedVertexObject
+			: public Mesh::VertexShadeObject<
+			Cube::VertexCount, Cube::TriangleCount,
+			PrimitiveSources::Vertex::Static::Source,
+			PrimitiveSources::Triangle::Static::Source,
+			FrustumCullingEnum::PrimitiveCulling,
+			FaceCullingEnum::BackfaceCulling,
+			PrimitiveSources::Albedo::Static::FullSource,
+			PrimitiveSources::Material::DiffuseMaterialSource,
+			PrimitiveSources::Normal::Static::NoSource,
+			PrimitiveSources::Uv::Static::Source>
+		{
+		private:
+			using Base = Mesh::VertexShadeObject<
+				Cube::VertexCount, Cube::TriangleCount,
+				PrimitiveSources::Vertex::Static::Source,
+				PrimitiveSources::Triangle::Static::Source,
+				FrustumCullingEnum::PrimitiveCulling,
+				FaceCullingEnum::BackfaceCulling,
+				PrimitiveSources::Albedo::Static::FullSource,
+				PrimitiveSources::Material::DiffuseMaterialSource,
+				PrimitiveSources::Normal::Static::NoSource,
+				PrimitiveSources::Uv::Static::Source>;
+		private:
+			PrimitiveSources::Vertex::Static::Source VerticesSource;
+			PrimitiveSources::Triangle::Static::Source TrianglesSource;
+			PrimitiveSources::Uv::Static::Source UvsSource;
+
+		public:
+			CubeTexturedVertexObject()
+				: VerticesSource(Cube::Vertices)
+				, TrianglesSource(Cube::Triangles)
+				, UvsSource(Assets::Uvs::Cube::UVs)
+				, Base(VerticesSource, TrianglesSource,
+					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
+					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
+					const_cast<PrimitiveSources::Normal::Static::NoSource&>(PrimitiveSources::Normal::NormalNoSourceInstance),
+					UvsSource)
+			{
+			}
+		};
+#endif
+
+		struct StarMeshTriangleObject
+			: Mesh::SimpleStaticMeshTriangleObject<Star::VertexCount, Star::TriangleCount>
+		{
+			StarMeshTriangleObject() : Mesh::SimpleStaticMeshTriangleObject<Star::VertexCount, Star::TriangleCount>(
+				Star::Vertices,
+				Star::Triangles)
+			{
+			}
+		};
+
+		struct StarMeshVertexObject
+			: Mesh::SimpleStaticMeshVertexObject<Star::VertexCount, Star::TriangleCount>
+		{
+			StarMeshVertexObject() : Mesh::SimpleStaticMeshVertexObject<Star::VertexCount, Star::TriangleCount>(
+				Star::Vertices,
+				Star::Triangles)
+			{
+			}
+		};
+
+		struct SphereMeshVertexObject : public Mesh::SimpleStaticMeshVertexObject<Sphere::VertexCount, Sphere::TriangleCount>
+		{
+			SphereMeshVertexObject() : Mesh::SimpleStaticMeshVertexObject<Sphere::VertexCount, Sphere::TriangleCount>(
+				Sphere::Vertices,
+				Sphere::Triangles)
+			{
+			}
+		};
+
+		class FloorPointCloudObject
+			: public PointCloud::ShadeObject<
+			Grid8x8::VertexCount,
+			PrimitiveSources::Vertex::Static::Source,
+			FrustumCullingEnum::PrimitiveCulling,
+			FaceCullingEnum::NoCulling,
+			PrimitiveSources::Albedo::Static::FullSource,
+			PrimitiveSources::Material::DiffuseMaterialSource,
+			PrimitiveSources::Normal::Dynamic::SingleSource>
+		{
+		private:
+			using Base = PointCloud::ShadeObject<
+				Grid8x8::VertexCount,
+				PrimitiveSources::Vertex::Static::Source,
+				FrustumCullingEnum::PrimitiveCulling,
+				FaceCullingEnum::NoCulling,
+				PrimitiveSources::Albedo::Static::FullSource,
+				PrimitiveSources::Material::DiffuseMaterialSource,
+				PrimitiveSources::Normal::Dynamic::SingleSource>;
+
+		private:
+			PrimitiveSources::Vertex::Static::Source VertexSource;
+			PrimitiveSources::Normal::Dynamic::SingleSource NormalSource;
+
+		public:
+			FloorPointCloudObject()
+				: VertexSource(Grid8x8::Vertices)
+				, NormalSource()
+				, Base(VertexSource,
+					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
+					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
+					NormalSource)
+			{
+			}
+
+			void SetNormal(const vertex16_t& normal)
+			{
+				NormalSource.Normal = normal;
+
+				NormalizeVertex16(NormalSource.Normal);
+			}
+		};
+	}
+
+	namespace FragmentShaders
+	{
+		using namespace RenderObjects;
+
+		struct FloorFragmentShader : IFragmentShader<point_cloud_fragment_t>
+		{
+		public:
+			int16_t Radius = 1;
+
+		public:
+			void FragmentShade(WindowRasterizer& rasterizer, const point_cloud_fragment_t& fragment) final
+			{
+				const Rgb8::color_t color = Rgb8::Color(fragment.red, fragment.green, fragment.blue);
+				rasterizer.DrawLine(color, fragment.x - Radius, fragment.y, fragment.x + Radius, fragment.y);
+				rasterizer.DrawLine(color, fragment.x, fragment.y - Radius, fragment.x, fragment.y + Radius);
+			}
+		};
+
+		struct LightBillboardFragmentShader : IFragmentShader<billboard_fragment_t>
+		{
 			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment) final
 			{
-				Rgb8::color_t lightColor{};
-				if (LightSource == nullptr)
+				if (fragment.red == 0 && fragment.green == 0 && fragment.blue == 0)
 					return;
-				else
-					LightSource->GetLightColor(lightColor);
 
-				if (lightColor == 0)
-					return;
+				const ufraction16_t nearFraction = UFRACTION16_1X - UFraction16::GetScalar<int16_t>(LimitValue<int16_t>(fragment.z, 0, VERTEX16_RANGE), VERTEX16_RANGE);
+				const uint8_t innerComponentMax = Fraction(nearFraction, Rgb8::COMPONENT_MAX);
+
+				Rgb8::component_t r = Fraction(nearFraction, fragment.red);
+				Rgb8::component_t g = Fraction(nearFraction, fragment.green);
+				Rgb8::component_t b = Fraction(nearFraction, fragment.blue);
 
 				int_fast16_t radius = SignedRightShift(fragment.bottomRightY - fragment.topLeftY, 1);
 
@@ -257,200 +695,65 @@ namespace Assets
 					for (int_fast16_t x = 0; x < radius; x++)
 					{
 						const uint32_t distancePower = ((uint32_t(x) * (x)) + (uint_fast16_t(y) * (y)));
-						const ufraction8_t distanceFraction = Fraction::GetUFraction8(distancePower, radiusPower);
+						const ufraction8_t distanceFraction = UFraction8::GetScalar(distancePower, radiusPower);
 						const ufraction8_t proximityFraction = UFRACTION8_1X - distanceFraction;
 
 						if (distanceFraction < UFRACTION8_1X)
 						{
-							/*const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
+							const uint8_t innerComponent = Fraction(proximityFraction, innerComponentMax);
 							color = Rgb8::Color(
-								Fraction::Scale(proximityFraction, uint8_t(UINT8_MAX)),
-								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent),
-								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent),
-								uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent));
-							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY + y);
-							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY + y);
-							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX + x, centerY - y);
-							rasterizer.BlendPixel<pixel_blend_mode_t::Alpha>(color, centerX - x, centerY - y);*/
+								Fraction(proximityFraction, static_cast<uint8_t>(UINT8_MAX)),
+								static_cast<uint8_t>(Fraction(proximityFraction, MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(r) + innerComponent))),
+								static_cast<uint8_t>(Fraction(proximityFraction, MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(g) + innerComponent))),
+								static_cast<uint8_t>(Fraction(proximityFraction, MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(b) + innerComponent))));
 
-							const uint8_t innerComponent = Fraction::Scale(proximityFraction, Rgb8::COMPONENT_MAX);
-							color = Rgb8::Color(
-								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Red(lightColor)) + innerComponent)),
-								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Green(lightColor)) + innerComponent)),
-								Fraction::Scale(proximityFraction, uint8_t(Fraction::Scale(distanceFraction, Rgb8::Blue(lightColor)) + innerComponent)));
 							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY + y);
 							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY + y);
-							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY - y);
-							rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY - y);
+							if (y != 0)
+							{
+								rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX + x, centerY - y);
+								rasterizer.BlendPixel<pixel_blend_mode_t::Add>(color, centerX - x, centerY - y);
+							}
 						}
 					}
 				}
 			}
 		};
 
-		struct FloorFragmentShader : IFragmentShader<point_fragment_t>
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
+		class CubeTextureTriangleShader
+			: public Mesh::FragmentShaders::TriangleShade::TextureLitShader<
+			PrimitiveSources::Texture::Static::Source>
 		{
 		private:
-			world_position_shade_t Shade{};
-			Rgb8::color_t FragmentColor{};
+			PrimitiveSources::Texture::Static::Source TextureSource;
 
 		public:
-			int16_t Radius = 1;
-
-		public:
-			void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment, ISceneShader* sceneShader) final
-			{
-				FragmentColor = fragment.color;
-				Shade.positionWorld = fragment.world;
-				sceneShader->Shade(FragmentColor, fragment.material, Shade);
-				rasterizer.DrawLine(FragmentColor, fragment.screen.x - Radius, fragment.screen.y, fragment.screen.x + Radius, fragment.screen.y);
-				rasterizer.DrawLine(FragmentColor, fragment.screen.x, fragment.screen.y - Radius, fragment.screen.x, fragment.screen.y + Radius);
-			}
-
-			void FragmentShade(WindowRasterizer& rasterizer, const point_fragment_t& fragment) final
-			{
-				FragmentColor = fragment.color;
-				rasterizer.DrawLine(FragmentColor, fragment.screen.x - Radius, fragment.screen.y, fragment.screen.x + Radius, fragment.screen.y);
-				rasterizer.DrawLine(FragmentColor, fragment.screen.x, fragment.screen.y - Radius, fragment.screen.x, fragment.screen.y + Radius);
-			}
-		};
-	}
-
-	namespace Objects
-	{
-		using namespace Shapes;
-
-		struct StarMeshObject : public MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>
-		{
-			StarMeshObject() : MeshWorldSingleColorSingleMaterialObject<Star::VertexCount, Star::TriangleCount>(
-				Star::Vertices,
-				Star::Triangles) {
-			}
-		};
-
-		struct CubeMeshObject : public MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>
-		{
-			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
-
-			CubeMeshObject() : MeshWorldObject<Cube::VertexCount, Cube::TriangleCount>(
-				Cube::Vertices,
-				Cube::Triangles,
-				Cube::Normals) {
-			}
-
-		protected:
-			virtual void GetFragment(triangle_fragment_t& fragment, const uint16_t index)
-			{
-				fragment.color = Palletes::Cube::Pallete[(index / 2) % Palletes::Cube::PalleteSize];
-				fragment.material = Material;
-			}
-		};
-
-		struct CubeEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Cube::VertexCount, Cube::EdgeCount>
-		{
-			CubeEdgeObject()
-				: StaticEdgeSingleColorSingleMaterialObject<Cube::VertexCount, Cube::EdgeCount>(
-					Cube::Vertices,
-					Cube::Edges) {
-			}
-		};
-
-		struct OctahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>
-		{
-			OctahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::TriangleCount>(
-				Octahedron::Vertices,
-				Octahedron::Triangles,
-				Octahedron::Normals) {
-			}
-		};
-
-		struct OctahedronEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::EdgeCount>
-		{
-			OctahedronEdgeObject() : StaticEdgeSingleColorSingleMaterialObject<Octahedron::VertexCount, Octahedron::EdgeCount>(
-				Octahedron::Vertices, Octahedron::Edges) {
-			}
-		};
-
-		struct IcosahedronMeshObject : public MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>
-		{
-			IcosahedronMeshObject() : MeshWorldSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::TriangleCount>(
-				Icosahedron::Vertices,
-				Icosahedron::Triangles,
-				Icosahedron::Normals) {
-			}
-		};
-
-		struct IcosahedronEdgeObject : public StaticEdgeSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>
-		{
-			IcosahedronEdgeObject() : StaticEdgeSingleColorSingleMaterialObject<Icosahedron::VertexCount, Icosahedron::EdgeCount>(
-				Icosahedron::Vertices,
-				Icosahedron::Edges) {
-			}
-		};
-
-		struct SphereMeshObject : public MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>
-		{
-			SphereMeshObject() : MeshWorldSingleColorSingleMaterialObject<Sphere::VertexCount, Sphere::TriangleCount>(
-				Sphere::Vertices,
-				Sphere::Triangles,
-				Sphere::Normals
-			) {
-			}
-		};
-
-		class SpherePointCloudObject : public LitPointCloudObject<Sphere::VertexCount>
-		{
-		public:
-			SpherePointCloudObject() : LitPointCloudObject<Sphere::VertexCount>(Sphere::Vertices) {}
-
-		protected:
-			virtual void GetFragment(point_fragment_t& fragment, const uint16_t index)
-			{
-				fragment.color = Rgb8::WHITE;
-				fragment.material.Diffuse = UFRACTION8_1X;
-				fragment.material.Emissive = 0;
-				fragment.material.Specular = 0;
-				fragment.material.Metallic = 0;
-			}
-		};
-
-		struct FloorPointCloudObject : public FlatPointCloudObject<Grid8x8::VertexCount, FrustumCullingEnum::PrimitiveCulling>
-		{
-			FloorPointCloudObject() : FlatPointCloudObject<Grid8x8::VertexCount,
-				FrustumCullingEnum::PrimitiveCulling>
-				(Grid8x8::Vertices)
+			CubeTextureTriangleShader()
+				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width, Texture::Cube::Height)
+				, Mesh::FragmentShaders::TriangleShade::TextureLitShader<
+				PrimitiveSources::Texture::Static::Source>(TextureSource)
 			{
 			}
 		};
-	}
 
-	namespace Lights
-	{
-		template<typename ShaderType>
-		struct TemplateOnOffShader : ShaderType
+		class CubeTextureVertexShader
+			: public Mesh::FragmentShaders::VertexShade::TextureLitShader<
+			PrimitiveSources::Texture::Static::Source>
 		{
 		private:
-			bool Enabled = true;
+			PrimitiveSources::Texture::Static::Source TextureSource;
 
 		public:
-			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment, ISceneShader* sceneShader)
+			CubeTextureVertexShader()
+				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width, Texture::Cube::Height)
+				, Mesh::FragmentShaders::VertexShade::TextureLitShader<
+				PrimitiveSources::Texture::Static::Source>(TextureSource)
 			{
-				if (Enabled)
-					ShaderType::FragmentShade(rasterizer, fragment, sceneShader);
-			}
-
-			void FragmentShade(WindowRasterizer& rasterizer, const billboard_fragment_t& fragment)
-			{
-				if (Enabled)
-					ShaderType::FragmentShade(rasterizer, fragment);
-			}
-
-			void SetEnabled(const bool enabled)
-			{
-				Enabled = enabled;
 			}
 		};
+#endif
+
 	}
 }
-
 #endif

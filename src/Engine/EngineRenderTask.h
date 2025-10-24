@@ -133,6 +133,11 @@ namespace IntegerWorld
 		render_status_struct Status{};           // Minimal render status.
 		render_status_struct StatusCopy{};       // Copy of status for reporting.
 #endif
+
+#if defined(INTEGER_WORLD_FRUSTUM_DEBUG)
+		bool FrustumLock = false; // Indicates if the frustum is locked for debugging.
+#endif
+
 	private:
 		SurfacedWindowRasterizer Rasterizer; // Handles rasterization to the output surface.
 
@@ -175,6 +180,13 @@ namespace IntegerWorld
 		void GetRendererStatus(render_status_struct& rendererStatus) final
 		{
 			rendererStatus = StatusCopy;
+		}
+#endif
+
+#if defined(INTEGER_WORLD_FRUSTUM_DEBUG)
+		void SetFrustumLock(const bool locked = false)
+		{
+			FrustumLock = locked;
 		}
 #endif
 
@@ -250,8 +262,13 @@ namespace IntegerWorld
 
 					// Set the focal distance from the projector.
 					CameraTransform.FocalDistance = ViewProjector.GetFocalDistance();
-					ViewProjector.GetFrustum(CameraControls, CameraFrustum);
 					State = StateEnum::ObjectShade;
+#if defined(INTEGER_WORLD_FRUSTUM_DEBUG)
+					if (!FrustumLock)
+						ViewProjector.GetFrustum(CameraControls, CameraFrustum);
+#else
+					ViewProjector.GetFrustum(CameraControls, CameraFrustum);
+#endif
 				}
 				else
 				{

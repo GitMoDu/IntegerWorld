@@ -11,113 +11,193 @@ namespace Assets
 	{
 		namespace Cube
 		{
-			static constexpr Rgb8::color_t Pallete[Shapes::Cube::TriangleCount]
+			static constexpr Rgb8::color_t Albedos[] PROGMEM
 			{
-				Rgb8::RED,
-				Rgb8::GREEN,
-				Rgb8::BLUE,
+				0xFF0000,
+				0xFF0000,
+				0x00FF00,
+				0x00FF00,
+				0x0000FF,
+				0x0000FF,
+				0xFFFF00,
 				0xFFFF00,
 				0x00FFFF,
+				0x00FFFF,
+				0xFF00FF,
 				0xFF00FF
 			};
-			constexpr uint8_t PalleteSize = sizeof(Pallete) / sizeof(Pallete[0]);
 		}
 	}
 
-	namespace Objects
+	namespace RenderObjects
 	{
-		struct CubeEdgeObject : StaticEdgeSingleColorSingleMaterialObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>
+		using namespace IntegerWorld::RenderObjects;
+
+		struct CubeEdgeObject : Edge::SimpleStaticEdgeLineObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>
 		{
 			CubeEdgeObject()
-				: StaticEdgeSingleColorSingleMaterialObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>(
+				: Edge::SimpleStaticEdgeLineObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>(
 					Shapes::Cube::Vertices,
 					Shapes::Cube::Edges) {
 			}
 		};
 
-		struct OctahedronEdgeObject : StaticEdgeSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>
+		struct OctahedronEdgeObject : IntegerWorld::RenderObjects::Edge::SimpleStaticEdgeLineObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>
 		{
 			OctahedronEdgeObject()
-				: StaticEdgeSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>
+				: IntegerWorld::RenderObjects::Edge::SimpleStaticEdgeLineObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::EdgeCount>
 				(Shapes::Octahedron::Vertices, Shapes::Octahedron::Edges)
 			{
 			}
 		};
 
-		struct CubeMeshObject : StaticMeshObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>
+		IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0> MockNormalSource{};
+
+		/// <summary>
+		/// Mesh triangle object for a cube.
+		/// Minimal memory usage by using static sources.
+		/// Minimal processing, no frustum culling is applied and skips calculating normal.
+		/// Fixed albedo colors from palette.
+		/// </summary>
+		class CubeMeshObject
+			: public IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
+			Shapes::Cube::VertexCount,
+			Shapes::Cube::TriangleCount,
+			IntegerWorld::PrimitiveSources::Vertex::Static::Source,
+			IntegerWorld::PrimitiveSources::Triangle::Static::Source,
+			FrustumCullingEnum::NoCulling,
+			FaceCullingEnum::BackfaceCulling,
+			IntegerWorld::PrimitiveSources::Albedo::Static::Source,
+			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
+			IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>
+			>
 		{
-			material_t Material{ 0, UFRACTION8_1X, 0, 0 };
-
-			CubeMeshObject() : StaticMeshObject<Shapes::Cube::VertexCount, Shapes::Cube::TriangleCount>
-				(Shapes::Cube::Vertices, Shapes::Cube::Triangles)
-			{
-			}
-
-		protected:
-			void GetFragment(triangle_fragment_t& fragment, const uint16_t index) final
-			{
-				fragment.color = Palletes::Cube::Pallete[(index >> 1) % Palletes::Cube::PalleteSize];
-				fragment.material = Material;
-			}
-		};
-
-		struct OctahedronMeshObject : StaticMeshSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>
-		{
-			OctahedronMeshObject() : StaticMeshSingleColorSingleMaterialObject<Shapes::Octahedron::VertexCount, Shapes::Octahedron::TriangleCount>(
-				Shapes::Octahedron::Vertices,
-				Shapes::Octahedron::Triangles) {
-			}
-		};
-
-		template<int16_t Range, typename BaseMeshObject>
-		class TemplateOffsetShadeMeshObject : public BaseMeshObject
-		{
-		public:
-			TemplateOffsetShadeMeshObject() : BaseMeshObject() {}
-
-		public:
-			using BaseMeshObject::WorldPosition;
-
 		private:
-			// Screen space object position.
-			vertex16_t ScreenPosition{};
+			using Base = IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
+				Shapes::Cube::VertexCount,
+				Shapes::Cube::TriangleCount,
+				IntegerWorld::PrimitiveSources::Vertex::Static::Source,
+				IntegerWorld::PrimitiveSources::Triangle::Static::Source,
+				FrustumCullingEnum::NoCulling,
+				FaceCullingEnum::BackfaceCulling,
+				IntegerWorld::PrimitiveSources::Albedo::Static::Source,
+				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
+				IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>
+			>;
+
+			IntegerWorld::PrimitiveSources::Vertex::Static::Source VertexSource;
+			IntegerWorld::PrimitiveSources::Triangle::Static::Source TriangleSource;
+			IntegerWorld::PrimitiveSources::Albedo::Static::Source AlbedoSource;
 
 		public:
-			virtual bool CameraTransform(const transform16_camera_t& transform, const uint16_t vertexIndex)
+			CubeMeshObject()
+				: VertexSource(Shapes::Cube::Vertices)
+				, TriangleSource(Shapes::Cube::Triangles)
+				, AlbedoSource(Palletes::Cube::Albedos)
+				, Base(VertexSource, TriangleSource, AlbedoSource,
+					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
+					MockNormalSource)
 			{
-				if (vertexIndex == 0)
-				{
-					ScreenPosition = WorldPosition;
-					ApplyCameraTransform(transform, ScreenPosition);
-				}
+			}
+		};
 
-				return BaseMeshObject::CameraTransform(transform, vertexIndex);
+		/// <summary>
+		/// Mesh triangle object for a octaedron.
+		/// Minimal memory usage by using static sources.
+		/// Minimal processing, no frustum culling is applied and skips calculating normal.
+		/// Single dynamic albedo color.
+		/// </summary>
+		class OctahedronMeshObject
+			: public IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
+			Shapes::Octahedron::VertexCount,
+			Shapes::Octahedron::TriangleCount,
+			IntegerWorld::PrimitiveSources::Vertex::Static::Source,
+			IntegerWorld::PrimitiveSources::Triangle::Static::Source,
+			FrustumCullingEnum::NoCulling,
+			FaceCullingEnum::BackfaceCulling,
+			IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource,
+			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
+			IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>>
+		{
+		private:
+			using Base = IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
+				Shapes::Octahedron::VertexCount,
+				Shapes::Octahedron::TriangleCount,
+				IntegerWorld::PrimitiveSources::Vertex::Static::Source,
+				IntegerWorld::PrimitiveSources::Triangle::Static::Source,
+				FrustumCullingEnum::NoCulling,
+				FaceCullingEnum::BackfaceCulling,
+				IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource,
+				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
+				IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>>;
+
+			IntegerWorld::PrimitiveSources::Vertex::Static::Source VertexSource;
+			IntegerWorld::PrimitiveSources::Triangle::Static::Source TriangleSource;
+			IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource AlbedoSource;
+
+		public:
+			OctahedronMeshObject()
+				: VertexSource(Shapes::Octahedron::Vertices)
+				, TriangleSource(Shapes::Octahedron::Triangles)
+				, AlbedoSource()
+				, Base(VertexSource, TriangleSource, AlbedoSource,
+					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
+					MockNormalSource)
+			{
 			}
 
-			virtual bool ScreenProject(ViewportProjector& screenProjector, const uint16_t vertexIndex)
+			void SetAlbedo(const Rgb8::color_t albedo)
 			{
-				if (vertexIndex == 0)
-					screenProjector.Project(ScreenPosition);
-
-				return BaseMeshObject::ScreenProject(screenProjector, vertexIndex);
+				AlbedoSource.Albedo = albedo;
 			}
 
-		protected:
-			void GetFragment(triangle_fragment_t& fragment, const uint16_t index) final
+			Rgb8::color_t GetAlbedo() const
 			{
-				const int16_t x = AverageApproximate(fragment.triangleScreenA.x, fragment.triangleScreenB.x, fragment.triangleScreenC.x);
-				const int16_t y = AverageApproximate(fragment.triangleScreenA.y, fragment.triangleScreenB.y, fragment.triangleScreenC.y);
-				const int16_t z = AverageApproximate(fragment.triangleScreenA.z, fragment.triangleScreenB.z, fragment.triangleScreenC.z);
-				const int16_t xTravel = LimitValue<int16_t>(x - ScreenPosition.x, -Range, Range);
-				const int16_t yTravel = LimitValue<int16_t>(y - ScreenPosition.y, -Range, Range);
-				const int16_t zTravel = LimitValue<int16_t>(z - ScreenPosition.z, -Range, Range);
+				return AlbedoSource.Albedo;
+			}
+		};
 
-				uint8_t gray = INT8_MAX;
-				gray += (-int32_t(xTravel) * (32)) / Range;
-				gray += (-int32_t(yTravel) * (90)) / Range;
-				gray += (-int32_t(zTravel) * (16)) / Range;
-				fragment.color = Rgb8::Color(gray, gray, gray);
-				fragment.material = { UFRACTION8_1X, 0, 0, 0 };
+		struct OctahedronSimpleMeshObject : IntegerWorld::RenderObjects::Mesh::SimpleStaticMeshTriangleObject<
+			Shapes::Octahedron::VertexCount,
+			Shapes::Octahedron::TriangleCount,
+			FrustumCullingEnum::NoCulling,
+			FaceCullingEnum::BackfaceCulling>
+		{
+			OctahedronSimpleMeshObject() : IntegerWorld::RenderObjects::Mesh::SimpleStaticMeshTriangleObject<
+				Shapes::Octahedron::VertexCount,
+				Shapes::Octahedron::TriangleCount,
+				FrustumCullingEnum::NoCulling,
+				FaceCullingEnum::BackfaceCulling>(
+					Shapes::Octahedron::Vertices,
+					Shapes::Octahedron::Triangles) {
+			}
+		};
+	}
+
+	namespace SceneShaders
+	{
+		/// <summary>
+		/// Shades an object's albedo by reducing each RGB component based on the vertex height (y coordinate).
+		/// Assumes shape is centered at y=0, with shading range from around -SHAPE_UNIT/2 to +SHAPE_UNIT/2.
+		/// </summary>
+		class HeightSceneShader final : public ISceneShader
+		{
+		private:
+			// Hue aware, brightness reduction based on height.
+			static uint8_t ScaleColor(const uint8_t component, const uint8_t remove)
+			{
+				const uint8_t removeComponent = (uint16_t(remove) * component) >> 7;
+				return component > removeComponent ? component - removeComponent : 0;
+			}
+
+		public:
+			Rgb8::color_t GetLitColor(const Rgb8::color_t albedo, const material_t& material, const vertex16_t& position, const vertex16_t& normal)
+			{
+				const uint8_t yDelta = LimitValue<int16_t, 0, (Shapes::SHAPE_UNIT * 4) / 5>(position.y + (Shapes::SHAPE_UNIT / 2)) >> 4;
+				return Rgb8::Color(
+					ScaleColor(Rgb8::Red(albedo), yDelta),
+					ScaleColor(Rgb8::Green(albedo), yDelta),
+					ScaleColor(Rgb8::Blue(albedo), yDelta));
 			}
 		};
 	}

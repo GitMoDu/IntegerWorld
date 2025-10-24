@@ -1,6 +1,7 @@
 #ifndef _INTEGER_WORLD_ASSETS_FRUSTUM_DEBUG_h
 #define _INTEGER_WORLD_ASSETS_FRUSTUM_DEBUG_h
 
+#if defined(INTEGER_WORLD_FRUSTUM_DEBUG)
 #include <IntegerWorld.h>
 
 namespace Assets
@@ -251,15 +252,58 @@ namespace Assets
 				1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
 				2, 2, 2, 2, 2, 2, 2, 2,
 			};
+
+			enum class FrustumVertex : uint8_t
+			{
+				NearBottomRight = 0,
+				NearBottomLeft = 1,
+				NearTopLeft = 2,
+				NearTopRight = 3,
+				FarBottomRight = 4,
+				FarBottomLeft = 5,
+				FarTopLeft = 6,
+				FarTopRight = 7,
+				Origin = 8,
+				Count
+			};
+
+			enum class FrustumEdge : uint8_t
+			{
+				NearBottom = 0,
+				NearLeft = 1,
+				NearTop = 2,
+				NearRight = 3,
+				FarBottom = 4,
+				FarLeft = 5,
+				FarTop = 6,
+				FarRight = 7,
+				LeftBottom = 8,
+				LeftTop = 9,
+				RightTop = 10,
+				RightBottom = 11,
+				NearTopLeftOrigin = 12,
+				NearTopRightOrigin = 13,
+				NearBottomLeftOrigin = 14,
+				NearBottomRightOrigin = 15,
+				Count
+			};
 		}
 	}
 
 	namespace Objects
 	{
-		class CameraMeshObject : public StaticMeshSingleColorSingleMaterialObject<Shapes::Camera::VertexCount, Shapes::Camera::TriangleCount>
+		using namespace ::IntegerWorld::RenderObjects;
+		class CameraMeshObject
+			: public Mesh::SimpleStaticMeshTriangleObject<
+			Shapes::Camera::VertexCount,
+			Shapes::Camera::TriangleCount,
+			FrustumCullingEnum::NoCulling>
 		{
 		private:
-			using Base = StaticMeshSingleColorSingleMaterialObject<Shapes::Camera::VertexCount, Shapes::Camera::TriangleCount>;
+			using Base = Mesh::SimpleStaticMeshTriangleObject<
+				Shapes::Camera::VertexCount,
+				Shapes::Camera::TriangleCount,
+				FrustumCullingEnum::NoCulling>;
 
 		private:
 			bool Trigger = false;
@@ -268,8 +312,6 @@ namespace Assets
 			CameraMeshObject()
 				: Base(Shapes::Camera::Vertices, Shapes::Camera::Triangles)
 			{
-				Material = { 0, UFRACTION8_1X, 0, 0 };
-				Color = Rgb8::WHITE;
 			}
 
 			void TriggerLock()
@@ -290,61 +332,44 @@ namespace Assets
 			}
 		};
 
-		class FrustumEdgeObject : public DynamicEdgeObject<9, 16, FrustumCullingEnum::PrimitiveCulling, EdgeDrawModeEnum::NoCulling>
+
+		class FrustumEdgeObject : public Edge::LineShadeObject<
+			uint8_t(Shapes::Camera::FrustumVertex::Count),
+			uint8_t(Shapes::Camera::FrustumEdge::Count),
+			PrimitiveSources::Vertex::Dynamic::Source,
+			PrimitiveSources::Edge::Dynamic::Source>
 		{
 		public:
 			static constexpr uint8_t PrimitiveCount = 16;
 
 		private:
-			using Base = DynamicEdgeObject<9, 16, FrustumCullingEnum::PrimitiveCulling, EdgeDrawModeEnum::NoCulling>;
+			using Base = Edge::LineShadeObject<
+				uint8_t(Shapes::Camera::FrustumVertex::Count),
+				uint8_t(Shapes::Camera::FrustumEdge::Count),
+				PrimitiveSources::Vertex::Dynamic::Source,
+				PrimitiveSources::Edge::Dynamic::Source>;
+
+			using FrustumVertex = Shapes::Camera::FrustumVertex;
+			using FrustumEdge = Shapes::Camera::FrustumEdge;
 
 		private:
-			material_t Material{ UFRACTION8_1X, 0, 0, 0 };
-
-		private:
-			enum class FrustumVertex : uint8_t
-			{
-				NearBottomRight = 0,
-				NearBottomLeft = 1,
-				NearTopLeft = 2,
-				NearTopRight = 3,
-				FarBottomRight = 4,
-				FarBottomLeft = 5,
-				FarTopLeft = 6,
-				FarTopRight = 7,
-				Origin = 8
-			};
-
-			enum class FrustumEdge : uint8_t
-			{
-				NearBottom = 0,
-				NearLeft = 1,
-				NearTop = 2,
-				NearRight = 3,
-				FarBottom = 4,
-				FarLeft = 5,
-				FarTop = 6,
-				FarRight = 7,
-				LeftBottom = 8,
-				LeftTop = 9,
-				RightTop = 10,
-				RightBottom = 11,
-				NearTopLeftOrigin = 12,
-				NearTopRightOrigin = 13,
-				NearBottomLeftOrigin = 14,
-				NearBottomRightOrigin = 15
-			};
 
 		protected:
-			using Base::VerticesSource;
-			using Base::EdgesSource;
+			PrimitiveSources::Vertex::Dynamic::Source VertexSource;
+			PrimitiveSources::Edge::Dynamic::Source EdgeSource;
+
+			vertex16_t VerticesSource[uint8_t(Shapes::Camera::FrustumVertex::Count)]{};
+			edge_line_t EdgesSource[uint8_t(Shapes::Camera::FrustumEdge::Count)]{};
 
 		private:
 			uint8_t FarScale = 0;
 			bool Trigger = false;
 
 		public:
-			FrustumEdgeObject() : Base()
+			FrustumEdgeObject()
+				: VertexSource(VerticesSource)
+				, EdgeSource(EdgesSource)
+				, Base(VertexSource, EdgeSource)
 			{
 				EdgesSource[uint8_t(FrustumEdge::NearBottom)] = { uint8_t(FrustumVertex::NearBottomLeft), uint8_t(FrustumVertex::NearBottomRight) };
 				EdgesSource[uint8_t(FrustumEdge::NearLeft)] = { uint8_t(FrustumVertex::NearTopLeft), uint8_t(FrustumVertex::NearBottomLeft) };
@@ -372,9 +397,10 @@ namespace Assets
 				FarScale = farScale;
 			}
 
-		protected:
-			virtual void LoadObjectData(const frustum_t& frustum) final
+			virtual void ObjectShade(const frustum_t& frustum)
 			{
+				Base::ObjectShade(frustum);
+
 				if (Trigger)
 				{
 					Trigger = false;
@@ -409,20 +435,6 @@ namespace Assets
 						fc.z = static_cast<int16_t>(frustum.origin.z + (dz * FarScale));
 					}
 				}
-			}
-
-		protected:
-			virtual void GetFragment(edge_fragment_t& fragment, const uint16_t index)
-			{
-				if (index < uint8_t(FrustumEdge::NearTopLeftOrigin))
-				{
-					fragment.color = Rgb8::RED;
-				}
-				else
-				{
-					fragment.color = Rgb8::WHITE;
-				}
-				fragment.material = Material;
 			}
 
 		private:
@@ -514,10 +526,11 @@ namespace Assets
 
 		private:
 			Objects::FrustumEdgeObject ObjectFrustumEdge{};
-			EdgeFragmentShader EdgeShader{};
+			RenderObjects::Edge::FragmentShaders::LineShade::FillShader EdgeShader{};
+
 
 			Objects::CameraMeshObject ObjectCamera{};
-			TriangleFillFragmentShader MeshShader{};
+			RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader MeshShader{};
 
 		public:
 			bool Start(IEngineRenderer& engineRenderer)
@@ -547,5 +560,5 @@ namespace Assets
 		};
 	}
 }
-
+#endif
 #endif

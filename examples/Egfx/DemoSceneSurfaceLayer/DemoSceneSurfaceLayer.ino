@@ -3,17 +3,19 @@
 * Includes configurations for multiple screen drivers (uncomment driver).
 */
 
-#define DEBUG
+//#define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
 
 //#define USE_DYNAMIC_FRAME_BUFFER // Enable dynamic allocation of framebuffer.
-#define GRAPHICS_ENGINE_MEASURE // Enable engine measuring and logging.
+//#define GRAPHICS_ENGINE_MEASURE // Enable engine measuring and logging.
 #define GRAPHICS_ENGINE_DISPLAY_FPS // Enable display FPS counter.
 
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
-#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging..
-//#define INTEGER_WORLD_HIGH_PRECISION_TRANSFORMS // Enable high precision transforms in IntegerWorldDemo.
+#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
+
+//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles in the lights shader.
+#define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
 
 
 // Preset of SPI pin definitions for various platforms.
@@ -79,10 +81,11 @@ Egfx::SpiType& SpiInstance(SPI);
 #endif
 
 using EgfxOptions = DisplayOptions::TemplateOptions<
-	DisplayOptions::MirrorEnum::None
-	, DisplayOptions::RotationEnum::None
-	, DisplayOptions::AntiAliasingEnum::PixelCoverage
-	, false>;
+	DisplayOptions::MirrorEnum::None,
+	DisplayOptions::RotationEnum::None,
+	false,
+	DisplayOptions::AntiAliasingEnum::None
+>;
 
 // Uncomment Driver and matching framebuffer type. Drivers will have Async, DMA, and RTOS variants, depending on the platform.
 //ScreenDriverSSD1306_64x32x1_I2C ScreenDriver(WireInstance);
@@ -97,11 +100,11 @@ using EgfxOptions = DisplayOptions::TemplateOptions<
 //ScreenDriverSSD1331_96x64x8_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //using FramebufferType = Color8Framebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 0, EgfxOptions>;
 
-//ScreenDriverSSD1331_96x64x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
+ScreenDriverSSD1331_96x64x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverSSD1351_128x128x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverST7789_240x240x16_SPI_Dma<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
 //ScreenDriverST7735S_80x160x16_SPI<TFT_CS, TFT_DC, TFT_RST> ScreenDriver(SpiInstance);
-//using FramebufferType = Color16Framebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 0, EgfxOptions>;
+using FramebufferType = Color16Framebuffer<ScreenDriver.ScreenWidth, ScreenDriver.ScreenHeight, 3, EgfxOptions>;
 
 
 // In-memory frame-buffer.
@@ -205,6 +208,10 @@ void setup()
 
 	// Start Internet World Engine renderer.
 	EngineRenderer.Start();
+
+#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+	IntegerWorldEngineLog.Start();
+#endif
 
 	// EGFX Surface can be windowed.
 	//Surface.OffsetX = 16;

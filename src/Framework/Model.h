@@ -12,12 +12,49 @@ namespace IntegerWorld
 	using namespace IntegerSignal::FixedPoint::ScalarFraction;
 	using namespace IntegerSignal::FixedPoint::FactorScale;
 
+	/// <summary>
+	/// Specifies modes for frustum culling to determine which scene elements are considered for rendering.
+	/// </summary>
 	enum class FrustumCullingEnum : uint8_t
 	{
+		// No frustum culling is applied; all objects and primitives are considered for rendering.
 		NoCulling,
+
+		// Frustum culling is applied at the object level; entire objects outside the frustum are not rendered.
 		ObjectCulling,
+
+		// Frustum culling is applied at the primitive level; individual primitives outside the frustum are not rendered.
 		PrimitiveCulling,
+
+		// Frustum culling is applied at both the object and primitive levels.
 		ObjectAndPrimitiveCulling
+	};
+
+	/// <summary>
+	/// Mesh culling modes applied after projection based on face orientation.
+	/// </summary>
+	enum class FaceCullingEnum : uint8_t
+	{
+		// Triangles whose normal is facing away from the camera are not drawn.
+		BackfaceCulling,
+
+		// All triangles are drawn, regardless of orientation.
+		NoCulling,
+
+		// Triangles whose normal is facing towards the camera are not drawn.
+		FrontfaceCulling
+	};
+
+	/// <summary>
+	/// Billboard scale mode defines how its size is calculated relative to the camera.
+	/// </summary>
+	enum class BillboardScaleModeEnum : uint8_t
+	{
+		// Fixed pixel size
+		ScreenSpace,
+
+		// Scales with distance.
+		WorldSpace
 	};
 
 	struct material_t
@@ -28,116 +65,138 @@ namespace IntegerWorld
 		ufraction8_t Metallic;
 	};
 
-	struct scene_shade_t
-	{
-		vertex16_t position;
-		vertex16_t normal;
-		int16_t z;
-	};
-
 	struct edge_line_t
 	{
-		uint16_t start;
-		uint16_t end;
+		uint16_t a;
+		uint16_t b;
 	};
 
 	struct triangle_face_t
 	{
-		uint16_t v1;
-		uint16_t v2;
-		uint16_t v3;
+		uint16_t a;
+		uint16_t b;
+		uint16_t c;
 	};
 
-	struct base_fragment_t
+	struct coordinate_t
 	{
-		material_t material;
-		Rgb8::color_t color;
+		int16_t x;
+		int16_t y;
 	};
 
-	struct point_normal_fragment_t : base_fragment_t
+	struct triangle_uv_t
 	{
-		vertex16_t world;
-		vertex16_t normal;
-		vertex16_t screen;
-	};
-
-	struct edge_fragment_t : base_fragment_t
-	{
-		vertex16_t world;
-		vertex16_t start;
-		vertex16_t end;
-		int16_t z;
+		coordinate_t a;
+		coordinate_t b;
+		coordinate_t c;
 	};
 
 	struct billboard_fragment_t
 	{
-		vertex16_t world;
 		int16_t topLeftX;
 		int16_t topLeftY;
 		int16_t bottomRightX;
 		int16_t bottomRightY;
+
 		int16_t z;
+		uint8_t red;
+		uint8_t green;
+		uint8_t blue;
 	};
 
-	struct triangle_fragment_t : base_fragment_t
+	struct point_cloud_fragment_t
 	{
-		vertex16_t world;
-		vertex16_t normalWorld;
-		vertex16_t triangleScreenA;
-		vertex16_t triangleScreenB;
-		vertex16_t triangleScreenC;
+		uint16_t index;
+
+		int16_t x;
+		int16_t y;
 		int16_t z;
+
+		uint8_t red;
+		uint8_t green;
+		uint8_t blue;
 	};
 
-	struct flat_background_fragment_t : base_fragment_t
+	struct edge_line_fragment_t
 	{
-	};
+		vertex16_t vertexA;
+		vertex16_t vertexB;
 
-	struct base_vertex_t : vertex16_t
-	{
-	};
-
-	struct normal_vertex_t : vertex16_t
-	{
-		vertex16_t normal;
-	};
-
-	struct color_vertex_t : vertex16_t
-	{
-		Rgb8::color_t color;
-	};
-
-	struct normal_color_vertex_t : vertex16_t
-	{
-		vertex16_t normal;
-		Rgb8::color_t color;
-	};
-
-	struct mesh_vertex_t : base_vertex_t
-	{
-	};
-
-	struct billboard_vertex_t : base_vertex_t
-	{
-	};
-
-	struct base_primitive_t
-	{
+		uint16_t index;
 		int16_t z;
+
+		uint8_t red;
+		uint8_t green;
+		uint8_t blue;
 	};
 
-	struct mesh_world_primitive_t : base_primitive_t
+	struct edge_vertex_fragment_t
 	{
-		vertex16_t worldPosition;
-		vertex16_t worldNormal;
+		vertex16_t vertexA;
+		vertex16_t vertexB;
+
+		uint16_t index;
+		int16_t z;
+
+		uint8_t redA;
+		uint8_t greenA;
+		uint8_t blueA;
+
+		uint8_t redB;
+		uint8_t greenB;
+		uint8_t blueB;
 	};
 
-	struct billboard_primitive_t : base_primitive_t
+	struct mesh_triangle_fragment_t
 	{
-		int16_t topLeftX;
-		int16_t topLeftY;
-		int16_t bottomRightX;
-		int16_t bottomRightY;
+		vertex16_t vertexA;
+		vertex16_t vertexB;
+		vertex16_t vertexC;
+
+		coordinate_t uvA;
+		coordinate_t uvB;
+		coordinate_t uvC;
+
+		uint16_t index;
+		int16_t z;
+
+		uint8_t red;
+		uint8_t green;
+		uint8_t blue;
+	};
+
+	struct mesh_vertex_fragment_t
+	{
+		vertex16_t vertexA;
+		vertex16_t vertexB;
+		vertex16_t vertexC;
+
+		coordinate_t uvA;
+		coordinate_t uvB;
+		coordinate_t uvC;
+
+		uint16_t index;
+		int16_t z;
+
+		uint8_t redA;
+		uint8_t greenA;
+		uint8_t blueA;
+
+		uint8_t redB;
+		uint8_t greenB;
+		uint8_t blueB;
+
+		uint8_t redC;
+		uint8_t greenC;
+		uint8_t blueC;
+	};
+
+	struct color_fragment_t
+	{
+		uint8_t red;
+		uint8_t green;
+		uint8_t blue;
+		int16_t z;
 	};
 
 	struct camera_state_t

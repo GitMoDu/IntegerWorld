@@ -1,7 +1,6 @@
 #ifndef _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_WINRT_h
 #define _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_WINRT_h
 
-
 #if defined(WINRT_ASSERT)
 
 #include <winrt/Windows.Foundation.h>
@@ -22,7 +21,6 @@
 
 #include <windows.h>
 #include <Unknwn.h>
-#include <dxgi1_2.h>
 
 namespace IntegerWorld
 {
@@ -168,6 +166,7 @@ namespace IntegerWorld
 			void FlipSurface() final
 			{
 				UploadFrameBuffer();
+				std::fill(frameBuffer.begin(), frameBuffer.end(), 0xFF000000); // Clear to opaque black
 				RenderFrameTexture();
 
 				auto asyncOp = m_swapChainPanel.Dispatcher().TryRunAsync(
@@ -471,5 +470,5 @@ namespace IntegerWorld
 		};
 	}
 }
-#endif
-#endif
+#endif // __cplusplus_winrt
+#endif // _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_WINRT_h

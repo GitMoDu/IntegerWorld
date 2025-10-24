@@ -1,7 +1,10 @@
 #ifndef _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_UNIVERSAL_h
 #define _INTEGER_WORLD_DIRECTX_SWAP_CHAIN_SURFACE_UNIVERSAL_h
 
-#if !defined(WINRT_ASSERT)
+//#if __has_include(<windows.ui.xaml.controls.h>) // UWP XAML #else #error No supported XAML framework detected #endif
+//#if !defined(__cplusplus_winrt)
+//#if defined(__cplusplus_winui)
+#if defined(WINUI_ASSERT)
 
 #include "../../Framework/Interface.h"
 #include "SwapChainDirectX.h"
@@ -470,4 +473,5 @@ namespace IntegerWorld
 	}
 }
 
+#endif
 #endif

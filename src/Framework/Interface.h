@@ -6,17 +6,17 @@
 #include "WindowRasterizer.h"
 #include "Viewport.h"
 #include "FragmentManager.h"
+#include "CompactRgbList.h"
 
 
 namespace IntegerWorld
 {
 	/// <summary>
-	/// SceneShader shader takes in a material and fragment properties, to shade a provided color.
+	/// SceneShader shader takes in an albedo, material and primitive properties, to calculate a lit color.
 	/// </summary>
 	struct ISceneShader
 	{
-		virtual void Shade(Rgb8::color_t& color, const material_t& material) = 0;
-		virtual void Shade(Rgb8::color_t& color, const material_t& material, const scene_shade_t& shade) = 0;
+		virtual Rgb8::color_t GetLitColor(const Rgb8::color_t albedo, const material_t& material, const vertex16_t& position, const vertex16_t& normal) = 0;
 	};
 
 	/// <summary>
@@ -26,7 +26,7 @@ namespace IntegerWorld
 	template<typename fragment_t>
 	struct IFragmentShader
 	{
-		// Draw the fragment using the provided rasterizer and optional scene shader.
+		// Draw the fragment using the provided rasterizer.
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment) = 0;
 	};
 
@@ -211,6 +211,9 @@ namespace IntegerWorld
 
 	struct IEngineRenderer
 	{
+		virtual void Start() = 0;
+		virtual void Stop() = 0;
+
 		virtual bool AddObject(IRenderObject* renderObject) = 0;
 		virtual void ClearObjects() = 0;
 

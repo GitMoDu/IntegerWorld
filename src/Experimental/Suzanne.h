@@ -3901,16 +3901,18 @@ namespace Assets
 		}
 	}
 
-	namespace Objects
+	namespace RenderObjects
 	{
-		struct SuzanneMeshObject : public StaticMeshSingleColorSingleMaterialObject<Shapes::Suzanne::VertexCount, Shapes::Suzanne::TriangleCount>
+		struct SuzanneMeshObject : public IntegerWorld::RenderObjects::Mesh::SimpleStaticMeshTriangleObject
+			<Shapes::Suzanne::VertexCount, Shapes::Suzanne::TriangleCount>
 		{
-			SuzanneMeshObject() : StaticMeshSingleColorSingleMaterialObject<Shapes::Suzanne::VertexCount, Shapes::Suzanne::TriangleCount>(
-				Shapes::Suzanne::Vertices,
-				Shapes::Suzanne::Triangles) {
+			SuzanneMeshObject() : IntegerWorld::RenderObjects::Mesh::SimpleStaticMeshTriangleObject
+				<Shapes::Suzanne::VertexCount, Shapes::Suzanne::TriangleCount>
+				(Shapes::Suzanne::Vertices,
+					Shapes::Suzanne::Triangles)
+			{
 			}
 		};
 	}
 }
-
 #endif

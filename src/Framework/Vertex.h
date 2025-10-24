@@ -8,6 +8,16 @@ namespace IntegerWorld
 	using namespace IntegerSignal;
 
 	/// <summary>
+	/// Represents a 3D vertex with signed 16-bit integer coordinates.
+	/// </summary>
+	struct vertex16_t
+	{
+		int16_t x;
+		int16_t y;
+		int16_t z;
+	};
+
+	/// <summary>
 	/// vertex16_t axis uses int16_t.
 	/// </summary>
 	static constexpr int16_t VERTEX16_RANGE = INT16_MAX;
@@ -20,80 +30,47 @@ namespace IntegerWorld
 	/// <summary>
 	/// Dot product range for 16-bit vertex units.
 	/// </summary>
-	static constexpr int32_t VERTEX16_DOT = (int32_t(VERTEX16_UNIT) * VERTEX16_UNIT);
+	static constexpr int32_t VERTEX16_DOT = int32_t(VERTEX16_UNIT) * VERTEX16_UNIT;
 
 	/// <summary>
-	/// vertex32_t axis uses int32_t.
+	/// Maximum draw distance for 16-bit vertices.
 	/// </summary>
-	static constexpr int32_t VERTEX32_RANGE = INT32_MAX;
+	static constexpr uint16_t DRAW_DISTANCE_MAX = ((uint32_t)VERTEX16_UNIT) * (VERTEX16_RANGE / VERTEX16_UNIT);
 
 	/// <summary>
-	/// Unit scale for 32-bit vertices.
+	/// Reciprocal approximation of 1/3 in fixed-point (int16_t).
 	/// </summary>
-	static constexpr int32_t VERTEX32_UNIT = (UINT32_MAX / (16 * 16)) + 1;
+	static constexpr int16_t ThreePointReciprocal = 0x5556;
 
 	/// <summary>
-	/// Dot product range for 32-bit vertex units.
+	/// Largest sum that keeps (sum * ThreePointReciprocal) within int32_t.
 	/// </summary>
-	static constexpr int32_t VERTEX32_DOT = int32_t(int64_t(VERTEX32_UNIT) * VERTEX32_UNIT);
+	static constexpr int32_t ThreePointSumMax = INT32_MAX / ThreePointReciprocal;
 
-
-	struct vertex16_t
+	/// <summary>
+	/// Calculates the dot product of two vertex16_t vectors.
+	/// </summary>
+	/// <param name="vertexA">The first vertex.</param>
+	/// <param name="vertexB">The second vertex.</param>
+	/// <returns>The dot product of the two vertices.</returns>
+	static constexpr int32_t DotProduct16(const vertex16_t& vertexA, const vertex16_t& vertexB)
 	{
-		int16_t x;
-		int16_t y;
-		int16_t z;
-	};
-
-	struct vertex32_t
-	{
-		int32_t x;
-		int32_t y;
-		int32_t z;
-	};
-
-	static void GetNormal16(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, vertex32_t& normal)
-	{
-		// Compute the vectors for two edges of the triangle.
-		const int16_t ax = b.x - a.x;
-		const int16_t ay = b.y - a.y;
-		const int16_t az = b.z - a.z;
-		const int16_t bx = c.x - a.x;
-		const int16_t by = c.y - a.y;
-		const int16_t bz = c.z - a.z;
-
-		// Compute the cross product of the two edge vectors.
-		normal.x = (int32_t(ay) * bz) - (int32_t(az) * by);
-		normal.y = (int32_t(az) * bx) - (int32_t(ax) * bz);
-		normal.z = (int32_t(ax) * by) - (int32_t(ay) * bx);
+		return (static_cast<int32_t>(vertexA.x) * vertexB.x) +
+			(static_cast<int32_t>(vertexA.y) * vertexB.y) +
+			(static_cast<int32_t>(vertexA.z) * vertexB.z);
 	}
 
-	constexpr int32_t DotProduct16(const vertex16_t& vertex1, const vertex16_t& vertex2)
-	{
-		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
-	}
-
-	constexpr int32_t DotProduct16(const vertex16_t& vertex1, const vertex32_t& vertex2)
-	{
-		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
-	}
-
-	constexpr int32_t DotProduct16(const vertex32_t& vertex1, const vertex16_t& vertex2)
-	{
-		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
-	}
-
-	constexpr int32_t DotProduct16(const vertex32_t& vertex1, const vertex32_t& vertex2)
-	{
-		return ((int32_t)vertex1.x * vertex2.x) + ((int32_t)vertex1.y * vertex2.y) + ((int32_t)vertex1.z * vertex2.z);
-	}
-
+	/// <summary>
+	/// Normalizes vertex in place to have length VERTEX16_UNIT.
+	/// If the input length is zero or already equal to VERTEX16_UNIT, the vertex is left unchanged.
+	/// </summary>
+	/// <param name="vertex">Reference to  vertex16_t to normalize.</param>
 	static void NormalizeVertex16(vertex16_t& vertex)
 	{
 		// Calculate the squared length of the vector.
-		const uint32_t lengthSquared = (uint32_t)((int32_t)vertex.x * vertex.x) +
-			((int32_t)vertex.y * vertex.y) +
-			((int32_t)vertex.z * vertex.z);
+		const uint32_t lengthSquared = static_cast<uint32_t>(static_cast<int32_t>(vertex.x) * vertex.x) +
+			static_cast<uint32_t>(static_cast<int32_t>(vertex.y) * vertex.y) +
+			static_cast<uint32_t>(static_cast<int32_t>(vertex.z) * vertex.z);
 
 		if (lengthSquared != 0)
 		{
@@ -103,106 +80,88 @@ namespace IntegerWorld
 			// Normalize to VERTEX16_UNIT.
 			if (magnitude != 0 && magnitude != VERTEX16_UNIT)
 			{
-				vertex.x = ((int32_t)vertex.x << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.y = ((int32_t)vertex.y << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.z = ((int32_t)vertex.z << GetBitShifts(VERTEX16_UNIT)) / magnitude;
+				vertex.x = SignedLeftShift(static_cast<int32_t>(vertex.x), GetBitShifts(VERTEX16_UNIT)) / magnitude;
+				vertex.y = SignedLeftShift(static_cast<int32_t>(vertex.y), GetBitShifts(VERTEX16_UNIT)) / magnitude;
+				vertex.z = SignedLeftShift(static_cast<int32_t>(vertex.z), GetBitShifts(VERTEX16_UNIT)) / magnitude;
 			}
 		}
 	}
 
-	static void NormalizeVertex16(vertex32_t& vertex)
+	static vertex16_t GetNormal16(const vertex16_t& vectorA, const vertex16_t& vectorB)
 	{
-		// Calculate the squared length of the vector.
-		const uint32_t lengthSquared = (uint32_t)((int32_t)vertex.x * vertex.x) +
-			((int32_t)vertex.y * vertex.y) +
-			((int32_t)vertex.z * vertex.z);
+		int32_t normalX = (static_cast<int32_t>(vectorA.y) * vectorB.z)
+			- (static_cast<int32_t>(vectorA.z) * vectorB.y);
+		int32_t normalY = (static_cast<int32_t>(vectorA.z) * vectorB.x)
+			- (static_cast<int32_t>(vectorA.x) * vectorB.z);
+		int32_t normalZ = (static_cast<int32_t>(vectorA.x) * vectorB.y)
+			- (static_cast<int32_t>(vectorA.y) * vectorB.x);
 
-		if (lengthSquared != 0)
-		{
-			// Calculate the length using the integer square root method.
-			const uint16_t magnitude = IntegerSignal::SquareRoot32(lengthSquared);
-
-			// Normalize to VERTEX16_UNIT.
-			if (magnitude != 0 && magnitude != VERTEX16_UNIT)
-			{
-				vertex.x = ((int32_t)vertex.x << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.y = ((int32_t)vertex.y << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.z = ((int32_t)vertex.z << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-			}
-		}
-	}
-
-	static void NormalizeVertex32(vertex32_t& vertex)
-	{
-		// Calculate the squared length of the vector.
-		const uint64_t lengthSquared = (uint64_t)((int64_t)vertex.x * vertex.x) +
-			((int64_t)vertex.y * vertex.y) +
-			((int64_t)vertex.z * vertex.z);
-
-		if (lengthSquared != 0)
-		{
-			// Calculate the length using the integer square root method.
-			const uint32_t magnitude = IntegerSignal::SquareRoot64(lengthSquared);
-
-			// Normalize to VERTEX16_UNIT.
-			if (magnitude != 0 && magnitude != VERTEX16_UNIT)
-			{
-				vertex.x = ((int64_t)vertex.x << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.y = ((int64_t)vertex.y << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-				vertex.z = ((int64_t)vertex.z << GetBitShifts(VERTEX16_UNIT)) / magnitude;
-			}
-		}
-	}
-
-	static void NormalizeVertex32Fast(vertex32_t& vertex)
-	{
 		// Reduce to 16 bit vertex by dividing by 2 until all values are in range.
-		while (vertex.x < INT16_MIN
-			|| vertex.x > INT16_MAX
-			|| vertex.y < INT16_MIN
-			|| vertex.y > INT16_MAX
-			|| vertex.z < INT16_MIN
-			|| vertex.z > INT16_MAX)
+		while (normalX < INT16_MIN
+			|| normalX > INT16_MAX
+			|| normalY < INT16_MIN
+			|| normalY > INT16_MAX
+			|| normalZ < INT16_MIN
+			|| normalZ > INT16_MAX)
 		{
-			vertex.x = SignedRightShift(vertex.x, 1);
-			vertex.y = SignedRightShift(vertex.y, 1);
-			vertex.z = SignedRightShift(vertex.z, 1);
+			normalX = SignedRightShift(normalX, 1);
+			normalY = SignedRightShift(normalY, 1);
+			normalZ = SignedRightShift(normalZ, 1);
 		}
 
-		NormalizeVertex16(vertex);
+		return vertex16_t{
+			static_cast<int16_t>(normalX),
+			static_cast<int16_t>(normalY),
+			static_cast<int16_t>(normalZ)
+		};
 	}
 
-	static constexpr int16_t AverageApproximate(const int16_t a, const int16_t b, const int16_t c)
+	static vertex16_t GetNormal16(const vertex16_t& vertexA, const vertex16_t& vertexB, const vertex16_t& vertexC)
 	{
-		// Sum as int32_t to prevent overflow, then divide by 3 using multiply and shift
-		// 0x5556 is the fixed-point reciprocal of 3 for 16-bit (rounded)
-		// (a + b + c) * 0x5556 >> 16 is equivalent to (a + b + c) / 3
-		return int16_t(((int32_t(a) + b + c) * 0x5556) >> 16);
-	}
-
-	static uint16_t Distance16(const int16_t aX, const int16_t aY, const int16_t bX, const int16_t bY)
-	{
-		// Calculate squared differences for each axis
-		const int32_t dx = int32_t(bX) - aX;
-		const int32_t dy = int32_t(bY) - aY;
-		// Compute squared distance
-		const uint32_t distSquared = uint32_t(dx * dx) + uint32_t(dy * dy);
-		// Use IntegerSignal's integer square root
-		return IntegerSignal::SquareRoot32(distSquared);
+		return GetNormal16(
+			{ static_cast<int16_t>(vertexB.x - vertexA.x),
+			  static_cast<int16_t>(vertexB.y - vertexA.y),
+			  static_cast<int16_t>(vertexB.z - vertexA.z) },
+			{ static_cast<int16_t>(vertexC.x - vertexA.x),
+			  static_cast<int16_t>(vertexC.y - vertexA.y),
+			  static_cast<int16_t>(vertexC.z - vertexA.z) });
 	}
 
 	static uint16_t Distance16(const vertex16_t& a, const vertex16_t& b)
 	{
-		// Calculate squared differences for each axis
-		const int32_t dx = int32_t(b.x) - a.x;
-		const int32_t dy = int32_t(b.y) - a.y;
-		const int32_t dz = int32_t(b.z) - a.z;
+		// Calculate squared differences for each axis.
+		const int16_t dx = b.x - a.x;
+		const int16_t dy = b.y - a.y;
+		const int16_t dz = b.z - a.z;
 
-		// Compute squared distance
-		const uint32_t distSquared = uint32_t(dx * dx) + uint32_t(dy * dy) + uint32_t(dz * dz);
+		// Compute squared distance.
+		const uint32_t distSquared = static_cast<uint32_t>(static_cast<int32_t>(dx) * dx)
+			+ static_cast<uint32_t>(static_cast<int32_t>(dy) * dy)
+			+ static_cast<uint32_t>(static_cast<int32_t>(dz) * dz);
 
-		// Use IntegerSignal's integer square root
+		// Use IntegerSignal's integer square root.
 		return IntegerSignal::SquareRoot32(distSquared);
+	}
+
+	/// <summary>
+	/// Computes an approximate average of three signed 16-bit integers using scaled fixed-point arithmetic to avoid overflow.
+	/// </summary>
+	/// <param name="a">The first signed 16-bit input value.</param>
+	/// <param name="b">The second signed 16-bit input value.</param>
+	/// <param name="c">The third signed 16-bit input value.</param>
+	/// <returns>A signed 16-bit value containing the truncated, approximate average of the three inputs.
+	/// The result is computed using scaling and a fixed-point divide-by-3 approximation, so it may differ slightly from the exact arithmetic mean.</returns>
+	static int16_t AverageApproximate(const int16_t a, const int16_t b, const int16_t c)
+	{
+		// 3 value sum.
+		int32_t sum = static_cast<int32_t>(a) + b + c;
+		const uint8_t shifts = (AbsValue(sum) > ThreePointSumMax) ? 1 : 0;
+
+		// Scale down sum if it exceeds safe maximum.
+		sum = SignedRightShift(sum, shifts);
+
+		// Truncating fixed-point divide-by-3: (sum * 0x5556) >> (16 - shifts).
+		return static_cast<int16_t>(SignedRightShift(sum * ThreePointReciprocal, 16 - shifts));
 	}
 }
 

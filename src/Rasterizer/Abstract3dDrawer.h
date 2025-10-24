@@ -69,13 +69,9 @@ namespace IntegerWorld
 			if (start.z == end.z)
 			{
 				// Screen plane 2D line, only need to check one point for bounds.
-				if (start.z > 0)
+				if (start.z >= 0)
 				{
 					DrawLine(color, start.x, start.y, end.x, end.y);
-				}
-				else
-				{
-					// Whole line out of z-bounds.
 				}
 			}
 			else

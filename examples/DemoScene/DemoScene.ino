@@ -9,6 +9,10 @@
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
 #define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
+//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles in the lights shader.
+#define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
+
+
 #define _TASK_OO_CALLBACKS
 #include <TScheduler.hpp>
 
@@ -33,6 +37,7 @@
 #include "DemoSceneAssets.h"
 
 // Forward declare the used communications hardware.
+TwoWire& WireInstance(Wire);
 #if defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(STM32F4)
 SPIClass SpiInstance(3);
 #elif defined(ARDUINO_ARCH_RP2040)
@@ -90,7 +95,7 @@ SPIClass& SpiInstance(SPI);
 
 //IntegerWorld::Sumotoy::Ssd1331::DirectDrawSurface Driver(TFT_CS, TFT_DC, TFT_RST); // https://github.com/sumotoy/SSD_13XX
 
-//IntegerWorld::MockOutput::OutputSurface<128, 128> Driver{}; // Mock output.
+IntegerWorld::MockOutput::OutputSurface<128, 128> Driver{}; // Mock output.
 
 
 // Process scheduler.
@@ -122,6 +127,10 @@ void setup()
 	Driver.GetSurfaceDimensions(width, height, colorDepth);
 
 	DemoScene.Start(EngineRenderer, width, height);
+
+#if defined(INTEGER_WORLD_PERFORMANCE_LOG)
+	IntegerWorldEngineLog.Start();
+#endif
 
 #if defined(DEBUG)
 	Serial.println(F("Integer World 3D Demo Scene"));

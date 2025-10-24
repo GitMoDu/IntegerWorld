@@ -13,6 +13,7 @@ namespace IntegerWorld
 	{
 	private:
 		IEngineRenderer& Engine;
+
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 		render_debug_status_struct RendererStatus{};
 #else
@@ -21,11 +22,21 @@ namespace IntegerWorld
 
 	public:
 		PerformanceLogTask(TS::Scheduler& scheduler, IEngineRenderer& engine)
-			: TS::Task(LogPeriodMillis, TASK_FOREVER, &scheduler, true), Engine(engine)
+			: TS::Task(LogPeriodMillis, TASK_FOREVER, &scheduler, false), Engine(engine)
 		{
 		}
 
 	public:
+		void Start()
+		{
+			TS::Task::enable();
+		}
+
+		void Stop()
+		{
+			TS::Task::disable();
+		}
+
 		bool Callback() final
 		{
 			Engine.GetRendererStatus(RendererStatus);
@@ -33,7 +44,7 @@ namespace IntegerWorld
 			if (RendererStatus.GetRenderDuration() > 0)
 			{
 				Serial.println();
-				Serial.print(F("Integer World Renderer\t"));
+				Serial.print(F("Integer World Log\t"));
 				if (RendererStatus.FrameDuration > 0)
 				{
 					const uint32_t subUnits = 1000000000 / RendererStatus.FrameDuration;
@@ -59,7 +70,7 @@ namespace IntegerWorld
 				Serial.println(F("us"));
 
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
-				Serial.print(F("\tFramePreparation\t"));
+				Serial.print(F("\tFrameSetup\t"));
 				Serial.print(RendererStatus.FramePreparation);
 				Serial.println(F("us"));
 				Serial.print(F("\tObjectShade\t"));

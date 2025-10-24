@@ -1,13 +1,8 @@
 #ifndef _INTEGER_WORLD_DIRECTX_SURFACE_h
 #define _INTEGER_WORLD_DIRECTX_SURFACE_h
 
-#if defined(WINRT_ASSERT)
 #include "SwapChainSurfaceWinRT.h"
-#else
 #include "SwapChainSurfaceUniversal.h"
-#endif
-
-
 
 namespace IntegerWorld
 {
@@ -27,7 +22,7 @@ namespace IntegerWorld
 				return;
 			frameBuffer[y * SurfaceWidth + x] = color;
 		}
-
+		
 		void Line(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2) final
 		{
 			if (frameBuffer.size() != SurfaceWidth * SurfaceHeight)

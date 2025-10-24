@@ -9,8 +9,8 @@ namespace IntegerWorld
 	{
 	private:
 		static constexpr uint16_t RangeMin = VERTEX16_UNIT;
-		static constexpr uint8_t RangeUnits = VERTEX16_RANGE / VERTEX16_UNIT;
-		static constexpr uint16_t RangeMax = (((uint32_t)VERTEX16_UNIT) * RangeUnits);
+		static constexpr uint16_t RangeMax = DRAW_DISTANCE_MAX;
+
 		static constexpr uint16_t Range = RangeMax - RangeMin;
 		static constexpr uint8_t DownShift = GetBitShifts(Range);
 		static constexpr uint8_t UnitShift = GetBitShifts(VERTEX16_UNIT);
@@ -34,7 +34,7 @@ namespace IntegerWorld
 		int16_t verticalNum = 0;
 		int16_t verticalDenum = 0;
 
-		uint16_t distanceNum = (RangeMin + RangeMax) / 2;
+		uint16_t distanceNum = (static_cast<uint32_t>(RangeMin) + RangeMax) / 2;
 
 		uint16_t drawDistance = RangeMax;
 
@@ -47,8 +47,8 @@ namespace IntegerWorld
 		{
 			verticalNum = viewWidth;
 			verticalDenum = viewHeight;
-			ViewWidthHalf = MinValue<uint16_t>(INT16_MAX, uint16_t(viewWidth >> 1));
-			ViewHeightHalf = MinValue<uint16_t>(INT16_MAX, uint16_t(viewHeight >> 1));
+			ViewWidthHalf = MinValue<uint16_t>(INT16_MAX, static_cast<uint16_t>(viewWidth) >> 1);
+			ViewHeightHalf = MinValue<uint16_t>(INT16_MAX, static_cast<uint16_t>(viewHeight) >> 1);
 			frustumShifts = UnitShift - GetBitShifts(MaxValue<uint16_t>(viewWidth, viewHeight) / 2);
 		}
 
@@ -62,7 +62,7 @@ namespace IntegerWorld
 
 		void SetDrawDistance(const uint16_t distance)
 		{
-			drawDistance = MinValue<uint16_t>(distance, VERTEX16_RANGE);
+			drawDistance = MinValue<uint16_t>(RangeMax, distance);
 		}
 
 		uint16_t GetFocalDistance() const
@@ -79,7 +79,7 @@ namespace IntegerWorld
 		void GetFrustum(const camera_state_t& cameraControls, frustum_t& frustum)
 		{
 			// Set frustum culling radius squared.
-			frustum.radiusSquared = (uint32_t(drawDistance) * drawDistance);
+			frustum.radiusSquared = (static_cast<uint32_t>(drawDistance) * drawDistance);
 
 			// Set frustum origin to apparent camera position.
 			frustum.origin = cameraControls.Position;
@@ -112,9 +112,9 @@ namespace IntegerWorld
 				// Calculate plane center.
 				const vertex16_t nearCenter
 				{
-					int16_t(frustum.origin.x + int16_t(SignedRightShift(int32_t(forward.x) * nearDist, DownShift))),
-					int16_t(frustum.origin.y + int16_t(SignedRightShift(int32_t(forward.y) * nearDist, DownShift))),
-					int16_t(frustum.origin.z + int16_t(SignedRightShift(int32_t(forward.z) * nearDist, DownShift)))
+					static_cast<int16_t>(frustum.origin.x + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(forward.x) * nearDist, DownShift))),
+					static_cast<int16_t>(frustum.origin.y + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(forward.y) * nearDist, DownShift))),
+					static_cast<int16_t>(frustum.origin.z + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(forward.z) * nearDist, DownShift)))
 				};
 
 				// Calculate corners.
@@ -140,28 +140,33 @@ namespace IntegerWorld
 
 		void Project(vertex16_t& cameraToscreen)
 		{
-			const int32_t distanceDenum = int32_t(distanceNum) + cameraToscreen.z;
+			const int32_t distanceDenum = static_cast<int32_t>(distanceNum) + cameraToscreen.z;
 
 			int32_t ix, iy;
 			if (distanceDenum == 0)
 			{
-				ix = SignedRightShift(int32_t(cameraToscreen.x) * ViewWidthHalf, DownShift);
+				ix = SignedRightShift(static_cast<int32_t>(cameraToscreen.x) * ViewWidthHalf, DownShift);
 
-				iy = (int32_t(cameraToscreen.y) * verticalNum) / verticalDenum;
+				iy = (static_cast<int32_t>(cameraToscreen.y) * verticalNum) / verticalDenum;
 				iy = SignedRightShift(iy * ViewHeightHalf, DownShift);
 			}
 			else
 			{
-				ix = (int32_t(cameraToscreen.x) * distanceNum) / distanceDenum;
+				ix = (static_cast<int32_t>(cameraToscreen.x) * distanceNum) / distanceDenum;
 				ix = SignedRightShift(ix * ViewWidthHalf, DownShift);
 
-				iy = (int32_t(cameraToscreen.y) * distanceNum) / distanceDenum;
+				iy = (static_cast<int32_t>(cameraToscreen.y) * distanceNum) / distanceDenum;
 				iy = (iy * verticalNum) / verticalDenum;
 				iy = SignedRightShift(iy * ViewHeightHalf, DownShift);
 			}
 
-			cameraToscreen.x = ViewWidthHalf + int16_t(ix);
-			cameraToscreen.y = ViewHeightHalf + int16_t(iy);
+			// Convert to screen space (bottom-right is (0,0).
+			cameraToscreen.x = ViewWidthHalf + static_cast<int16_t>(ix);
+			cameraToscreen.y = ViewHeightHalf + static_cast<int16_t>(iy);
+
+			//TODO: Convert to screen space (top-left is (0,0).
+			//cameraToscreen.x = ViewWidthHalf - int16_t(ix);
+			//cameraToscreen.y = ViewHeightHalf - int16_t(iy);
 			cameraToscreen.z = distanceDenum;
 		}
 
@@ -172,37 +177,37 @@ namespace IntegerWorld
 		void CalculateNearPlaneCorners(const vertex16_t& center, const vertex16_t& right, const vertex16_t& up,
 			vertex16_t& topLeft, vertex16_t& topRight, vertex16_t& bottomLeft, vertex16_t& bottomRight)
 		{
-			// Top-left corner
-			topLeft.x = center.x - int16_t(SignedRightShift(int32_t(right.x) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.x) * ViewHeightHalf, UnitShift));
-			topLeft.y = center.y - int16_t(SignedRightShift(int32_t(right.y) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.y) * ViewHeightHalf, UnitShift));
-			topLeft.z = center.z - int16_t(SignedRightShift(int32_t(right.z) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.z) * ViewHeightHalf, UnitShift));
+			// Top-left corner.
+			topLeft.x = center.x - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.x) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.x) * ViewHeightHalf, UnitShift));
+			topLeft.y = center.y - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.y) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.y) * ViewHeightHalf, UnitShift));
+			topLeft.z = center.z - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.z) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.z) * ViewHeightHalf, UnitShift));
 
-			// Top-right corner
-			topRight.x = center.x + int16_t(SignedRightShift(int32_t(right.x) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.x) * ViewHeightHalf, UnitShift));
-			topRight.y = center.y + int16_t(SignedRightShift(int32_t(right.y) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.y) * ViewHeightHalf, UnitShift));
-			topRight.z = center.z + int16_t(SignedRightShift(int32_t(right.z) * ViewWidthHalf, UnitShift))
-				- int16_t(SignedRightShift(int32_t(up.z) * ViewHeightHalf, UnitShift));
+			// Top-right corner.
+			topRight.x = center.x + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.x) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.x) * ViewHeightHalf, UnitShift));
+			topRight.y = center.y + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.y) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.y) * ViewHeightHalf, UnitShift));
+			topRight.z = center.z + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.z) * ViewWidthHalf, UnitShift))
+				- static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.z) * ViewHeightHalf, UnitShift));
 
-			// Bottom-right corner
-			bottomRight.x = center.x + int16_t(SignedRightShift(int32_t(right.x) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.x) * ViewHeightHalf, UnitShift));
-			bottomRight.y = center.y + int16_t(SignedRightShift(int32_t(right.y) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.y) * ViewHeightHalf, UnitShift));
-			bottomRight.z = center.z + int16_t(SignedRightShift(int32_t(right.z) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.z) * ViewHeightHalf, UnitShift));
+			// Bottom-right corner.
+			bottomRight.x = center.x + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.x) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.x) * ViewHeightHalf, UnitShift));
+			bottomRight.y = center.y + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.y) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.y) * ViewHeightHalf, UnitShift));
+			bottomRight.z = center.z + static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.z) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.z) * ViewHeightHalf, UnitShift));
 
-			// Bottom-left corner
-			bottomLeft.x = center.x - int16_t(SignedRightShift(int32_t(right.x) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.x) * ViewHeightHalf, UnitShift));
-			bottomLeft.y = center.y - int16_t(SignedRightShift(int32_t(right.y) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.y) * ViewHeightHalf, UnitShift));
-			bottomLeft.z = center.z - int16_t(SignedRightShift(int32_t(right.z) * ViewWidthHalf, UnitShift))
-				+ int16_t(SignedRightShift(int32_t(up.z) * ViewHeightHalf, UnitShift));
+			// Bottom-left corner.
+			bottomLeft.x = center.x - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.x) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.x) * ViewHeightHalf, UnitShift));
+			bottomLeft.y = center.y - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.y) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.y) * ViewHeightHalf, UnitShift));
+			bottomLeft.z = center.z - static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(right.z) * ViewWidthHalf, UnitShift))
+				+ static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(up.z) * ViewHeightHalf, UnitShift));
 		}
 
 		/// <summary>
@@ -210,36 +215,56 @@ namespace IntegerWorld
 		/// </summary>
 		void CalculatePlane(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, plane16_t& plane)
 		{
-			// Calculate two vectors in the plane
-			const vertex16_t v1
+			vertex16_t normal16;
 			{
-				static_cast<int16_t>(b.x - a.x),
-				static_cast<int16_t>(b.y - a.y),
-				static_cast<int16_t>(b.z - a.z)
-			};
+				// Calculate two vectors in the plane.
+				const vertex16_t v1
+				{
+					static_cast<int16_t>(b.x - a.x),
+					static_cast<int16_t>(b.y - a.y),
+					static_cast<int16_t>(b.z - a.z)
+				};
 
-			const vertex16_t v2
-			{
-				static_cast<int16_t>(c.x - a.x),
-				static_cast<int16_t>(c.y - a.y),
-				static_cast<int16_t>(c.z - a.z)
-			};
+				const vertex16_t v2
+				{
+					static_cast<int16_t>(c.x - a.x),
+					static_cast<int16_t>(c.y - a.y),
+					static_cast<int16_t>(c.z - a.z)
+				};
 
-			// Calculate the normal using cross product
-			vertex32_t normal32{ (static_cast<int32_t>(v1.y) * v2.z) - (static_cast<int32_t>(v1.z) * v2.y),
-								(static_cast<int32_t>(v1.z) * v2.x) - (static_cast<int32_t>(v1.x) * v2.z),
-								(static_cast<int32_t>(v1.x) * v2.y) - (static_cast<int32_t>(v1.y) * v2.x) };
+				// Calculate the normal using cross product.
+				int32_t normalX = (static_cast<int32_t>(v1.y) * v2.z) - (static_cast<int32_t>(v1.z) * v2.y);
+				int32_t normalY = (static_cast<int32_t>(v1.z) * v2.x) - (static_cast<int32_t>(v1.x) * v2.z);
+				int32_t normalZ = (static_cast<int32_t>(v1.x) * v2.y) - (static_cast<int32_t>(v1.y) * v2.x);
+
+				// Reduce to 16 bit vertex by dividing by 2 until all values are in range.
+				while (normalX < INT16_MIN
+					|| normalX > INT16_MAX
+					|| normalY < INT16_MIN
+					|| normalY > INT16_MAX
+					|| normalZ < INT16_MIN
+					|| normalZ > INT16_MAX)
+				{
+					normalX = SignedRightShift(normalX, 1);
+					normalY = SignedRightShift(normalY, 1);
+					normalZ = SignedRightShift(normalZ, 1);
+				}
+
+				normal16.x = static_cast<int16_t>(normalX);
+				normal16.y = static_cast<int16_t>(normalY);
+				normal16.z = static_cast<int16_t>(normalZ);
+			}
 
 			// Normalize the normal vector.
-			NormalizeVertex32Fast(normal32);
-			plane = { static_cast<int16_t>(normal32.x),
-					static_cast<int16_t>(normal32.y),
-					static_cast<int16_t>(normal32.z) };
+			NormalizeVertex16(normal16);
+			plane.x = normal16.x;
+			plane.y = normal16.y;
+			plane.z = normal16.z;
 
-			// Calculate the plane distance: -dot(normal, point)
-			plane.distance = -static_cast<int32_t>(SignedRightShift((normal32.x * a.x) +
-				(normal32.y * a.y) +
-				(normal32.z * a.z), UnitShift));
+			// Calculate the plane distance: -dot(normal, point).
+			plane.distance = -static_cast<int32_t>(SignedRightShift((normal16.x * a.x) +
+				(normal16.y * a.y) +
+				(normal16.z * a.z), UnitShift));
 		}
 	};
 }

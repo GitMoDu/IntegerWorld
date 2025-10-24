@@ -546,7 +546,10 @@ namespace IntegerWorld
 				const int16_t dySegment = y2 - y1;
 
 				// Calculate Vi_x in fixed-point.
-				const int16_t Vi_x = SignedRightShift((((int32_t)x1 << BRESENHAM_SCALE) + ((((int32_t)dxTotal << BRESENHAM_SCALE) * dySegment) / dyTotal)), BRESENHAM_SCALE);
+				const int16_t Vi_x = SignedRightShift(
+					(SignedLeftShift<int32_t>(x1, BRESENHAM_SCALE))
+					+ ((SignedLeftShift<int32_t>(dxTotal, BRESENHAM_SCALE) * dySegment) / dyTotal)
+					, BRESENHAM_SCALE);
 
 				// Draw the two sub-triangles
 				BresenhamFlatBottomFill(x1, y1, x2, y2, Vi_x, y2, pixelShader);
@@ -563,11 +566,11 @@ namespace IntegerWorld
 			PixelShader&& pixelShader)
 		{
 			// Pre-calculate slopes in 16.16 fixed point format
-			const int32_t dx1 = ((int32_t)(x2 - x1) << 16) / (y2 - y1);
-			const int32_t dx2 = ((int32_t)(x3 - x1) << 16) / (y3 - y1);
+			const int32_t dx1 = SignedLeftShift<int32_t>(x2 - x1, BRESENHAM_SCALE) / (y2 - y1);
+			const int32_t dx2 = SignedLeftShift<int32_t>(x3 - x1, BRESENHAM_SCALE) / (y3 - y1);
 
 			// Initialize scanline starting x-coordinates in fixed point
-			int32_t sx1 = (int32_t)x1 << 16;
+			int32_t sx1 = SignedLeftShift<int32_t>(x1, BRESENHAM_SCALE);
 			int32_t sx2 = sx1;
 
 			Rgb8::color_t color{};
@@ -575,8 +578,8 @@ namespace IntegerWorld
 			// Scan all lines from top to bottom
 			for (int16_t y = y1; y <= y2; y++)
 			{
-				int16_t startX = (sx1 + 0x8000) >> 16; // round to nearest pixel
-				int16_t endX = (sx2 + 0x8000) >> 16;   // round to nearest pixel
+				int16_t startX = SignedRightShift(sx1 + 0x8000, BRESENHAM_SCALE); // round to nearest pixel
+				int16_t endX = SignedRightShift(sx2 + 0x8000, BRESENHAM_SCALE);   // round to nearest pixel
 
 				// Ensure left-to-right drawing order
 				if (startX > endX)
@@ -609,11 +612,11 @@ namespace IntegerWorld
 			PixelShader&& pixelShader)
 		{
 			// Pre-calculate slopes in 16.16 fixed point format
-			const int32_t dx1 = ((int32_t)(x3 - x1) << 16) / (y3 - y1);
-			const int32_t dx2 = ((int32_t)(x3 - x2) << 16) / (y3 - y2);
+			const int32_t dx1 = SignedLeftShift<int32_t>(x3 - x1, BRESENHAM_SCALE) / (y3 - y1);
+			const int32_t dx2 = SignedLeftShift<int32_t>(x3 - x2, BRESENHAM_SCALE) / (y3 - y2);
 
 			// Initialize scanline starting x-coordinates in fixed point
-			int32_t sx1 = (int32_t)x3 << 16;
+			int32_t sx1 = SignedLeftShift<int32_t>(x3, BRESENHAM_SCALE);
 			int32_t sx2 = sx1;
 
 			Rgb8::color_t color{};
@@ -621,8 +624,8 @@ namespace IntegerWorld
 			// Scan all lines from bottom to top
 			for (int16_t y = y3; y >= y1; y--)
 			{
-				int16_t startX = (sx1 + 0x8000) >> 16; // round to nearest pixel
-				int16_t endX = (sx2 + 0x8000) >> 16;   // round to nearest pixel
+				int16_t startX = SignedRightShift(sx1 + 0x8000, BRESENHAM_SCALE); // round to nearest pixel
+				int16_t endX = SignedRightShift(sx2 + 0x8000, BRESENHAM_SCALE);   // round to nearest pixel
 
 				// Ensure left-to-right drawing order
 				if (startX > endX)
