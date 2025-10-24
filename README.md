@@ -4,7 +4,7 @@
 
 ![Tiny demo scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/tiny_demo_scene_avr.gif)
 
-*Tiny Demo Scene running at ~24 fps on an Arduino AVR328 @ 16 Mhz*
+*Tiny Demo Scene running at ~33 fps on an Arduino AVR328 @ 16 Mhz*
 
 
 ## Library
