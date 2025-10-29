@@ -4,6 +4,7 @@
 #include "AbstractObject.h"
 #include "../../Shaders/Primitive/DepthSampler.h"
 #include "../../Shaders/Primitive/TriangleSampler.h"
+#include "../../Shaders/Primitive/UvInterpolator.h"
 
 namespace IntegerWorld
 {
@@ -26,7 +27,7 @@ namespace IntegerWorld
 					public:
 						bool SetFragmentData(const mesh_vertex_fragment_t& fragment)
 						{
-							if (Sampler.SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC))
+							if (Sampler.SetFragmentData(fragment))
 							{
 								Ra = fragment.redA;
 								Ga = fragment.greenA;
@@ -39,6 +40,7 @@ namespace IntegerWorld
 								Rc = fragment.redC;
 								Gc = fragment.greenC;
 								Bc = fragment.blueC;
+
 								return true;
 							}
 
@@ -47,7 +49,7 @@ namespace IntegerWorld
 
 						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 						{
-							const auto fractions = Sampler.U8Fractions(x, y);
+							const auto fractions = Sampler.U16Fractions(x, y);
 							color = Rgb8::Color(
 								MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(Fraction(fractions.FractionA, Ra)) + Fraction(fractions.FractionB, Rb) + Fraction(fractions.FractionC, Rc)),
 								MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(Fraction(fractions.FractionA, Ga)) + Fraction(fractions.FractionB, Gb) + Fraction(fractions.FractionC, Gc)),
@@ -69,7 +71,7 @@ namespace IntegerWorld
 					public:
 						bool SetFragmentData(const fragment_t& fragment)
 						{
-							if (Sampler.SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC))
+							if (Sampler.SetFragmentData(fragment))
 							{
 								Az = fragment.vertexA.z;
 								Bz = fragment.vertexB.z;
@@ -98,217 +100,174 @@ namespace IntegerWorld
 						}
 					};
 
-					class AbstractTextureFunctor
+					namespace Texture
 					{
-					protected:
-						PrimitiveShaders::TriangleSampler Sampler{};
-
-					protected:
-						coordinate_t UvA{};
-						coordinate_t UvB{};
-						coordinate_t UvC{};
-
-					protected:
-						coordinate_t GetUv(const int16_t x, const int16_t y) const
+						template<typename TextureSourceType,
+							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+						class UnlitFunctor
 						{
-							const auto fractions = Sampler.U8Fractions(x, y);
+						private:
+							PrimitiveShaders::TriangleSampler Sampler{};
+							PrimitiveShaders::UvInterpolatorFast UvInterpolator{};
 
-							return coordinate_t{
-								MaxValue<int16_t>(0, Fraction(fractions.FractionA, UvA.x)
-									+ Fraction(fractions.FractionB, UvB.x)
-									+ Fraction(fractions.FractionC, UvC.x)),
-								MaxValue<int16_t>(0, Fraction(fractions.FractionA, UvA.y)
-									+ Fraction(fractions.FractionB, UvB.y)
-									+ Fraction(fractions.FractionC, UvC.y)) };
-						}
-					};
+						private:
+							TextureSourceType& TextureSource;
 
-					template<typename TextureSourceType>
-					class TextureFunctor : public AbstractTextureFunctor
-					{
-					private:
-						using Base = AbstractTextureFunctor;
-
-					private:
-						TextureSourceType& TextureSource;
-
-					public:
-						TextureFunctor(TextureSourceType& textureSource)
-							: Base()
-							, TextureSource(textureSource)
-						{
-						}
-
-						bool SetFragmentData(const mesh_triangle_fragment_t& fragment)
-						{
-							if (Sampler.SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC))
+						public:
+							UnlitFunctor(TextureSourceType& textureSource)
+								: TextureSource(textureSource)
 							{
-								UvA = fragment.uvA;
-								UvB = fragment.uvB;
-								UvC = fragment.uvC;
-
-								return true;
 							}
 
-							return false;
-						}
-
-						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
-						{
-							const coordinate_t uv = Base::GetUv(x, y);
-							color = TextureSource.GetTexel(uv.x, uv.y);
-
-							return true;
-						}
-					};
-
-					template<typename TextureSourceType, typename fragment_t = mesh_triangle_fragment_t>
-					class TextureTriangleLitFunctor : public AbstractTextureFunctor
-					{
-					private:
-						using Base = AbstractTextureFunctor;
-
-					private:
-						TextureSourceType& TextureSource;
-
-					private:
-						uint8_t R = 0;
-						uint8_t G = 0;
-						uint8_t B = 0;
-
-					public:
-						TextureTriangleLitFunctor(TextureSourceType& textureSource)
-							: Base()
-							, TextureSource(textureSource)
-						{
-						}
-
-						bool SetFragmentData(const fragment_t& fragment)
-						{
-							if (Sampler.SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC))
+							template<typename mesh_fragment_t>
+							bool SetFragmentData(const mesh_fragment_t& fragment)
 							{
-								UvA = fragment.uvA;
-								UvB = fragment.uvB;
-								UvC = fragment.uvC;
+								if (Sampler.SetFragmentData(fragment))
+								{
+									UvInterpolator.SetFragmentData(fragment);
 
-								R = fragment.red;
-								G = fragment.green;
-								B = fragment.blue;
+									return true;
+								}
 
-								return true;
+
+								return false;
 							}
 
-							return false;
-						}
-
-						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
-						{
+							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 							{
-								const coordinate_t uv = Base::GetUv(x, y);
+								const auto fractions = Sampler.U16Fractions(x, y);
+								const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
 								color = TextureSource.GetTexel(uv.x, uv.y);
-							}
-
-							color = Rgb8::Color(
-								static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Red(color)) * R) >> 8)),
-								static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Green(color)) * G) >> 8)),
-								static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Blue(color)) * B) >> 8)));
-
-							return true;
-						}
-					};
-
-
-					template<typename TextureSourceType>
-					struct TextureVertexLitFunctor
-					{
-					private:
-						PrimitiveShaders::TriangleSampler Sampler{};
-
-					private:
-						TextureSourceType& TextureSource;
-
-					private:
-						coordinate_t UvA{};
-						coordinate_t UvB{};
-						coordinate_t UvC{};
-
-					private:
-						uint8_t Ra, Ga, Ba, Rb, Gb, Bb, Rc, Gc, Bc;
-
-					public:
-						TextureVertexLitFunctor(TextureSourceType& textureSource)
-							: TextureSource(textureSource)
-						{
-						}
-
-						bool SetFragmentData(const mesh_vertex_fragment_t& fragment)
-						{
-							if (Sampler.SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC))
-							{
-								UvA = fragment.uvA;
-								UvB = fragment.uvB;
-								UvC = fragment.uvC;
-
-								Ra = fragment.redA;
-								Ga = fragment.greenA;
-								Ba = fragment.blueA;
-
-								Rb = fragment.redB;
-								Gb = fragment.greenB;
-								Bb = fragment.blueB;
-
-								Rc = fragment.redC;
-								Gc = fragment.greenC;
-								Bc = fragment.blueC;
 
 								return true;
 							}
+						};
 
-							return false;
-						}
-
-						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
+						template<typename TextureSourceType,
+							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+						class TriangleLitFunctor
 						{
-							const auto fractions = Sampler.U16Fractions(x, y);
+						private:
+							PrimitiveShaders::TriangleSampler Sampler{};
+							UvInterpolatorType UvInterpolator{};
 
-							uint8_t r;
-							uint8_t g;
-							uint8_t b;
+						private:
+							TextureSourceType& TextureSource;
+
+						private:
+							uint8_t R = 0;
+							uint8_t G = 0;
+							uint8_t B = 0;
+
+						public:
+							TriangleLitFunctor(TextureSourceType& textureSource)
+								: TextureSource(textureSource)
 							{
-								const uint16_t u = MaxValue<int16_t>(0, Fraction(fractions.FractionA, UvA.x)
-									+ Fraction(fractions.FractionB, UvB.x)
-									+ Fraction(fractions.FractionC, UvC.x));
-								const uint16_t v = MaxValue<int16_t>(0, Fraction(fractions.FractionA, UvA.y)
-									+ Fraction(fractions.FractionB, UvB.y)
-									+ Fraction(fractions.FractionC, UvC.y));
-
-								const Rgb8::color_t texel = TextureSource.GetTexel(u, v);
-
-								r = Rgb8::Red(texel);
-								g = Rgb8::Green(texel);
-								b = Rgb8::Blue(texel);
 							}
 
-							r = MinValue<uint16_t>(UINT8_MAX,
-								((static_cast<uint16_t>(Fraction(fractions.FractionA, Ra))
-									+ Fraction(fractions.FractionB, Rb)
-									+ Fraction(fractions.FractionC, Rc)) * r) >> 8);
+							bool SetFragmentData(const mesh_triangle_fragment_t& fragment)
+							{
+								if (Sampler.SetFragmentData(fragment))
+								{
+									UvInterpolator.SetFragmentData(fragment);
 
-							g = MinValue<uint16_t>(UINT8_MAX,
-								((static_cast<uint16_t>(Fraction(fractions.FractionA, Ga))
-									+ Fraction(fractions.FractionB, Gb)
-									+ Fraction(fractions.FractionC, Gc)) * g) >> 8);
+									R = fragment.red;
+									G = fragment.green;
+									B = fragment.blue;
 
-							b = MinValue<uint16_t>(UINT8_MAX,
-								((static_cast<uint16_t>(Fraction(fractions.FractionA, Ba))
-									+ Fraction(fractions.FractionB, Bb)
-									+ Fraction(fractions.FractionC, Bc)) * b) >> 8);
+									return true;
+								}
 
-							color = Rgb8::Color(r, g, b);
+								return false;
+							}
 
-							return true;
-						}
-					};
+							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
+							{
+								{
+									const auto fractions = Sampler.U16Fractions(x, y);
+									const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									color = TextureSource.GetTexel(uv.x, uv.y);
+								}
+
+								color = Rgb8::Color(
+									static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Red(color)) * R) >> 8)),
+									static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Green(color)) * G) >> 8)),
+									static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(Rgb8::Blue(color)) * B) >> 8)));
+
+								return true;
+							}
+						};
+
+
+						template<typename TextureSourceType,
+							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+						class VertexLitFunctor
+						{
+						private:
+							PrimitiveShaders::TriangleSampler Sampler{};
+							UvInterpolatorType UvInterpolator{};
+
+						private:
+							TextureSourceType& TextureSource;
+
+						private:
+							uint8_t Ra, Ga, Ba, Rb, Gb, Bb, Rc, Gc, Bc;
+
+						public:
+							VertexLitFunctor(TextureSourceType& textureSource)
+								: TextureSource(textureSource)
+							{
+							}
+							bool SetFragmentData(const mesh_vertex_fragment_t& fragment)
+							{
+								if (Sampler.SetFragmentData(fragment))
+								{
+									UvInterpolator.SetFragmentData(fragment);
+									Ra = fragment.redA;
+									Ga = fragment.greenA;
+									Ba = fragment.blueA;
+									Rb = fragment.redB;
+									Gb = fragment.greenB;
+									Bb = fragment.blueB;
+									Rc = fragment.redC;
+									Gc = fragment.greenC;
+									Bc = fragment.blueC;
+
+									return true;
+								}
+								return false;
+							}
+							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
+							{
+								const auto fractions = Sampler.U16Fractions(x, y);
+								const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+								uint8_t r;
+								uint8_t g;
+								uint8_t b;
+								{
+									const Rgb8::color_t texel = TextureSource.GetTexel(uv.x, uv.y);
+									r = Rgb8::Red(texel);
+									g = Rgb8::Green(texel);
+									b = Rgb8::Blue(texel);
+								}
+								r = MinValue<uint16_t>(UINT8_MAX,
+									((static_cast<uint16_t>(Fraction(fractions.FractionA, Ra))
+										+ Fraction(fractions.FractionB, Rb)
+										+ Fraction(fractions.FractionC, Rc)) * r) >> 8);
+								g = MinValue<uint16_t>(UINT8_MAX,
+									((static_cast<uint16_t>(Fraction(fractions.FractionA, Ga))
+										+ Fraction(fractions.FractionB, Gb)
+										+ Fraction(fractions.FractionC, Gc)) * g) >> 8);
+								b = MinValue<uint16_t>(UINT8_MAX,
+									((static_cast<uint16_t>(Fraction(fractions.FractionA, Ba))
+										+ Fraction(fractions.FractionB, Bb)
+										+ Fraction(fractions.FractionC, Bc)) * b) >> 8);
+								color = Rgb8::Color(r, g, b);
+
+								return true;
+							}
+						};
+					}
 				}
 			}
 		}

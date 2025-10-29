@@ -11,23 +11,41 @@ namespace IntegerWorld
 		{
 			namespace Static
 			{
+				/// <summary>
+				/// Read-only texture source stored in program/ROM memory.
+				/// Provides random access to texels using row-major addressing.
+				/// </summary>
 				class Source
 				{
 				private:
+					/// <summary>Pointer to texel data.</summary>
 					const Rgb8::color_t* Texels = nullptr;
-					const uint16_t Width = 0;
-					const uint16_t Height = 0;
+
+					/// <summary>Texture width in texels (row stride).</summary>
+					const uint16_t Width =0;
 
 				public:
-					Source(const Rgb8::color_t* texels, const uint16_t width, const uint16_t height)
-						: Texels(texels), Width(width), Height(height)
+					/// <summary>
+					/// Construct a static texture source.
+					/// </summary>
+					/// <param name="texels">Pointer to immutable texel data.</param>
+					/// <param name="width">Texture width (row stride) in texels.</param>
+					Source(const Rgb8::color_t* texels, const uint16_t width)
+						: Texels(texels), Width(width)
 					{
 					}
 
+					/// <summary>
+					/// Get the texel color at coordinates (u, v).
+					/// Uses row-major addressing: index = v * Width + u.
+					/// No wrapping or bounds checking is performed.
+					/// </summary>
+					/// <param name="u">Horizontal texel coordinate (column index).</param>
+					/// <param name="v">Vertical texel coordinate (row index).</param>
+					/// <returns>Texel color at (u, v).</returns>
 					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
 					{
-						// Wrap texture coordinates.
-						const size_t index = ((static_cast<size_t>(v % Height) * Width) + (u % Width));
+						const size_t index = ((static_cast<size_t>(v) * Width) + (u));
 #if defined(ARDUINO_ARCH_AVR)
 						return static_cast<Rgb8::color_t>(pgm_read_dword(&Texels[index]));
 #else
@@ -39,34 +57,48 @@ namespace IntegerWorld
 
 			namespace Dynamic
 			{
+				/// <summary>
+				/// Read/write texture source stored in RAM.
+				/// Provides random access to texels using row-major addressing.
+				/// </summary>
 				class Source
 				{
 				public:
-					// External texture data.
+					/// <summary>External texel buffer (mutable).</summary>
 					Rgb8::color_t* Texels;
 
-					// Texture dimensions.
+					/// <summary>Texture width in texels (row stride).</summary>
 					uint16_t Width;
-					uint16_t Height;
 
 				public:
+					/// <summary>
+					/// Construct a dynamic texture source.
+					/// </summary>
+					/// <param name="texels">Pointer to texel buffer in RAM.</param>
+					/// <param name="width">Texture width (row stride) in texels.</param>
 					Source(Rgb8::color_t* texels
-						, const uint16_t width
-						, const uint16_t height)
+						, const uint16_t width)
 						: Texels(texels)
-						, Width(width), Height(height)
+						, Width(width)
 					{
 					}
 
+					/// <summary>
+					/// Get the texel color at coordinates (u, v).
+					/// Uses row-major addressing: index = v * Width + u.
+					/// No wrapping or bounds checking is performed.
+					/// </summary>
+					/// <param name="u">Horizontal texel coordinate (column index).</param>
+					/// <param name="v">Vertical texel coordinate (row index).</param>
+					/// <returns>Texel color at (u, v).</returns>
 					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
 					{
-						// Wrap texture coordinates.
-						const size_t index = ((static_cast<size_t>(v % Height) * Width) + (u % Width));
+						const size_t index = ((static_cast<size_t>(v) * Width) + (u));
+
 						return static_cast<Rgb8::color_t>(Texels[index]);
 					}
 				};
 			}
-
 		}
 	}
 }

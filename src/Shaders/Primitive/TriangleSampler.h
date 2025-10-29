@@ -28,13 +28,6 @@ namespace IntegerWorld
 			ufraction16_t FractionC;
 		};
 
-		struct TriangleU32Fractions
-		{
-			ufraction32_t FractionA;
-			ufraction32_t FractionB;
-			ufraction32_t FractionC;
-		};
-
 		/// <summary>
 		/// Screen-space barycentric sampler for a single triangle.
 		/// Precomputes edge-function coefficients and a reduced 16-bit area so
@@ -71,18 +64,18 @@ namespace IntegerWorld
 
 		public:
 			/// <summary>
-			/// Set triangle properties with the three vertices. 
-			/// Precomputes values for efficient barycentric calculations.
-			/// Ensures the triangle has non-zero area and maintains consistent winding order. 
+			/// Precomputes and caches triangle properties from a fragment's vertices for barycentric interpolation and rasterization.
+			/// Detects degenerate triangles, may reorder vertices to ensure consistent winding.
 			/// </summary>
-			/// <param name="a">The first vertex of the triangle.</param>
-			/// <param name="b">The second vertex of the triangle.</param>
-			/// <param name="c">The third vertex of the triangle.</param>
-			/// <returns>Returns true if the triangle is valid (non-zero area) and properties were set; returns false if the triangle is degenerate (zero area).</returns>
-			bool SetTriangle(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c)
+			/// <typeparam name="fragment_t">The fragment type. Must provide accessible members vertexA, vertexB, and vertexC, each with x and y coordinate fields.</typeparam>
+			/// <param name="fragment">A fragment object that provides three vertices named vertexA, vertexB, and vertexC. Each vertex must expose x and y coordinates (numeric types convertible to int32_t).</param>
+			/// <returns>true if the fragment defines a non-degenerate triangle and triangle data was computed and cached; false if the triangle area is zero (degenerate) and no data was set.</returns>
+			template<typename fragment_t>
+			bool SetFragmentData(const fragment_t& fragment)
 			{
 				// Compute denominator (twice the area of the triangle)
-				int32_t triangleArea = static_cast<int32_t>(b.y - c.y) * (a.x - c.x) + static_cast<int32_t>(c.x - b.x) * (a.y - c.y);
+				int32_t triangleArea = static_cast<int32_t>(fragment.vertexB.y - fragment.vertexC.y) * (fragment.vertexA.x - fragment.vertexC.x)
+					+ static_cast<int32_t>(fragment.vertexC.x - fragment.vertexB.x) * (fragment.vertexA.y - fragment.vertexC.y);
 
 				if (triangleArea == 0)
 				{
@@ -97,23 +90,23 @@ namespace IntegerWorld
 						triangleArea = -triangleArea;
 
 						// Swap B and C
-						BmCy = c.y - b.y;
-						CmBx = b.x - c.x;
-						CmAy = b.y - a.y;
-						AmCx = a.x - b.x;
+						BmCy = fragment.vertexC.y - fragment.vertexB.y;
+						CmBx = fragment.vertexB.x - fragment.vertexC.x;
+						CmAy = fragment.vertexB.y - fragment.vertexA.y;
+						AmCx = fragment.vertexA.x - fragment.vertexB.x;
 
-						Cx = b.x;
-						Cy = b.y;
+						Cx = fragment.vertexB.x;
+						Cy = fragment.vertexB.y;
 					}
 					else
 					{
-						BmCy = b.y - c.y;
-						CmBx = c.x - b.x;
-						CmAy = c.y - a.y;
-						AmCx = a.x - c.x;
+						BmCy = fragment.vertexB.y - fragment.vertexC.y;
+						CmBx = fragment.vertexC.x - fragment.vertexB.x;
+						CmAy = fragment.vertexC.y - fragment.vertexA.y;
+						AmCx = fragment.vertexA.x - fragment.vertexC.x;
 
-						Cx = c.x;
-						Cy = c.y;
+						Cx = fragment.vertexC.x;
+						Cy = fragment.vertexC.y;
 					}
 
 					// Reduce area and weights to fit in 16-bit for faster barycentric calculations.
@@ -192,7 +185,7 @@ namespace IntegerWorld
 				const int16_t ymCy = y - Cy;
 				const int16_t wA = LimitValue<int32_t>((static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy), 0, ReducedArea);
 				const int16_t wB = LimitValue<int32_t>((static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy), 0, ReducedArea);
-				const int16_t wC = ReducedArea - wA - wB;
+				const int16_t wC = ReducedArea - MinValue<int32_t>(static_cast<int32_t>(wA) + wB, ReducedArea);
 
 				if (Swapped)
 					return TriangleWeights{ wA, wC, wB };

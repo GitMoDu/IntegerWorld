@@ -1,7 +1,7 @@
 #ifndef _INTEGER_WORLD_SCENE_SHADERS_LIGHT_SOURCE_SHADER_h
 #define _INTEGER_WORLD_SCENE_SHADERS_LIGHT_SOURCE_SHADER_h
 
-#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles.
+// #define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 
 #include "Abstract.h"
 
@@ -86,7 +86,6 @@ namespace IntegerWorld
 						Fraction(material.Diffuse, Rgb8::Blue(AmbientLight)));
 #endif
 
-
 					const Rgb8::component_t albedoR = Rgb8::Red(albedo);
 					const Rgb8::component_t albedoG = Rgb8::Green(albedo);
 					const Rgb8::component_t albedoB = Rgb8::Blue(albedo);
@@ -139,9 +138,9 @@ namespace IntegerWorld
 							case LightTypeEnum::Spot:
 								// L = (light.Position - P)
 								IlluminationVector = {
-									(int32_t(light.Position.x) - position.x),
-									(int32_t(light.Position.y) - position.y),
-									(int32_t(light.Position.z) - position.z)
+									(static_cast<int32_t>(light.Position.x) - position.x),
+									(static_cast<int32_t>(light.Position.y) - position.y),
+									(static_cast<int32_t>(light.Position.z) - position.z)
 								};
 
 								// Distance falloff before normalization.
@@ -170,9 +169,9 @@ namespace IntegerWorld
 												CameraPosition->z - position.z };
 
 								// H = normalize(L + V). Normalize call accounts for scale.
-								HalfVector = { static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(IlluminationVector.x) + HalfVector.x, 1)),
-											static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(IlluminationVector.y) + HalfVector.y, 1)),
-											static_cast<int16_t>(SignedRightShift(static_cast<int32_t>(IlluminationVector.z) + HalfVector.z, 1)) };
+								HalfVector = { static_cast<int16_t>(SignedRightShift<int32_t>(static_cast<int32_t>(IlluminationVector.x) + HalfVector.x, 1)),
+											static_cast<int16_t>(SignedRightShift<int32_t>(static_cast<int32_t>(IlluminationVector.y) + HalfVector.y, 1)),
+											static_cast<int16_t>(SignedRightShift<int32_t>(static_cast<int32_t>(IlluminationVector.z) + HalfVector.z, 1)) };
 								NormalizeVertex16(HalfVector);
 							}
 
