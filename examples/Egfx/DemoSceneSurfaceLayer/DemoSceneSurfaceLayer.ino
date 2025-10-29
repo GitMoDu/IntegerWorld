@@ -3,7 +3,7 @@
 * Includes configurations for multiple screen drivers (uncomment driver).
 */
 
-//#define DEBUG
+#define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
 
@@ -14,8 +14,9 @@
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
 #define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
 
-//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles in the lights shader.
+//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 #define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
+#define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Use vertex lit cube object with perspective correct texture mapping.
 
 
 // Preset of SPI pin definitions for various platforms.
@@ -63,9 +64,7 @@
 #include <IntegerWorld.h>
 #include <IntegerWorldTasks.h>
 #include <IntegerWorldEgfx.h>
-
-#include "AnimatedDemoScene.h"
-#include "DemoSceneAssets.h"
+#include <IntegerWorldExperimental.h>
 
 
 // Process scheduler.

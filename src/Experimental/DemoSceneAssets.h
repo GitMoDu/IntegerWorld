@@ -1,7 +1,7 @@
 #ifndef _DEMO_SCENE_ASSETS_h
 #define _DEMO_SCENE_ASSETS_h
 
-#include <IntegerWorld.h>
+#include "../Framework/Model.h"
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 #include "CubeTexture.h"
@@ -204,199 +204,145 @@ namespace Assets
 			constexpr uint8_t VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 		}
 
-		namespace SphereLod
+		namespace Sphere
 		{
-			namespace LoD0
+			static constexpr int16_t UpSize = 1;
+
+			static constexpr int16_t DownSize = 1;
+
+			static constexpr vertex16_t Vertices[] PROGMEM
 			{
-				static constexpr int16_t UpSize = 1;
+				{(UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+				{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+				{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+				{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+				{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+				{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+				{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+				{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+				{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
+				{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize},
+				{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+				{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
+				{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+				{(UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize},
+				{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+				{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+				{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+				{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+				{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+				{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
+				{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
+				{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
+				{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+				{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+				{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+				{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
+				{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
+				{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
+			};
 
-				static constexpr int16_t DownSize = 1;
+			constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
 
-				static constexpr vertex16_t Vertices[] PROGMEM
-				{
-					{(UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
-					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
-					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
-					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
-					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
-					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
-					{(UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize},
-					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1280)) / DownSize},
-					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
-					{(UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize},
-					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
-					{(UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1280)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
-					{(UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
-					{(UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(640)) / DownSize},
-					{(UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(-673)) / DownSize , (UpSize * (int32_t)(0)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize , (UpSize * (int32_t)(-640)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(396)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-396)) / DownSize},
-				};
-
-				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
-
-				static constexpr triangle_face_t Triangles[] PROGMEM
-				{
-					{ 2, 3, 4 },
-					{ 3, 5, 6 },
-					{ 6, 7, 4 },
-					{ 4, 3, 6 },
-					{ 3, 8, 5 },
-					{ 9, 10, 1 },
-					{ 6, 10, 7 },
-					{ 1, 6, 5 },
-					{ 1, 10, 6 },
-					{ 8, 15, 14 },
-					{ 15, 3, 2 },
-					{ 8, 3, 15 },
-					{ 17, 18, 19 },
-					{ 21, 22, 23 },
-					{ 11, 24, 25 },
-					{ 13, 14, 25 },
-					{ 25, 24, 13 },
-					{ 25, 12, 11 },
-					{ 14, 15, 25 },
-					{ 15, 2, 12 },
-					{ 12, 25, 15 },
-					{ 20, 26, 27 },
-					{ 26, 28, 29 },
-					{ 29, 27, 26 },
-					{ 13, 30, 14 },
-					{ 29, 13, 16 },
-					{ 30, 29, 28 },
-					{ 30, 13, 29 },
-					{ 31, 32, 9 },
-					{ 26, 31, 28 },
-					{ 20, 32, 26 },
-					{ 32, 31, 26 },
-					{ 19, 33, 17 },
-					{ 34, 35, 23 },
-					{ 35, 36, 23 },
-					{ 4, 37, 2 },
-					{ 7, 38, 4 },
-					{ 38, 35, 37 },
-					{ 37, 4, 38 },
-					{ 11, 12, 34 },
-					{ 37, 12, 2 },
-					{ 35, 34, 37 },
-					{ 22, 11, 34 },
-					{ 34, 23, 22 },
-					{ 23, 39, 21 },
-					{ 19, 39, 36 },
-					{ 23, 36, 39 },
-					{ 21, 39, 41 },
-					{ 18, 39, 19 },
-					{ 18, 41, 39 },
-					{ 16, 13, 24 },
-					{ 9, 32, 17 },
-					{ 32, 20, 18 },
-					{ 18, 17, 32 },
-					{ 30, 28, 0 },
-					{ 28, 31, 0 },
-					{ 31, 9, 1 },
-					{ 1, 0, 31 },
-					{ 27, 29, 16 },
-					{ 16, 40, 27 },
-					{ 40, 21, 41 },
-					{ 41, 20, 27 },
-					{ 27, 40, 41 },
-					{ 24, 40, 16 },
-					{ 22, 24, 11 },
-					{ 40, 22, 21 },
-					{ 40, 24, 22 },
-					{ 41, 18, 20 },
-					{ 34, 12, 37 },
-					{ 36, 33, 19 },
-					{ 38, 36, 35 },
-					{ 7, 33, 38 },
-					{ 33, 36, 38 },
-					{ 7, 10, 33 },
-					{ 10, 9, 17 },
-					{ 17, 33, 10 },
-					{ 5, 8, 0 },
-					{ 14, 30, 8 },
-					{ 30, 0, 8 },
-					{ 0, 1, 5 },
-				};
-
-				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
-			}
-
-			namespace LoD1
+			static constexpr triangle_face_t Triangles[] PROGMEM
 			{
-				static constexpr int16_t UpSize = 105;
+				{ 2, 3, 4 },
+				{ 3, 5, 6 },
+				{ 6, 7, 4 },
+				{ 4, 3, 6 },
+				{ 3, 8, 5 },
+				{ 9, 10, 1 },
+				{ 6, 10, 7 },
+				{ 1, 6, 5 },
+				{ 1, 10, 6 },
+				{ 8, 15, 14 },
+				{ 15, 3, 2 },
+				{ 8, 3, 15 },
+				{ 17, 18, 19 },
+				{ 21, 22, 23 },
+				{ 11, 24, 25 },
+				{ 13, 14, 25 },
+				{ 25, 24, 13 },
+				{ 25, 12, 11 },
+				{ 14, 15, 25 },
+				{ 15, 2, 12 },
+				{ 12, 25, 15 },
+				{ 20, 26, 27 },
+				{ 26, 28, 29 },
+				{ 29, 27, 26 },
+				{ 13, 30, 14 },
+				{ 29, 13, 16 },
+				{ 30, 29, 28 },
+				{ 30, 13, 29 },
+				{ 31, 32, 9 },
+				{ 26, 31, 28 },
+				{ 20, 32, 26 },
+				{ 32, 31, 26 },
+				{ 19, 33, 17 },
+				{ 34, 35, 23 },
+				{ 35, 36, 23 },
+				{ 4, 37, 2 },
+				{ 7, 38, 4 },
+				{ 38, 35, 37 },
+				{ 37, 4, 38 },
+				{ 11, 12, 34 },
+				{ 37, 12, 2 },
+				{ 35, 34, 37 },
+				{ 22, 11, 34 },
+				{ 34, 23, 22 },
+				{ 23, 39, 21 },
+				{ 19, 39, 36 },
+				{ 23, 36, 39 },
+				{ 21, 39, 41 },
+				{ 18, 39, 19 },
+				{ 18, 41, 39 },
+				{ 16, 13, 24 },
+				{ 9, 32, 17 },
+				{ 32, 20, 18 },
+				{ 18, 17, 32 },
+				{ 30, 28, 0 },
+				{ 28, 31, 0 },
+				{ 31, 9, 1 },
+				{ 1, 0, 31 },
+				{ 27, 29, 16 },
+				{ 16, 40, 27 },
+				{ 40, 21, 41 },
+				{ 41, 20, 27 },
+				{ 27, 40, 41 },
+				{ 24, 40, 16 },
+				{ 22, 24, 11 },
+				{ 40, 22, 21 },
+				{ 40, 24, 22 },
+				{ 41, 18, 20 },
+				{ 34, 12, 37 },
+				{ 36, 33, 19 },
+				{ 38, 36, 35 },
+				{ 7, 33, 38 },
+				{ 33, 36, 38 },
+				{ 7, 10, 33 },
+				{ 10, 9, 17 },
+				{ 17, 33, 10 },
+				{ 5, 8, 0 },
+				{ 14, 30, 8 },
+				{ 30, 0, 8 },
+				{ 0, 1, 5 },
+			};
 
-				static constexpr int16_t DownSize = 100;
-
-				static constexpr vertex16_t Vertices[] PROGMEM
-				{
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1089)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(1217)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(337)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(-881)) / DownSize , (UpSize * (int32_t)(544)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1217)) / DownSize},
-					{(UpSize * (int32_t)(1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
-					{(UpSize * (int32_t)(0)) / DownSize , (UpSize * (int32_t)(-1089)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
-					{(UpSize * (int32_t)(-1036)) / DownSize , (UpSize * (int32_t)(-337)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
-					{(UpSize * (int32_t)(-640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
-					{(UpSize * (int32_t)(640)) / DownSize , (UpSize * (int32_t)(881)) / DownSize , (UpSize * (int32_t)(-544)) / DownSize},
-				};
-
-				constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);
-
-				static constexpr triangle_face_t Triangles[] PROGMEM
-				{
-					{ 0, 1, 2 },
-					{ 3, 0, 2 },
-					{ 2, 4, 3 },
-					{ 2, 5, 4 },
-					{ 1, 5, 2 },
-					{ 6, 7, 8 },
-					{ 8, 9, 6 },
-					{ 9, 10, 6 },
-					{ 10, 11, 6 },
-					{ 11, 7, 6 },
-					{ 11, 0, 3 },
-					{ 1, 10, 9 },
-					{ 3, 7, 11 },
-					{ 1, 0, 10 },
-					{ 3, 4, 7 },
-					{ 0, 11, 10 },
-					{ 4, 8, 7 },
-					{ 4, 5, 8 },
-					{ 5, 9, 8 },
-					{ 5, 1, 9 },
-				};
-
-				constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
-			}
+			constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);
 		}
 	}
 
@@ -721,39 +667,57 @@ namespace Assets
 		};
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
-		class CubeTextureTriangleShader
-			: public Mesh::FragmentShaders::TriangleShade::TextureLitShader<
-			PrimitiveSources::Texture::Static::Source>
+
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+		using UvInterpolatorType = typename PrimitiveShaders::UvInterpolatorPerspectiveCorrect;
+#else
+		using UvInterpolatorType = typename PrimitiveShaders::UvInterpolatorFast;
+#endif
+
+		using TextureTriangleLitFunctor = Mesh::FragmentShaders::Functors::Texture::TriangleLitFunctor<
+			PrimitiveSources::Texture::Static::Source,
+			UvInterpolatorType>;
+
+		class CubeTexturedTriangleLitShader
+			: public Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
+			PrimitiveSources::Texture::Static::Source,
+			TextureTriangleLitFunctor>
 		{
 		private:
 			PrimitiveSources::Texture::Static::Source TextureSource;
 
 		public:
-			CubeTextureTriangleShader()
-				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width, Texture::Cube::Height)
-				, Mesh::FragmentShaders::TriangleShade::TextureLitShader<
-				PrimitiveSources::Texture::Static::Source>(TextureSource)
+			CubeTexturedTriangleLitShader()
+				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width)
+				, Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
+				PrimitiveSources::Texture::Static::Source,
+				TextureTriangleLitFunctor>(TextureSource)
 			{
 			}
 		};
 
-		class CubeTextureVertexShader
-			: public Mesh::FragmentShaders::VertexShade::TextureLitShader<
-			PrimitiveSources::Texture::Static::Source>
+		using TextureVertexLitFunctor = Mesh::FragmentShaders::Functors::Texture::VertexLitFunctor<
+			PrimitiveSources::Texture::Static::Source,
+			UvInterpolatorType>;
+
+		class CubeTexturedVertexLitShader
+			: public Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
+			PrimitiveSources::Texture::Static::Source,
+			TextureVertexLitFunctor>
 		{
 		private:
 			PrimitiveSources::Texture::Static::Source TextureSource;
 
 		public:
-			CubeTextureVertexShader()
-				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width, Texture::Cube::Height)
-				, Mesh::FragmentShaders::VertexShade::TextureLitShader<
-				PrimitiveSources::Texture::Static::Source>(TextureSource)
+			CubeTexturedVertexLitShader()
+				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width)
+				, Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
+				PrimitiveSources::Texture::Static::Source,
+				TextureVertexLitFunctor>(TextureSource)
 			{
 			}
 		};
 #endif
-
 	}
 }
 #endif

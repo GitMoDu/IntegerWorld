@@ -7,10 +7,11 @@
 #define SERIAL_BAUD_RATE 115200
 
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
-#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
+#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
 
-//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable material component toggles in the lights shader.
-#define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
+//#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
+//#define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
+//#define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Use vertex lit cube object with perspective correct texture mapping.
 
 
 #define _TASK_OO_CALLBACKS
@@ -22,6 +23,7 @@
 #include <IntegerWorld.h>
 #include <IntegerWorldTasks.h>
 #include <IntegerWorldOutputs.h>
+#include <IntegerWorldExperimental.h>
 
 // Include used output drivers. 
 // Each driver has its own dependencies, so you may need to install them.
@@ -32,9 +34,6 @@
 //#include <IntegerWorldAdafruitSt77XX.h>
 //#include <IntegerWorldLexus2kSsd1306.h>
 //#include <IntegerWorldSumotoySsd1331.h>
-
-#include "AnimatedDemoScene.h"
-#include "DemoSceneAssets.h"
 
 // Forward declare the used communications hardware.
 TwoWire& WireInstance(Wire);
@@ -87,7 +86,7 @@ SPIClass& SpiInstance(SPI);
 //IntegerWorld::Adafruit::Ssd1306I2c::FramebufferSurface Driver(Wire); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Ssd1306Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Sh1106Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SH110X
-//IntegerWorld::Adafruit::Ssd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
+//IntegerWorld::Adafruit::Ssd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST, true, 0); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
 //IntegerWorld::Adafruit::St7735::DirectDrawSurface Driver(IntegerWorld::Adafruit::St7735::VariantEnum::Mini160x80Plugin, SpiInstance, TFT_CS, TFT_DC, TFT_RST, TFT_BKL); // https://github.com/adafruit/Adafruit-ST7735-Library
 //IntegerWorld::Adafruit::St7789::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-ST7735-Library
 

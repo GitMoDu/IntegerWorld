@@ -1,15 +1,25 @@
-#ifndef _ANIMATED_DEMO_SCENE_h
-#define _ANIMATED_DEMO_SCENE_h
+#ifndef _INTEGER_WORLD_EXPERIMENTAL_ANIMATED_DEMO_SCENE_h
+#define _INTEGER_WORLD_EXPERIMENTAL_ANIMATED_DEMO_SCENE_h
+
 
 #define _TASK_OO_CALLBACKS
 #include <TSchedulerDeclarations.hpp>
 
-#include <IntegerWorld.h>
 #include "DemoSceneAssets.h"
+#include "../Framework/Interface.h"
 
 using namespace IntegerWorld;
 
-
+/// <summary>
+/// Integer World Animated Demo Scene.
+/// Cross-platform demo scene showcasing various renderable objects, materials, lighting and animation.
+/// 
+/// Configuration options:
+/// #define INTEGER_WORLD_FRUSTUM_DEBUG // Enable engine frustum visualization in scene.
+/// #define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
+/// #define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
+/// #define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Use vertex lit cube object with perspective correct texture mapping.
+/// </summary>
 class AnimatedDemoScene : private TS::Task
 {
 public:
@@ -75,7 +85,11 @@ private:
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 	// Cube has a texture mapped on all faces.
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+	Assets::RenderObjects::CubeTexturedVertexObject ObjectCube{};
+#else
 	Assets::RenderObjects::CubeTexturedTriangleObject ObjectCube{};
+#endif
 #else
 	// Cube has a palleted diffuse color for each face.
 	Assets::RenderObjects::CubeMeshTriangleObject ObjectCube{};
@@ -86,19 +100,22 @@ private:
 
 	// Shared mesh triangle shaders.
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader TriangleShader{};
-	RenderObjects::Mesh::FragmentShaders::TriangleShade::InterpolateZShader TriangleZShader{};
+	RenderObjects::Mesh::FragmentShaders::TriangleShade::ZInterpolateShader TriangleZShader{};
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::WireframeShader TriangleWireframeShader{};
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
-	Assets::FragmentShaders::CubeTextureTriangleShader TriangleTextureShader{};
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+	Assets::FragmentShaders::CubeTexturedVertexLitShader TriangleTextureShader{};
+	RenderObjects::Mesh::FragmentShaders::VertexShade::WireframeShader TriangleVertexWireframeShader{};
+	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader TriangleVertexZShader{};
+#else
+	Assets::FragmentShaders::CubeTexturedTriangleLitShader TriangleTextureShader{};
+#endif
 #endif
 
 	// Shared mesh vertex shaders.
 	RenderObjects::Mesh::FragmentShaders::VertexShade::ColorInterpolateShader VertexShader{};
 	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader VertexZShader{};
 	RenderObjects::Mesh::FragmentShaders::VertexShade::WireframeShader VertexWireframeShader{};
-#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
-	Assets::FragmentShaders::CubeTextureVertexShader VertexTextureShader{};
-#endif
 
 	// Custom billboard shaders for point light sources.
 	Assets::FragmentShaders::LightBillboardFragmentShader BillboardShader{};
@@ -160,7 +177,7 @@ public:
 			return false;
 		}
 
-		uint8_t fovPercent = 50;
+		uint8_t fovPercent = 30;
 		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * (100 - fovPercent)) / 100);
 
 		// Configure animation based on surface dimensions.
@@ -287,11 +304,14 @@ public:
 	void SetFragmentShaderWireframe()
 	{
 		ObjectBackground.Color = Rgb8::BLACK;
+		ObjectFloor.FragmentShader = &PointShader;
 		ObjectSphere.FragmentShader = &VertexWireframeShader;
 		ObjectStar.FragmentShader = &TriangleWireframeShader;
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+		ObjectCube.FragmentShader = &TriangleVertexWireframeShader;
+#else
 		ObjectCube.FragmentShader = &TriangleWireframeShader;
-		//ObjectCube.FragmentShader = &EdgeShader;
-		ObjectFloor.FragmentShader = &PointShader;
+#endif
 
 		LightRedBillboardObject.FragmentShader = &BillboardWireframeShade;
 		LightGreenBillboardObject.FragmentShader = &BillboardWireframeShade;
@@ -300,10 +320,15 @@ public:
 	void SetFragmentShaderZ()
 	{
 		ObjectBackground.Color = Rgb8::BLACK;
+		ObjectFloor.FragmentShader = &PointZShader;
 		ObjectSphere.FragmentShader = &VertexZShader;
 		ObjectStar.FragmentShader = &TriangleZShader;
+
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+		ObjectCube.FragmentShader = &TriangleVertexZShader;
+#else
 		ObjectCube.FragmentShader = &TriangleZShader;
-		ObjectFloor.FragmentShader = &PointZShader;
+#endif
 
 		LightRedBillboardObject.FragmentShader = &BillboardZShader;
 		LightGreenBillboardObject.FragmentShader = &BillboardZShader;

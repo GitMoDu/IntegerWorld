@@ -9,4 +9,7 @@
 // Monkey.
 #include "Experimental/Suzanne.h"
 
+// Animated demo scene with multiple objects and lights. Re-used for various cross-platform examples.
+#include "Experimental/AnimatedDemoScene.h"
+
 #endif
