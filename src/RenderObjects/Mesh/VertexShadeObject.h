@@ -225,7 +225,7 @@ namespace IntegerWorld
 			template<uint16_t vertexCount,
 				uint16_t triangleCount,
 				FrustumCullingEnum frustumCulling = FrustumCullingEnum::PrimitiveCulling,
-				FaceCullingEnum faceCulling = FaceCullingEnum::NoCulling>
+				FaceCullingEnum faceCulling = FaceCullingEnum::BackfaceCulling>
 			class SimpleStaticMeshVertexObject : public VertexShadeObject<
 				vertexCount,
 				triangleCount,
