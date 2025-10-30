@@ -668,13 +668,10 @@ namespace Assets
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
-		using TriangleSamplerType = typename PrimitiveShaders::TrianglePerspectiveCorrectSampler;
-		static constexpr PrimitiveShaders::UvInterpolationMode UvInterpolationMode = PrimitiveShaders::UvInterpolationMode::Fast;
-
 		using TextureVertexLitFunctor = Mesh::FragmentShaders::Functors::Texture::VertexLitFunctor<
 			PrimitiveSources::Texture::Static::Source,
-			TriangleSamplerType,
-			UvInterpolationMode>;
+			PrimitiveShaders::TrianglePerspectiveCorrectSampler,
+			PrimitiveShaders::UvInterpolationMode::Accurate>;
 
 		class CubeTexturedVertexLitShader
 			: public Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
@@ -694,13 +691,10 @@ namespace Assets
 			}
 		};
 #else
-		using TriangleSamplerType = typename PrimitiveShaders::TriangleAffineSampler;
-		static constexpr PrimitiveShaders::UvInterpolationMode UvInterpolationMode = PrimitiveShaders::UvInterpolationMode::Fast;
-
 		using TextureTriangleLitFunctor = Mesh::FragmentShaders::Functors::Texture::TriangleLitFunctor<
 			PrimitiveSources::Texture::Static::Source,
-			TriangleSamplerType,
-			UvInterpolationMode>;
+			PrimitiveShaders::TriangleAffineSampler,
+			PrimitiveShaders::UvInterpolationMode::Fast>;
 
 		class CubeTexturedTriangleLitShader
 			: public Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
