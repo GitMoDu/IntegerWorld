@@ -18,7 +18,7 @@ using namespace IntegerWorld;
 /// #define INTEGER_WORLD_FRUSTUM_DEBUG // Enable engine frustum visualization in scene.
 /// #define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 /// #define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
-/// #define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Use vertex lit cube object with perspective correct texture mapping.
+/// #define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Textured cube object with perspective correct and accurate texture mapping.
 /// </summary>
 class AnimatedDemoScene : private TS::Task
 {
@@ -102,11 +102,10 @@ private:
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader TriangleShader{};
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::ZInterpolateShader TriangleZShader{};
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::WireframeShader TriangleWireframeShader{};
+
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
 	Assets::FragmentShaders::CubeTexturedVertexLitShader TriangleTextureShader{};
-	RenderObjects::Mesh::FragmentShaders::VertexShade::WireframeShader TriangleVertexWireframeShader{};
-	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader TriangleVertexZShader{};
 #else
 	Assets::FragmentShaders::CubeTexturedTriangleLitShader TriangleTextureShader{};
 #endif
@@ -307,8 +306,8 @@ public:
 		ObjectFloor.FragmentShader = &PointShader;
 		ObjectSphere.FragmentShader = &VertexWireframeShader;
 		ObjectStar.FragmentShader = &TriangleWireframeShader;
-#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
-		ObjectCube.FragmentShader = &TriangleVertexWireframeShader;
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO) && defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+		ObjectCube.FragmentShader = &VertexWireframeShader;
 #else
 		ObjectCube.FragmentShader = &TriangleWireframeShader;
 #endif
@@ -324,8 +323,8 @@ public:
 		ObjectSphere.FragmentShader = &VertexZShader;
 		ObjectStar.FragmentShader = &TriangleZShader;
 
-#if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
-		ObjectCube.FragmentShader = &TriangleVertexZShader;
+#if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO) && defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
+		ObjectCube.FragmentShader = &VertexZShader;
 #else
 		ObjectCube.FragmentShader = &TriangleZShader;
 #endif
