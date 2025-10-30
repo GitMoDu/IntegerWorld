@@ -103,7 +103,7 @@ namespace IntegerWorld
 					class ColorInterpolateShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
-						Functors::ColorFunctor Functor{};
+						Functors::ColorFunctor<> Functor{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_vertex_fragment_t& fragment)

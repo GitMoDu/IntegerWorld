@@ -16,13 +16,14 @@ namespace IntegerWorld
 			{
 				namespace Functors
 				{
+					template<typename TriangleSamplerType = PrimitiveShaders::TrianglePerspectiveCorrectSampler>
 					struct ColorFunctor
 					{
 					private:
-						PrimitiveShaders::TriangleSampler Sampler{};
+						TriangleSamplerType Sampler{};
 
 					public:
-						uint8_t Ra, Ga, Ba, Rb, Gb, Bb, Rc, Gc, Bc;
+						uint8_t Ra{}, Ga{}, Ba{}, Rb{}, Gb{}, Bb{}, Rc{}, Gc{}, Bc{};
 
 					public:
 						bool SetFragmentData(const mesh_vertex_fragment_t& fragment)
@@ -49,7 +50,7 @@ namespace IntegerWorld
 
 						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 						{
-							const auto fractions = Sampler.U16Fractions(x, y);
+							const auto fractions = Sampler.Fractions(x, y);
 							color = Rgb8::Color(
 								MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(Fraction(fractions.FractionA, Ra)) + Fraction(fractions.FractionB, Rb) + Fraction(fractions.FractionC, Rc)),
 								MinValue<uint16_t>(UINT8_MAX, static_cast<uint16_t>(Fraction(fractions.FractionA, Ga)) + Fraction(fractions.FractionB, Gb) + Fraction(fractions.FractionC, Gc)),
@@ -63,7 +64,7 @@ namespace IntegerWorld
 					struct ZFunctor
 					{
 					private:
-						PrimitiveShaders::TriangleSampler Sampler{};
+						PrimitiveShaders::TriangleAffineSampler Sampler{};
 
 					public:
 						int16_t Az, Bz, Cz;
@@ -85,7 +86,7 @@ namespace IntegerWorld
 
 						bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 						{
-							const auto fractions = Sampler.U16Fractions(x, y);
+							const auto fractions = Sampler.Fractions(x, y);
 
 							const int16_t z = LimitValue<int32_t, 0, INT16_MAX>(
 								static_cast<int32_t>(Fraction(fractions.FractionA, Az))
@@ -103,12 +104,12 @@ namespace IntegerWorld
 					namespace Texture
 					{
 						template<typename TextureSourceType,
-							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+							typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
 						class UnlitFunctor
 						{
 						private:
-							PrimitiveShaders::TriangleSampler Sampler{};
-							PrimitiveShaders::UvInterpolatorFast UvInterpolator{};
+							TriangleSamplerType Sampler{};
+							PrimitiveShaders::UvInterpolator UvInterpolator{};
 
 						private:
 							TextureSourceType& TextureSource;
@@ -129,13 +130,12 @@ namespace IntegerWorld
 									return true;
 								}
 
-
 								return false;
 							}
 
 							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 							{
-								const auto fractions = Sampler.U16Fractions(x, y);
+								const auto fractions = Sampler.Fractions(x, y);
 								const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
 								color = TextureSource.GetTexel(uv.x, uv.y);
 
@@ -144,20 +144,19 @@ namespace IntegerWorld
 						};
 
 						template<typename TextureSourceType,
-							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+							typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler,
+							PrimitiveShaders::UvInterpolationMode uvInterpolationMode = PrimitiveShaders::UvInterpolationMode::Fast>
 						class TriangleLitFunctor
 						{
 						private:
-							PrimitiveShaders::TriangleSampler Sampler{};
-							UvInterpolatorType UvInterpolator{};
+							TriangleSamplerType Sampler{};
+							PrimitiveShaders::UvInterpolator UvInterpolator{};
 
 						private:
 							TextureSourceType& TextureSource;
 
 						private:
-							uint8_t R = 0;
-							uint8_t G = 0;
-							uint8_t B = 0;
+							uint8_t R{}, G{}, B{};
 
 						public:
 							TriangleLitFunctor(TextureSourceType& textureSource)
@@ -184,8 +183,18 @@ namespace IntegerWorld
 							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 							{
 								{
-									const auto fractions = Sampler.U16Fractions(x, y);
-									const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									const auto fractions = Sampler.Fractions(x, y);
+									coordinate_t uv;
+									switch (uvInterpolationMode)
+									{
+									case PrimitiveShaders::UvInterpolationMode::Fast:
+										uv = UvInterpolator.UvFast(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+										break;
+									case PrimitiveShaders::UvInterpolationMode::Accurate:
+									default:
+										uv = UvInterpolator.UvAccurate(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+										break;
+									}
 									color = TextureSource.GetTexel(uv.x, uv.y);
 								}
 
@@ -198,26 +207,27 @@ namespace IntegerWorld
 							}
 						};
 
-
 						template<typename TextureSourceType,
-							typename UvInterpolatorType = PrimitiveShaders::UvInterpolatorFast>
+							typename TriangleSamplerType = PrimitiveShaders::TrianglePerspectiveCorrectSampler,
+							PrimitiveShaders::UvInterpolationMode uvInterpolationMode = PrimitiveShaders::UvInterpolationMode::Fast>
 						class VertexLitFunctor
 						{
 						private:
-							PrimitiveShaders::TriangleSampler Sampler{};
-							UvInterpolatorType UvInterpolator{};
+							TriangleSamplerType Sampler{};
+							PrimitiveShaders::UvInterpolator UvInterpolator{};
 
 						private:
 							TextureSourceType& TextureSource;
 
 						private:
-							uint8_t Ra, Ga, Ba, Rb, Gb, Bb, Rc, Gc, Bc;
+							uint8_t Ra{}, Ga{}, Ba{}, Rb{}, Gb{}, Bb{}, Rc{}, Gc{}, Bc{};
 
 						public:
 							VertexLitFunctor(TextureSourceType& textureSource)
 								: TextureSource(textureSource)
 							{
 							}
+
 							bool SetFragmentData(const mesh_vertex_fragment_t& fragment)
 							{
 								if (Sampler.SetFragmentData(fragment))
@@ -235,12 +245,26 @@ namespace IntegerWorld
 
 									return true;
 								}
+
 								return false;
 							}
+
 							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 							{
-								const auto fractions = Sampler.U16Fractions(x, y);
-								const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+								const auto fractions = Sampler.Fractions(x, y);
+
+								coordinate_t uv;
+								switch (uvInterpolationMode)
+								{
+								case PrimitiveShaders::UvInterpolationMode::Fast:
+									uv = UvInterpolator.UvFast(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									break;
+								case PrimitiveShaders::UvInterpolationMode::Accurate:
+								default:
+									uv = UvInterpolator.UvAccurate(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									break;
+								}
+
 								uint8_t r;
 								uint8_t g;
 								uint8_t b;
