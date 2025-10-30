@@ -55,7 +55,7 @@ private:
 
 public:
 	AnimatedTinyScene(TS::Scheduler& scheduler)
-		: TS::Task(25, TASK_FOREVER, &scheduler, false)
+		: TS::Task(16, TASK_FOREVER, &scheduler, false)
 	{
 	}
 

@@ -9,9 +9,10 @@
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
 #define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
 
+//#define INTEGER_WORLD_FRUSTUM_DEBUG // Enable engine frustum visualization in scene.
 //#define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 //#define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
-//#define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Use vertex lit cube object with perspective correct texture mapping.
+//#define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Textured cube object with perspective correct and accurate texture mapping.
 
 
 #define _TASK_OO_CALLBACKS
