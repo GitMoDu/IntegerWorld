@@ -104,7 +104,8 @@ namespace IntegerWorld
 					namespace Texture
 					{
 						template<typename TextureSourceType,
-							typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
+							typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler,
+							PrimitiveShaders::UvInterpolationMode uvInterpolationMode = PrimitiveShaders::UvInterpolationMode::Fast>
 						class UnlitFunctor
 						{
 						private:
@@ -136,7 +137,17 @@ namespace IntegerWorld
 							bool operator()(Rgb8::color_t& color, const int16_t x, const int16_t y)
 							{
 								const auto fractions = Sampler.Fractions(x, y);
-								const coordinate_t uv = UvInterpolator.GetUv(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+								coordinate_t uv;
+								switch (uvInterpolationMode)
+								{
+								case PrimitiveShaders::UvInterpolationMode::Fast:
+									uv = UvInterpolator.UvFast(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									break;
+								case PrimitiveShaders::UvInterpolationMode::Accurate:
+								default:
+									uv = UvInterpolator.UvAccurate(fractions.FractionA, fractions.FractionB, fractions.FractionC);
+									break;
+								}
 								color = TextureSource.GetTexel(uv.x, uv.y);
 
 								return true;
