@@ -177,7 +177,7 @@ public:
 		}
 
 		uint8_t fovPercent = 30;
-		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * (100 - fovPercent)) / 100);
+		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * fovPercent) / 100);
 
 		// Configure animation based on surface dimensions.
 		ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * width) / height;

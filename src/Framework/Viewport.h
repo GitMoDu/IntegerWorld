@@ -57,7 +57,7 @@ namespace IntegerWorld
 		/// <param name="fovFraction">0 -> Minimum FoV; UFraction16::FRACTION_1X -> Max FoV.</param>
 		void SetFov(const ufraction16_t fovFraction)
 		{
-			distanceNum = RangeMin + Fraction(fovFraction, Range);
+			distanceNum = RangeMin + Fraction(static_cast<ufraction16_t>(UFRACTION16_1X - fovFraction), Range);
 		}
 
 		void SetDrawDistance(const uint16_t distance)
