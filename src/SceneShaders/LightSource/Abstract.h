@@ -9,47 +9,8 @@ namespace IntegerWorld
 	{
 		namespace LightSource
 		{
-			/// <summary>
-			/// Lighting helpers and common math used by scene shaders that implement multiple light types.
-			///
-			/// This class extends AbstractSceneShader with reusable calculations for:
-			/// - Directional lights (infinite distance, no attenuation)
-			/// - Point lights (position + range-based attenuation)
-			/// - Spot lights (position + cone + range-based attenuation)
-			/// - Camera-style lights (derived shaders may position at the camera and attenuate by view depth)
-			///
-			/// Fixed-point fractions:
-			/// - All lighting weights/attenuations returned by this class are ufraction16_t fixed-point values in [0,1].
-			/// - Typical material scalars (Diffuse/Specular/Metallic) are ufraction8_t.
-			///
-			/// It provides fixed-point friendly implementations of:
-			/// - Diffuse weighting (Lambert) using dot(N, L) where L = IlluminationVector (normalized)
-			/// - Specular weighting (Blinn–Phong) using dot(N, H)^p where H = normalize(L + V)
-			/// - Distance-based attenuation between RangeSquaredMin and RangeSquaredMax
-			/// - Cone falloff/softness for spot lights with a tunable focus
-			///
-			/// Notes and conventions:
-			/// - All vertex16_t vectors used in dot products must be normalized to the VERTEX16 range.
-			/// - IlluminationVector must be set and normalized by derived shaders before calling Get*Weights().
-			/// - For spot and directional lights, light.Direction must be normalized (use light.SetDirectionVector()).
-			/// - GetWeightsLambertBlinnPhong() does not apply distance or cone attenuation and does not scale by
-			///   material or light color — it only returns ufraction16_t diffuse/specular fractions in [0,1].
-			/// - Specular requires a normalized half-vector H. Computing H typically uses a normalized view vector V
-			///   from the fragment toward the camera in the derived shader.
-			///
-			/// Typical usage in a derived shader:
-			/// 1) StartShade(color)
-			/// 2) For each light:
-			///    - Compute IlluminationVector (direction from point toward the light) and normalize it
-			///    - Optionally compute H = normalize(L + V) if specular is desired
-			///    - Query Lambert/Blinn–Phong weights via GetWeightsLambertBlinnPhong(...)
-			///    - Apply attenuation via GetProximityFraction(...) and, for spots, GetConeFraction(...)
-			///    - Scale by material/light terms and ColorMix(...)
-			/// 3) color = EndShade()
-			/// </summary>
-			class AbstractShader : public ::IntegerWorld::SceneShaders::Abstract::Shader
+			namespace Lighting
 			{
-			protected:
 				/// <summary>
 				/// Bit shifts in the 32-bit result of DotProduct16() when using vertex16_t inputs.
 				/// Used to align dot product magnitude into ufraction16_t space.
@@ -67,105 +28,54 @@ namespace IntegerWorld
 				/// </summary>
 				static constexpr uint8_t DOT_CONVERT_SHIFTS = DOT_SHIFTS - FRAC_SHIFTS;
 
-			private:
 				/// <summary>
-				/// Optional array of lights available to the shader (not used by helpers here).
-				/// Derived shaders may set and iterate these when implementing Shade().
+				/// Computes the Lambertian diffuse fraction between a surface normal and a (assumed normalized) illumination vector.
 				/// </summary>
-				const light_source_t* Lights = nullptr;
-
-				/// <summary>
-				/// Number of entries in Lights (not used by helpers here).
-				/// </summary>
-				uint8_t LightCount = 0;
-
-			protected:
-				/// <summary>
-				/// Illumination vector L: direction from the shaded point toward the light (normalized).
-				/// Must be provided/updated by derived shaders before calling Get*Weights().
-				/// </summary>
-				vertex16_t IlluminationVector{ 0, 0, 0 };
-
-			public:
-				AbstractShader() : ::IntegerWorld::SceneShaders::Abstract::Shader() {}
-
-			protected:
-				/// <summary>
-				/// Computes diffuse/specular fractions using normalized inputs:
-				/// - Diffuse: Lambert with L = IlluminationVector
-				/// - Specular: Blinn–Phong with provided H = normalize(L + V)
-				/// Outputs:
-				/// - diffuse/specular: ufraction16_t fractions in [0,1]. No attenuation or material/light scaling is applied.
-				/// </summary>
-				void GetWeightsLambertBlinnPhong(const vertex16_t& normal, const vertex16_t& halfVector, const ufraction8_t focusFraction, ufraction16_t& diffuse, ufraction16_t& specular)
+				/// <param name="normal">The surface normal vector (vertex16_t).</param>
+				/// <param name="illuminationVector">The illumination (light) direction vector (normalized L vector)</param>
+				/// <returns>A ufraction16_t representing the Lambert diffuse contribution.
+				/// If the dot product of illuminationVector and normal is positive, returns the shifted DotProduct16 value (cast to ufraction16_t);
+				/// otherwise returns 0.</returns>
+				static ufraction16_t GetDiffuseFraction(const vertex16_t& normal, const vertex16_t& illuminationVector)
 				{
-					// Diffuse: Lambert. Assumes IlluminationVector is the L vector.
-					vertex16_t illumination16;
-					illumination16.x = IlluminationVector.x;
-					illumination16.y = IlluminationVector.y;
-					illumination16.z = IlluminationVector.z;
-					NormalizeVertex16(illumination16);
-					const int32_t dotProduct = DotProduct16(illumination16, normal);
-					if (dotProduct > 0)
-					{
-						/*	uint32_t scaled = LimitValue<int32_t, 0, DOT16_MAX>(dotProduct);
-							scaled = Curves::Root2U32<>::Get(scaled);
+					// Compute dot product of illumination vector and normal.
+					const int32_t dotProduct = DotProduct16(illuminationVector, normal);
 
-							diffuse = UFraction16::GetScalar<int32_t>(
-								LimitValue<int32_t, 0, UINT16_MAX>(dotProduct), UINT16_MAX);*/
-
-						diffuse = UFraction16::GetScalar(LimitValue<int32_t, 0, VERTEX16_DOT>(dotProduct), VERTEX16_DOT);
-						////diffuse = ufraction16_t(static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS);
-					}
-
-					// Specular: Blinn–Phong. Assumes halfVector is normalized H = normalize(L + V).
-					specular = GetSpecularFraction(normal, halfVector, focusFraction);
+					// Return shifted dot product as ufraction16_t if positive; otherwise return 0.
+					return (dotProduct > 0)
+						? static_cast<ufraction16_t>((static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS))
+						: 0;
 				}
 
 				/// <summary>
-				/// Spot cone intensity in [0,1] as ufraction16_t. Requires normalized inputs:
-				/// - lightDirection: the light’s axis (normalized)
-				/// - IlluminationVector: L (normalized, set by the caller)
-				/// Uses a tunable focus to sharpen the cone response.
+				/// Computes a Blinn–Phong style specular fraction using normalized normal and half-vector inputs, producing a ufraction16_t in the range [0,1].
+				/// The function narrows the highlight by repeated squaring (effectively x^8) and interpolates between a wide and narrow lobe according to the focus parameter.
 				/// </summary>
-				ufraction16_t GetConeFraction(const vertex16_t& lightDirection, const ufraction16_t focusFraction) const
-				{
-					// Cone alignment: larger is more inside the cone. Assumes IlluminationVector is the normalized L.
-					const int32_t coneDot = -DotProduct16(lightDirection, IlluminationVector);
-
-					if (coneDot > 0)
-					{
-						return TemplateConeFraction<>(coneDot, focusFraction);
-					}
-					else
-					{
-						return 0;
-					}
-				}
-
-			protected:
-				/// <summary>
-				/// Blinn–Phong specular term using normalized N and H.
-				/// Uses repeated squaring to produce a narrower highlight (x^8).
-				/// Returns ufraction16_t in [0,1].
-				/// </summary>
+				/// <param name="normal">Reference to the surface normal (vertex16_t). Expected to be normalized; used to compute the dot product with the half-vector.</param>
+				/// <param name="halfVector">Reference to the half-vector (vertex16_t) between light and view directions. Expected to be normalized; used together with the normal for the specular term.</param>
+				/// <param name="focus">ufraction8_t value that controls interpolation between the wide and narrow specular responses (acts as a weight). Interpreted as a fixed-point fraction in [0,1].</param>
+				/// <returns>A ufraction16_t fixed-point specular fraction in the range [0,1]. Returns 0 when the dot product of normal and half-vector is non-positive; otherwise returns an interpolated specular response between wide and narrowed lobes.</returns>
 				static ufraction16_t GetSpecularFraction(const vertex16_t& normal, const vertex16_t& halfVector, const ufraction8_t focus)
 				{
-					const int32_t dotProduct = DotProduct16(normal, halfVector);
+					// Compute dot product of normal and half-vector.
+					const int32_t dotProduct = DotProduct16(halfVector, normal);
+
+					// Return 0 if dot product is non-positive.
 					if (dotProduct <= 0)
 						return 0;
 
 					// Convert dot(N, H) to ufraction16_t in [0,1]
-					uint32_t frac = static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS;
-					const uint16_t fracBase = frac;
+					uint32_t narrow = static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS;
+					const uint16_t wide = narrow;
 
 					// Narrower lobe via repeated squaring.
-					frac = (frac * frac) >> FRAC_SHIFTS;
-					frac = (frac * frac) >> FRAC_SHIFTS;
-					frac = (frac * frac) >> FRAC_SHIFTS;
+					narrow = (narrow * narrow) >> FRAC_SHIFTS;
+					narrow = (narrow * narrow) >> FRAC_SHIFTS;
+					narrow = (narrow * narrow) >> FRAC_SHIFTS;
+					narrow = static_cast<ufraction16_t>(MinValue<uint32_t>(UFRACTION16_1X, narrow));
 
-					frac = static_cast<ufraction16_t>(LimitValue<uint32_t, 0, UFRACTION16_1X>(frac));
-					return Interpolate<uint16_t>(focus, fracBase, frac);
+					// Interpolate between wide and narrow specular responses based on focus.
+					return Fraction(focus, narrow) + Fraction(static_cast<ufraction8_t>(UFRACTION8_1X - focus), wide);
 				}
 
 				/// <summary>
@@ -178,17 +88,23 @@ namespace IntegerWorld
 				/// <param name="focusFraction">Blend factor in [0,1] (ufraction16_t) between narrow and wide responses</param>
 				/// <returns>Cone intensity as ufraction16_t in [0,1]</returns>
 				template<uint8_t FocusFactor = 3>
-				static ufraction16_t TemplateConeFraction(const int32_t dotProduct, const ufraction16_t focusFraction)
+				static ufraction16_t GetConeFraction(const vertex16_t& illuminationVector, const vertex16_t& lightDirection, const ufraction16_t focus)
 				{
-					const ufraction16_t wideFraction = ufraction16_t(static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS);
-					ufraction16_t narrowFraction = wideFraction;
+					// Cone alignment: larger is more inside the cone. Assumes IlluminationVector is the normalized L.
+					const int32_t coneDot = -DotProduct16(lightDirection, illuminationVector);
+
+					if (coneDot <= 0)
+						return 0;
+
+					const ufraction16_t wide = ufraction16_t(static_cast<uint32_t>(coneDot) >> DOT_CONVERT_SHIFTS);
+					ufraction16_t narrow = wide;
 					for (uint_fast8_t i = 0; i < FocusFactor; i++)
 					{
-						narrowFraction = (uint32_t(narrowFraction) * narrowFraction) >> GetBitShifts(UFRACTION16_1X);
+						narrow = (uint32_t(narrow) * narrow) >> GetBitShifts(UFRACTION16_1X);
 					}
 
 					// Interpolate between wide and narrow cone responses.
-					return Interpolate(focusFraction, narrowFraction, wideFraction);
+					return Fraction(focus, narrow) + Fraction(static_cast<ufraction8_t>(UFRACTION8_1X - focus), wide);
 				}
 
 				/// <summary>
@@ -235,7 +151,7 @@ namespace IntegerWorld
 
 					return GetProximityFraction(light, squaredDistance);
 				}
-			};
+			}
 		}
 	}
 }
