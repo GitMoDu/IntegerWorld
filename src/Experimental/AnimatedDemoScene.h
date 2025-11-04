@@ -112,7 +112,7 @@ private:
 #endif
 
 	// Shared mesh vertex shaders.
-	RenderObjects::Mesh::FragmentShaders::VertexShade::ColorInterpolateShader VertexShader{};
+	RenderObjects::Mesh::FragmentShaders::VertexShade::ColorInterpolateShader<PrimitiveShaders::TrianglePerspectiveCorrectSampler> VertexShader{};
 	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader VertexZShader{};
 	RenderObjects::Mesh::FragmentShaders::VertexShade::WireframeShader VertexWireframeShader{};
 

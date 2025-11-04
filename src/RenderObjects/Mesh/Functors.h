@@ -16,7 +16,7 @@ namespace IntegerWorld
 			{
 				namespace Functors
 				{
-					template<typename TriangleSamplerType = PrimitiveShaders::TrianglePerspectiveCorrectSampler>
+					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
 					struct ColorFunctor
 					{
 					private:

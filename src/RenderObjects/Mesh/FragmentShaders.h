@@ -100,10 +100,11 @@ namespace IntegerWorld
 						typename TextureFunctorType = Functors::Texture::UnlitFunctor<TextureSourceType>>
 						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_vertex_fragment_t, TextureSourceType, TextureFunctorType>;
 
+					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
 					class ColorInterpolateShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
-						Functors::ColorFunctor<> Functor{};
+						Functors::ColorFunctor<TriangleSamplerType> Functor{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_vertex_fragment_t& fragment)
