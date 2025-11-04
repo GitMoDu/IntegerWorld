@@ -184,14 +184,14 @@ public:
 
 		// Setup lights.
 		SceneLights[uint8_t(SceneLightsEnum::DirectionalLightGlobal)] = SceneShaders::LightSource::DirectionalLightSource(GlobalLightColor,
-			{ VERTEX16_UNIT, VERTEX16_UNIT, VERTEX16_UNIT }, UFRACTION16_1X / 4);
+			{ -VERTEX16_UNIT, -VERTEX16_UNIT, VERTEX16_UNIT }, UFRACTION16_1X / 4);
 
 		SceneLights[uint8_t(SceneLightsEnum::PointLightRed)] = SceneShaders::LightSource::PointLightSource(Light1Color,
-			{ int16_t(-(ShapeMoveX * 4) / 10) , int16_t(-(DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
+			{ int16_t(-(ShapeMoveX * 4) / 10) , int16_t((DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
 			LightMinDistance, LightMaxDistance);
 
 		SceneLights[uint8_t(SceneLightsEnum::PointLightGreen)] = SceneShaders::LightSource::PointLightSource(Light2Color * 0,
-			{ int16_t((ShapeMoveX * 4) / 10) , int16_t(-(DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
+			{ int16_t((ShapeMoveX * 4) / 10) , int16_t((DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
 			LightMinDistance, LightMaxDistance);
 
 		// Attach light sources to lights shader.
@@ -211,9 +211,9 @@ public:
 
 		// Configure and place floor.
 		FloorShader.Radius = MaxValue(1, MinValue(width, height) / 96);
-		ObjectFloor.Resize = Scale16::GetFactor(uint8_t(28), uint8_t(1));
-		ObjectFloor.SetNormal({ 0, -VERTEX16_UNIT, 0 });
-		ObjectFloor.Translation.y = (DistanceUnit * 3) / 5;
+		ObjectFloor.Resize = Scale16::GetFactor<uint8_t>(28, 1);
+		ObjectFloor.SetNormal({ 0, VERTEX16_UNIT, 0 });
+		ObjectFloor.Translation.y = (-DistanceUnit * 3) / 5;
 		ObjectFloor.Translation.z = BaseDistance;
 
 		// Configure object dynamic materials.
@@ -273,15 +273,15 @@ private:
 
 		// Circle animation.
 		const ufraction32_t circleFraction = UFraction32::GetScalar((uint32_t)(timestamp % (ShapeMovePeriodMicros + 1)), ShapeMovePeriodMicros);
-		const angle_t circleAngle = Fraction(circleFraction, ANGLE_RANGE);
+		const angle_t circleAngle = ANGLE_RANGE - Fraction(circleFraction, ANGLE_RANGE);
 
-		const fraction32_t xMoveFraction1 = Sine32(circleAngle);
-		const fraction32_t xMoveFraction2 = Sine32((int32_t)circleAngle + GetAngle(120));
-		const fraction32_t xMoveFraction3 = Sine32((int32_t)circleAngle + GetAngle(240));
+		const fraction16_t xMoveFraction1 = Sine16(circleAngle);
+		const fraction16_t xMoveFraction2 = Sine16((int32_t)circleAngle + GetAngle(120));
+		const fraction16_t xMoveFraction3 = Sine16((int32_t)circleAngle + GetAngle(240));
 
-		const fraction32_t zMoveFraction1 = Cosine32((int32_t)circleAngle);
-		const fraction32_t zMoveFraction2 = Cosine32((int32_t)circleAngle + GetAngle(120));
-		const fraction32_t zMoveFraction3 = Cosine32((int32_t)circleAngle + GetAngle(240));
+		const fraction16_t zMoveFraction1 = Cosine16((int32_t)circleAngle);
+		const fraction16_t zMoveFraction2 = Cosine16((int32_t)circleAngle + GetAngle(120));
+		const fraction16_t zMoveFraction3 = Cosine16((int32_t)circleAngle + GetAngle(240));
 
 		ObjectSphere.Translation.x = Fraction(xMoveFraction1, ShapeMoveX);
 		ObjectStar.Translation.x = Fraction(xMoveFraction2, ShapeMoveX);

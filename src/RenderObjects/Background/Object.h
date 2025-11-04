@@ -41,7 +41,7 @@ namespace IntegerWorld
 							Rgb8::Red(Color),
 							Rgb8::Green(Color),
 							Rgb8::Blue(Color),
-							MinValue<int32_t>(VERTEX16_RANGE, static_cast<int32_t>(VERTEX16_RANGE) + ZOffset) };
+							static_cast<int16_t>(MinValue<int32_t>(VERTEX16_RANGE, static_cast<int32_t>(VERTEX16_RANGE) + ZOffset)) };
 
 						if (FragmentShader != nullptr)
 						{

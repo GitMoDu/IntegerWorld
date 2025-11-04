@@ -160,13 +160,9 @@ namespace IntegerWorld
 				iy = SignedRightShift(iy * ViewHeightHalf, DownShift);
 			}
 
-			// Convert to screen space (bottom-right is (0,0).
-			cameraToscreen.x = ViewWidthHalf + static_cast<int16_t>(ix);
-			cameraToscreen.y = ViewHeightHalf + static_cast<int16_t>(iy);
-
-			//TODO: Convert to screen space (top-left is (0,0).
-			//cameraToscreen.x = ViewWidthHalf - int16_t(ix);
-			//cameraToscreen.y = ViewHeightHalf - int16_t(iy);
+			// Convert to screen space (top-left is (0,0).
+			cameraToscreen.x = ViewWidthHalf - static_cast<int16_t>(ix);
+			cameraToscreen.y = ViewHeightHalf - static_cast<int16_t>(iy);
 			cameraToscreen.z = distanceDenum;
 		}
 

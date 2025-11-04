@@ -132,9 +132,9 @@ namespace IntegerWorld
 						}
 
 						// Back/Front face culling after projection.
-						const int32_t signedArea = (int32_t(Vertices[triangle.b].x - Vertices[triangle.a].x)
+						const int32_t signedArea = (static_cast<int32_t>(Vertices[triangle.b].x - Vertices[triangle.a].x)
 							* (Vertices[triangle.c].y - Vertices[triangle.a].y))
-							- (int32_t(Vertices[triangle.b].y - Vertices[triangle.a].y)
+							- (static_cast<int32_t>(Vertices[triangle.b].y - Vertices[triangle.a].y)
 								* (Vertices[triangle.c].x - Vertices[triangle.a].x));
 
 						switch (faceCulling)

@@ -40,10 +40,6 @@ namespace IntegerWorld
 				int16_t AmCx = 0;
 
 				int16_t ReducedArea = 0;
-
-				/// <summary>
-				/// If the triangle has negative area, vertices B and C are swapped.
-				/// </summary>
 				bool Swapped = false;
 
 			protected:
@@ -55,56 +51,50 @@ namespace IntegerWorld
 				template<typename fragment_t>
 				bool SetTriangle(const fragment_t& fragment)
 				{
-					// Compute denominator (twice the area of the triangle)
-					int32_t triangleArea = static_cast<int32_t>(fragment.vertexB.y - fragment.vertexC.y) * (fragment.vertexA.x - fragment.vertexC.x) + static_cast<int32_t>(fragment.vertexC.x - fragment.vertexB.x) * (fragment.vertexA.y - fragment.vertexC.y);
+					// Twice the signed area using C as pivot:
+					// area2 = (B - C) x (A - C)
+					int32_t area2 =
+						static_cast<int32_t>(fragment.vertexB.y - fragment.vertexC.y) * (fragment.vertexA.x - fragment.vertexC.x)
+						- static_cast<int32_t>(fragment.vertexB.x - fragment.vertexC.x) * (fragment.vertexA.y - fragment.vertexC.y);
 
-					if (triangleArea == 0)
-					{
+					if (area2 == 0)
 						return false;
-					}
-					else // Pre-calculate intermediates and cache triangle properties.
+
+					// Normalize orientation: ensure positive area by swapping B<->C logically.
+					Swapped = (area2 < 0);
+					if (Swapped) area2 = -area2;
+
+					const vertex16_t& A = fragment.vertexA;
+					const vertex16_t& B = Swapped ? fragment.vertexC : fragment.vertexB;
+					const vertex16_t& C = Swapped ? fragment.vertexB : fragment.vertexC;
+
+					// Precompute edge-function coefficients with C as pivot.
+					int32_t bmc = static_cast<int32_t>(B.y) - C.y;
+					int32_t cmbx = static_cast<int32_t>(C.x) - B.x;
+					int32_t cmay = static_cast<int32_t>(C.y) - A.y;
+					int32_t amcx = static_cast<int32_t>(A.x) - C.x;
+
+					// Reduce to fit in int16 while preserving ratios for area.
+					while (area2 > INT16_MAX)
 					{
-						// If area is negative, swap B and C to maintain consistent winding.
-						Swapped = triangleArea < 0;
-						if (Swapped)
-						{
-							triangleArea = -triangleArea;
-
-							// Swap B and C
-							BmCy = fragment.vertexC.y - fragment.vertexB.y;
-							CmBx = fragment.vertexB.x - fragment.vertexC.x;
-							CmAy = fragment.vertexB.y - fragment.vertexA.y;
-							AmCx = fragment.vertexA.x - fragment.vertexB.x;
-
-							Cx = fragment.vertexB.x;
-							Cy = fragment.vertexB.y;
-						}
-						else
-						{
-							BmCy = fragment.vertexC.y - fragment.vertexB.y;
-							CmBx = fragment.vertexB.x - fragment.vertexC.x;
-							CmAy = fragment.vertexB.y - fragment.vertexA.y;
-							AmCx = fragment.vertexA.x - fragment.vertexB.x;
-
-							Cx = fragment.vertexC.x;
-							Cy = fragment.vertexC.y;
-						}
-
-						// Reduce area and weights to fit in 16-bit for faster barycentric calculations.
-						uint8_t reduceShifts = 0;
-						while (triangleArea > static_cast<int32_t>(INT16_MAX))
-						{
-							triangleArea >>= 1;
-							reduceShifts++;
-						}
-						ReducedArea = static_cast<int16_t>(triangleArea);
-						BmCy = SignedRightShift(BmCy, reduceShifts);
-						CmBx = SignedRightShift(CmBx, reduceShifts);
-						CmAy = SignedRightShift(CmAy, reduceShifts);
-						AmCx = SignedRightShift(AmCx, reduceShifts);
-
-						return true;
+						area2 >>= 1;
+						bmc = SignedRightShift(bmc, 1);
+						cmbx = SignedRightShift(cmbx, 1);
+						cmay = SignedRightShift(cmay, 1);
+						amcx = SignedRightShift(amcx, 1);
 					}
+
+					ReducedArea = static_cast<int16_t>(area2);
+					BmCy = static_cast<int16_t>(bmc);
+					CmBx = static_cast<int16_t>(cmbx);
+					CmAy = static_cast<int16_t>(cmay);
+					AmCx = static_cast<int16_t>(amcx);
+
+					// Always store C as the pivot for fast evaluation.
+					Cx = C.x;
+					Cy = C.y;
+
+					return true;
 				}
 
 			public:
@@ -112,14 +102,16 @@ namespace IntegerWorld
 				{
 					const int16_t xmCx = x - Cx;
 					const int16_t ymCy = y - Cy;
-					const int16_t wA = LimitValue<int32_t>((static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy), 0, ReducedArea);
-					const int16_t wB = LimitValue<int32_t>((static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy), 0, ReducedArea);
-					const int16_t wC = ReducedArea - MinValue<int32_t>(static_cast<int32_t>(wA) + wB, ReducedArea);
 
-					if (Swapped)
-						return triangle_sample_weights_t{ wA, wC, wB };
-					else
-						return triangle_sample_weights_t{ wA, wB, wC };
+					const int16_t wA = LimitValue<int32_t>(
+						static_cast<int32_t>(BmCy) * xmCx + static_cast<int32_t>(CmBx) * ymCy, 0, ReducedArea);
+					const int16_t wB = LimitValue<int32_t>(
+						static_cast<int32_t>(CmAy) * xmCx + static_cast<int32_t>(AmCx) * ymCy, 0, ReducedArea);
+					const int16_t wC = static_cast<int16_t>(ReducedArea - MinValue<int32_t>(static_cast<int32_t>(wA) + wB, ReducedArea));
+
+					// Map back to original vertex order if we swapped.
+					return Swapped ? triangle_sample_weights_t{ wA, wC, wB }
+					: triangle_sample_weights_t{ wA, wB, wC };
 				}
 			};
 		}

@@ -193,7 +193,7 @@ namespace Assets
 		public:
 			Rgb8::color_t GetLitColor(const Rgb8::color_t albedo, const material_t& material, const vertex16_t& position, const vertex16_t& normal)
 			{
-				const uint8_t yDelta = LimitValue<int16_t, 0, (Shapes::SHAPE_UNIT * 4) / 5>(position.y + (Shapes::SHAPE_UNIT / 2)) >> 4;
+				const uint8_t yDelta = LimitValue<int16_t, 0, (Shapes::SHAPE_UNIT * 4) / 5>((Shapes::SHAPE_UNIT / 2) - position.y) >> 4;
 				return Rgb8::Color(
 					ScaleColor(Rgb8::Red(albedo), yDelta),
 					ScaleColor(Rgb8::Green(albedo), yDelta),
