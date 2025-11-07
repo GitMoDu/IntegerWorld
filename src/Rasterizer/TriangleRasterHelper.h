@@ -23,6 +23,49 @@ namespace IntegerWorld
 		};
 
 		/// <summary>
+		/// EdgeWalker increments along an edge between two points
+		/// using an integer incremental algorithm (Bresenham-like).
+		/// It advances y by one step and updates x when the accumulated error exceeds the y delta.
+		/// </summary>
+		struct EdgeWalker
+		{
+			int_fast16_t x;
+			int_fast16_t y;
+			int_fast16_t err;
+			int16_t yEnd;
+			int16_t sx;
+			int16_t dy;
+			int16_t dxAbs;
+
+			void Init(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+			{
+				// Ensure y0 <= y1
+				if (y0 > y1)
+				{
+					int16_t tx = x0; x0 = x1; x1 = tx;
+					int16_t ty = y0; y0 = y1; y1 = ty;
+				}
+				x = x0; y = y0; yEnd = y1;
+				int16_t dx = int16_t(x1 - x0);
+				dy = int16_t(y1 - y0);
+				sx = (dx >= 0) ? 1 : -1;
+				dxAbs = (dx >= 0) ? dx : int16_t(-dx);
+				err = 0;
+			}
+
+			void Step()
+			{
+				y++;
+				err = int16_t(err + dxAbs);
+				while (err >= dy)
+				{
+					x = int16_t(x + sx);
+					err = int16_t(err - dy);
+				}
+			}
+		};
+
+		/// <summary>
 		/// Determines if a point (x, y) lies inside the triangle defined by (x1, y1), (x2, y2), and (x3, y3).
 		/// </summary>
 		/// <returns>True if the point (x, y) is inside the triangle (edges inclusive); otherwise, false.</returns>
@@ -43,20 +86,20 @@ namespace IntegerWorld
 		}
 
 		// Exact integer floor/ceil division helpers
-		static int32_t FloorDiv32(int32_t a, int32_t b)
+		static int32_t FloorDiv32(int32_t a, int16_t b)
 		{
 			// NB: b must be != 0
 			int32_t q = a / b;
-			int32_t r = a % b;
+			int16_t r = a % b;
 			if (r != 0 && ((r < 0) != (b < 0))) --q;
 			return q;
 		}
 
-		static int32_t CeilDiv32(int32_t a, int32_t b)
+		static int32_t CeilDiv32(int32_t a, int16_t b)
 		{
 			// NB: b must be != 0
 			int32_t q = a / b;
-			int32_t r = a % b;
+			int16_t r = a % b;
 			if (r != 0 && ((r > 0) == (b > 0))) ++q;
 			return q;
 		}
@@ -82,8 +125,8 @@ namespace IntegerWorld
 		static point2d_t IntersectWithEdge(const point2d_t& s, const point2d_t& e, ClipEdgeEnum edge, const int16_t w, const int16_t h)
 		{
 			point2d_t i = s;
-			const int32_t dx = int32_t(e.x) - int32_t(s.x);
-			const int32_t dy = int32_t(e.y) - int32_t(s.y);
+			const int_fast16_t dx = e.x - s.x;
+			const int_fast16_t dy = e.y - s.y;
 
 			switch (edge)
 			{
@@ -97,7 +140,6 @@ namespace IntegerWorld
 				}
 				i.x = 0;
 				break;
-
 			case ClipEdgeEnum::Right:
 				// x = w-1, right/bottom edges are exclusive -> floor
 				if (dx != 0)
@@ -108,7 +150,6 @@ namespace IntegerWorld
 				}
 				i.x = int16_t(w - 1);
 				break;
-
 			case ClipEdgeEnum::Top:
 				// y = 0, left/top edges are inclusive -> ceil
 				if (dy != 0)
@@ -119,7 +160,6 @@ namespace IntegerWorld
 				}
 				i.y = 0;
 				break;
-
 			case ClipEdgeEnum::Bottom:
 				// y = h-1, right/bottom edges are exclusive -> floor
 				if (dy != 0)
@@ -187,6 +227,7 @@ namespace IntegerWorld
 			return outCount;
 		}
 
+		
 	}
 }
 #endif

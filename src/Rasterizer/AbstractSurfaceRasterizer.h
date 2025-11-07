@@ -57,6 +57,24 @@ namespace IntegerWorld
 		/// </summary>
 		static constexpr uint8_t BRESENHAM_SCALE = 16;
 
+		// Fixed-point rounding helper: add half-unit for the current Bresenham scale, then arithmetic right-shift.
+		static constexpr int32_t FP_ROUND_HALF = (int32_t(1) << (BRESENHAM_SCALE - 1));
+
+		/// <summary>
+		/// Rounds a 32-bit fixed-point value to the nearest integer using a signed right shift.
+		/// </summary>
+		/// <param name="fx">A fixed-point value represented as a 32-bit signed integer. The number of fractional bits is implied by BRESENHAM_SCALE; FP_ROUND_HALF is used to perform rounding.</param>
+		/// <returns>The rounded integer value as a 16-bit signed (int16_t).</returns>
+		static constexpr int16_t FixedRoundToInt(const int32_t fx)
+		{
+			return SignedRightShift(fx + FP_ROUND_HALF, BRESENHAM_SCALE);
+		}
+
+		static constexpr int32_t IntToFixed(const int16_t x)
+		{
+			return SignedLeftShift<int32_t>(x, BRESENHAM_SCALE);
+		}
+
 	protected:
 		/// <summary>
 		/// Outcode bit mask for Cohen–Sutherland style region tests.

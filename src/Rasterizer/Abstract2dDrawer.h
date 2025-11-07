@@ -26,13 +26,16 @@ namespace IntegerWorld
 		using ClipEdgeEnum = TriangleRasterHelper::ClipEdgeEnum;
 
 	protected:
-		// Temporary buffers for Sutherland–Hodgman clipping (triangle in, convex polygon out).
-		point2d_t clipInputTriangle[3];
-		point2d_t clippedPolygon[8];
+		// Max vertices when clipping a triangle against a screen-aligned rectangle is 6.
+		// Ref: convex triangle (3) clipped by 4 half-planes -> max 6-vertex convex polygon.
+		static constexpr uint8_t TRI_CLIP_MAX_VERTS = 6;
 
-		// Resusable small buffers for edge ping-pong. Max 6 vertices after clipping a triangle to a rect.
-		point2d_t clipScratchA[8];
-		point2d_t clipScratchB[8];
+		// Temporary buffer for Sutherland–Hodgman clipping (triangle in, convex polygon out).
+		point2d_t clippedPolygon[TRI_CLIP_MAX_VERTS];
+
+		// Reusable small buffers for edge ping-pong. Max 6 vertices after clipping a triangle to a rect.
+		point2d_t clipScratchA[TRI_CLIP_MAX_VERTS];
+		point2d_t clipScratchB[TRI_CLIP_MAX_VERTS];
 
 		// Reusable points for clipping calculations.
 		point2d_t p0, p1, p2;
@@ -222,23 +225,23 @@ namespace IntegerWorld
 			}
 
 			// Clip the triangle against the window (Sutherland–Hodgman with integer arithmetic).
-			clipInputTriangle[0] = { x1, y1 };
-			clipInputTriangle[1] = { x2, y2 };
-			clipInputTriangle[2] = { x3, y3 };
-			const uint8_t outCount = ClipTriangleToWindow();
+			clippedPolygon[0] = { x1, y1 };
+			clippedPolygon[1] = { x2, y2 };
+			clippedPolygon[2] = { x3, y3 };
+			const uint8_t clippedVertexCount = ClipTriangleToWindow();
 
-			if (outCount == 0)
+			if (clippedVertexCount == 0)
 			{
 				return; // Fully outside
 			}
-			else if (outCount == 1)
+			else if (clippedVertexCount == 1)
 			{
 				// Collapsed to a point
 				if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y))
 					Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
 				return;
 			}
-			else if (outCount == 2)
+			else if (clippedVertexCount == 2)
 			{
 				// Collapsed to a line
 				if (clippedPolygon[0].x == clippedPolygon[1].x && clippedPolygon[0].y == clippedPolygon[1].y)
@@ -256,7 +259,7 @@ namespace IntegerWorld
 			// General convex polygon (up to 6 vertices) -> triangulate as a fan
 			p0 = clippedPolygon[0];
 			int32_t area2 = 0;
-			for (uint8_t i = 1; i + 1 < outCount; ++i)
+			for (uint8_t i = 1; i + 1 < clippedVertexCount; ++i)
 			{
 				p1 = clippedPolygon[i];
 				p2 = clippedPolygon[i + 1];
@@ -383,11 +386,11 @@ namespace IntegerWorld
 		/// <returns>The number of vertices in the resulting clipped polygon. Returns 0 if the triangle is completely outside the window.</returns>
 		uint8_t ClipTriangleToWindow()
 		{
-			// Initialize with triangle vertices
+			// Initialize with triangle vertices passed in clippedPolygon.
 			uint8_t countA = 3;
 			for (uint8_t i = 0; i < 3; ++i)
 			{
-				clipScratchA[i] = clipInputTriangle[i];
+				clipScratchA[i] = clippedPolygon[i];
 			}
 
 			// Clip sequentially: Left, Right, Top, Bottom
@@ -403,13 +406,35 @@ namespace IntegerWorld
 			countA = ClipAgainstEdge(clipScratchB, countB, clipScratchA, ClipEdgeEnum::Bottom, SurfaceWidth, SurfaceHeight);
 			if (countA == 0) return 0;
 
-			// Copy to out
+			// Normalize results to window and remove duplicate vertices.
+			uint8_t write = 0;
+			point2d_t prev = { INT16_MIN, INT16_MIN };
 			for (uint8_t i = 0; i < countA; ++i)
 			{
-				clippedPolygon[i] = clipScratchA[i];
+				point2d_t p = clipScratchA[i];
+
+				// Clamp to inclusive window bounds to avoid y==SurfaceHeight or x==SurfaceWidth
+				if (p.x < 0) p.x = 0;
+				else if (p.x >= SurfaceWidth) p.x = int16_t(SurfaceWidth - 1);
+
+				if (p.y < 0) p.y = 0;
+				else if (p.y >= SurfaceHeight) p.y = int16_t(SurfaceHeight - 1);
+
+				// Skip exact duplicate consecutive vertices
+				if (p.x == prev.x && p.y == prev.y)
+					continue;
+
+				clippedPolygon[write++] = p;
+				prev = p;
 			}
 
-			return countA;
+			// If polygon closed itself (last == first), drop the duplicate last.
+			if (write >= 2 && clippedPolygon[0].x == clippedPolygon[write - 1].x && clippedPolygon[0].y == clippedPolygon[write - 1].y)
+			{
+				--write;
+			}
+
+			return write;
 		}
 	};
 }

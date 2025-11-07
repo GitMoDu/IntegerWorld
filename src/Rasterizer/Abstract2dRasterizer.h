@@ -16,6 +16,7 @@ namespace IntegerWorld
 	{
 	protected:
 		using Abstract2dDrawer<SurfaceType>::BRESENHAM_SCALE;
+		using Abstract2dDrawer<SurfaceType>::FP_ROUND_HALF;
 
 	protected:
 		using Abstract2dDrawer<SurfaceType>::Surface;
@@ -25,15 +26,20 @@ namespace IntegerWorld
 
 		using Abstract2dDrawer<SurfaceType>::ClipEndpointToWindow;
 		using Abstract2dDrawer<SurfaceType>::ClipTriangleToWindow;
+		using Abstract2dDrawer<SurfaceType>::FixedRoundToInt;
+		using Abstract2dDrawer<SurfaceType>::IntToFixed;
 
 	protected:
-		using Abstract2dDrawer<SurfaceType>::clipInputTriangle;
 		using Abstract2dDrawer<SurfaceType>::clippedPolygon;
 		using Abstract2dDrawer<SurfaceType>::clipScratchA;
 		using Abstract2dDrawer<SurfaceType>::clipScratchB;
 		using Abstract2dDrawer<SurfaceType>::p0;
 		using Abstract2dDrawer<SurfaceType>::p1;
 		using Abstract2dDrawer<SurfaceType>::p2;
+
+	private:
+		// 2 edge walkers for triangle rasterization.
+		TriangleRasterHelper::EdgeWalker WalkerLeft{}, WalkerRight{};
 
 	public:
 		Abstract2dRasterizer(SurfaceType& surface)
@@ -136,6 +142,7 @@ namespace IntegerWorld
 			}
 		}
 
+
 		/// <summary>
 		/// Rasterizes (fills) a triangle using a custom pixel shader, handling window clipping and degenerate cases.
 		/// The pixel shader is invoked for each pixel within the triangle, allowing for per-pixel color and visibility control.
@@ -151,151 +158,56 @@ namespace IntegerWorld
 		template<typename PixelShader>
 		void RasterTriangle(const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, PixelShader&& pixelShader)
 		{
-			// Count how many vertices are inside the window
-			const bool in1 = IsInsideWindow(x1, y1);
-			const bool in2 = IsInsideWindow(x2, y2);
-			const bool in3 = IsInsideWindow(x3, y3);
-
-			const uint8_t insideCount = (uint8_t)in1 + (uint8_t)in2 + (uint8_t)in3;
-			if (insideCount == 3)
+			if (IsInsideWindow(x1, y1) && IsInsideWindow(x2, y2) && IsInsideWindow(x3, y3))
 			{
-				// The whole triangle fits in the window.
+				// Whole triangle is inside the window.
 				TriangleYRaster(x1, y1, x2, y2, x3, y3, pixelShader);
 			}
-			else if (insideCount == 2)
+			else
 			{
-				// Find the two inside vertices and the outside vertex
-				int16_t ax, ay, bx, by, cx, cy;
-				if (!in1)
+				// Pass the triangle through the clippedPolygon.
+				clippedPolygon[0] = { x1, y1 };
+				clippedPolygon[1] = { x2, y2 };
+				clippedPolygon[2] = { x3, y3 };
+
+				// Clip the triangle against the window (Sutherland–Hodgman with integer arithmetic).
+				const uint8_t clippedVertexCount = ClipTriangleToWindow();
+				if (clippedVertexCount == 0)
 				{
-					// x1,y1 is outside
-					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
+					// Fully outside after clipping.
 				}
-				else if (!in2)
+				else if (clippedVertexCount == 1)
 				{
-					// x2,y2 is outside
-					ax = x1; ay = y1; bx = x3; by = y3; cx = x2; cy = y2;
+					// Degenerate after clipping.
+					const int16_t px = clippedPolygon[0].x;
+					const int16_t py = clippedPolygon[0].y;
+					if (IsInsideWindow(px, py))
+					{
+						Rgb8::color_t color{};
+						if (pixelShader(color, px, py))
+							Surface.Pixel(color, px, py);
+					}
+				}
+				else if (clippedVertexCount == 2)
+				{
+					// Collapsed to a line after clipping.
+					RasterLine(clippedPolygon[0].x, clippedPolygon[0].y,
+					           clippedPolygon[1].x, clippedPolygon[1].y,
+					           pixelShader);
 				}
 				else
 				{
-					// x3,y3 is outside
-					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
-				}
-
-				// Clip edge AC
-				int16_t pcx1 = cx, pcy1 = cy;
-				ClipEndpointToWindow(pcx1, pcy1, ax, ay);
-
-				// Clip edge BC
-				int16_t pcx2 = cx, pcy2 = cy;
-				ClipEndpointToWindow(pcx2, pcy2, bx, by);
-
-				// The clipped polygon is a quad: A, B, pcx2/pcy2, pcx1/pcy1
-				// Split into two triangles: (A, B, pcx2/pcy2) and (A, pcx2/pcy2, pcx1/pcy1)
-				TriangleYRaster(ax, ay,
-					bx, by,
-					pcx2, pcy2, pixelShader);
-				TriangleYRaster(ax, ay,
-					pcx2, pcy2,
-					pcx1, pcy1, pixelShader);
-			}
-			else if (insideCount == 1)
-			{
-				// Find the inside vertex and the two outside vertices
-				int16_t ax, ay, bx, by, cx, cy;
-				if (in1)
-				{
-					ax = x1; ay = y1; bx = x2; by = y2; cx = x3; cy = y3;
-				}
-				else if (in2)
-				{
-					ax = x2; ay = y2; bx = x3; by = y3; cx = x1; cy = y1;
-				}
-				else // in3
-				{
-					ax = x3; ay = y3; bx = x1; by = y1; cx = x2; cy = y2;
-				}
-
-				// Use Sutherland-Hodgman clipping like in DrawTriangle
-				clipInputTriangle[0] = { ax, ay };
-				clipInputTriangle[1] = { bx, by };
-				clipInputTriangle[2] = { cx, cy };
-				const uint8_t outCount = ClipTriangleToWindow();
-
-				if (outCount == 0)
-				{
-					return; // Fully outside after clipping
-				}
-				else if (outCount == 1)
-				{
-					// Collapsed to a point
-					Rgb8::color_t color{};
-					if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y) &&
-						pixelShader(color, clippedPolygon[0].x, clippedPolygon[0].y))
+					// Triangulate convex clipped polygon (fan) and fill each triangle with edge functions.
+					p0 = clippedPolygon[0];
+					for (uint8_t i = 1; i + 1 < clippedVertexCount; i++)
 					{
-						Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
-					}
-					return;
-				}
-				else if (outCount == 2)
-				{
-					// Collapsed to a line
-					if (clippedPolygon[0].x == clippedPolygon[1].x && clippedPolygon[0].y == clippedPolygon[1].y)
-					{
-						Rgb8::color_t color{};
-						if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y) &&
-							pixelShader(color, clippedPolygon[0].x, clippedPolygon[0].y))
-						{
-							Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
-						}
-					}
-					else
-					{
-						RasterLine(clippedPolygon[0].x, clippedPolygon[0].y,
-							clippedPolygon[1].x, clippedPolygon[1].y, pixelShader);
-					}
-					return;
-				}
+						p1 = clippedPolygon[i];
+						p2 = clippedPolygon[i + 1];
 
-				// General convex polygon (up to 6 vertices) -> triangulate as a fan
-				p0 = clippedPolygon[0];
-				int32_t area2 = 0;
-				for (uint8_t i = 1; i + 1 < outCount; ++i)
-				{
-					p1 = clippedPolygon[i];
-					p2 = clippedPolygon[i + 1];
-
-					// Skip degenerate triangles
-					area2 = int32_t(p1.x - p0.x) * int32_t(p2.y - p0.y) - int32_t(p2.x - p0.x) * int32_t(p1.y - p0.y);
-					if (area2 != 0)
-					{
-						TriangleYRaster(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, pixelShader);
+						// Triangle fill with pixel shader. Requires mutable vertices.
+						TriangleHitRaster(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, pixelShader);
 					}
 				}
-			}
-			else  // insideCount == 0
-			{
-				// All vertices are outside the window.
-				// Check if triangle intersects the window
-				// Quick rejection test - check if all vertices are on the same side of the window
-				uint8_t out1 = 0, out2 = 0, out3 = 0;
-				if (x1 < 0) out1 |= 1; else if (x1 >= SurfaceWidth) out1 |= 2;
-				if (y1 < 0) out1 |= 4; else if (y1 >= SurfaceHeight) out1 |= 8;
-				if (x2 < 0) out2 |= 1; else if (x2 >= SurfaceWidth) out2 |= 2;
-				if (y2 < 0) out2 |= 4; else if (y2 >= SurfaceHeight) out2 |= 8;
-				if (x3 < 0) out3 |= 1; else if (x3 >= SurfaceWidth) out3 |= 2;
-				if (y3 < 0) out3 |= 4; else if (y3 >= SurfaceHeight) out3 |= 8;
-
-				// If all vertices are on the same side, the triangle doesn't intersect the window
-				if ((out1 & out2 & out3) != 0)
-					return;
-
-				// Complex case: clip triangle against window
-				// For this implementation, we'll handle edge cases by clipping lines
-				// and rendering the resulting segments
-				RasterLine(x1, y1, x2, y2, pixelShader);
-				RasterLine(x2, y2, x3, y3, pixelShader);
-				RasterLine(x3, y3, x1, y1, pixelShader);
 			}
 		}
 
@@ -492,7 +404,7 @@ namespace IntegerWorld
 					int16_t xMax = max(max(x1, x2), x3);
 
 					// Draw horizontal line
-					for (int16_t x = xMin; x <= xMax; x++)
+					for (int_fast16_t x = xMin; x <= xMax; x++)
 					{
 						if (pixelShader(color, x, y1))
 						{
@@ -500,11 +412,9 @@ namespace IntegerWorld
 						}
 					}
 				}
-				return;
 			}
-
 			// Original code for non-degenerate cases
-			if (y2 == y3) // Flat bottom.
+			else if (y2 == y3) // Flat bottom.
 			{
 				BresenhamFlatBottomFill(x1, y1, x2, y2, x3, y3, pixelShader);
 			}
@@ -565,23 +475,20 @@ namespace IntegerWorld
 			const int16_t x3, const int16_t y3,
 			PixelShader&& pixelShader)
 		{
-			// Pre-calculate slopes in 16.16 fixed point format
-			const int32_t dx1 = SignedLeftShift<int32_t>(x2 - x1, BRESENHAM_SCALE) / (y2 - y1);
-			const int32_t dx2 = SignedLeftShift<int32_t>(x3 - x1, BRESENHAM_SCALE) / (y3 - y1);
+			const int32_t dx1 = IntToFixed(x2 - x1) / (y2 - y1);
+			const int32_t dx2 = IntToFixed(x3 - x1) / (y3 - y1);
 
-			// Initialize scanline starting x-coordinates in fixed point
-			int32_t sx1 = SignedLeftShift<int32_t>(x1, BRESENHAM_SCALE);
+			int32_t sx1 = IntToFixed(x1);
 			int32_t sx2 = sx1;
 
 			Rgb8::color_t color{};
 
-			// Scan all lines from top to bottom
-			for (int16_t y = y1; y <= y2; y++)
+			for (int_fast16_t y = y1; y <= y2; y++)
 			{
-				int16_t startX = SignedRightShift(sx1 + 0x8000, BRESENHAM_SCALE); // round to nearest pixel
-				int16_t endX = SignedRightShift(sx2 + 0x8000, BRESENHAM_SCALE);   // round to nearest pixel
+				// round to nearest pixel
+				int16_t startX = FixedRoundToInt(sx1);
+				int16_t endX = FixedRoundToInt(sx2);
 
-				// Ensure left-to-right drawing order
 				if (startX > endX)
 				{
 					int16_t temp = startX;
@@ -589,8 +496,7 @@ namespace IntegerWorld
 					endX = temp;
 				}
 
-				// Draw the scanline
-				for (int16_t x = startX; x <= endX; x++)
+				for (int_fast16_t x = startX; x <= endX; x++)
 				{
 					if (pixelShader(color, x, y))
 					{
@@ -598,7 +504,6 @@ namespace IntegerWorld
 					}
 				}
 
-				// Update edge x-coordinates for the next scanline
 				sx1 += dx1;
 				sx2 += dx2;
 			}
@@ -611,23 +516,20 @@ namespace IntegerWorld
 			const int16_t x3, const int16_t y3,
 			PixelShader&& pixelShader)
 		{
-			// Pre-calculate slopes in 16.16 fixed point format
-			const int32_t dx1 = SignedLeftShift<int32_t>(x3 - x1, BRESENHAM_SCALE) / (y3 - y1);
-			const int32_t dx2 = SignedLeftShift<int32_t>(x3 - x2, BRESENHAM_SCALE) / (y3 - y2);
+			const int32_t dx1 = IntToFixed(x3 - x1) / (y3 - y1);
+			const int32_t dx2 = IntToFixed(x3 - x2) / (y3 - y2);
 
-			// Initialize scanline starting x-coordinates in fixed point
-			int32_t sx1 = SignedLeftShift<int32_t>(x3, BRESENHAM_SCALE);
+			int32_t sx1 = IntToFixed(x3);
 			int32_t sx2 = sx1;
 
 			Rgb8::color_t color{};
 
-			// Scan all lines from bottom to top
-			for (int16_t y = y3; y >= y1; y--)
+			for (int_fast16_t y = y3; y >= y1; y--)
 			{
-				int16_t startX = SignedRightShift(sx1 + 0x8000, BRESENHAM_SCALE); // round to nearest pixel
-				int16_t endX = SignedRightShift(sx2 + 0x8000, BRESENHAM_SCALE);   // round to nearest pixel
+				// round to nearest pixel
+				int16_t startX = FixedRoundToInt(sx1);
+				int16_t endX = FixedRoundToInt(sx2);
 
-				// Ensure left-to-right drawing order
 				if (startX > endX)
 				{
 					int16_t temp = startX;
@@ -635,8 +537,7 @@ namespace IntegerWorld
 					endX = temp;
 				}
 
-				// Draw the scanline
-				for (int16_t x = startX; x <= endX; x++)
+				for (int_fast16_t x = startX; x <= endX; x++)
 				{
 					if (pixelShader(color, x, y))
 					{
@@ -644,9 +545,161 @@ namespace IntegerWorld
 					}
 				}
 
-				// Update edge x-coordinates for the next scanline
 				sx1 -= dx1;
 				sx2 -= dx2;
+			}
+		}
+
+	private:
+		/// <summary>
+		/// Rasterizes a filled triangle defined by three 2D integer vertices
+		/// and invokes a pixel shader for each covered pixel.
+		/// The function sorts vertices by Y, handles flat-top/flat-bottom/degenerate cases,
+		/// clamps to the surface bounds, and writes pixels when the shader requests it.
+		/// </summary>
+		/// <typeparam name="PixelShader">The callable type for the pixel shader. Typical signature: bool(PixelColorType& color, int x, int y) (can be a forwarding reference).</typeparam>
+		/// <param name="ax">X coordinate of the first vertex (A).</param>
+		/// <param name="ay">Y coordinate of the first vertex (A).</param>
+		/// <param name="bx">X coordinate of the second vertex (B).</param>
+		/// <param name="by">Y coordinate of the second vertex (B).</param>
+		/// <param name="cx">X coordinate of the third vertex (C).</param>
+		/// <param name="cy">Y coordinate of the third vertex (C).</param>
+		/// <param name="pixelShader">A callable invoked for each candidate pixel. It is called as pixelShader(color, x, y) where 'color' is an Rgb8::color_t provided to be modified by the shader and (x,y) are the pixel coordinates. The callable returns a bool: true to write the pixel to the Surface, false to skip writing.</param>
+		template<typename PixelShader>
+		void TriangleHitRaster(int16_t ax, int16_t ay,
+			int16_t bx, int16_t by,
+			int16_t cx, int16_t cy,
+			PixelShader&& pixelShader)
+		{
+			// Sort by y (A top, C bottom)
+			if (ay > by) { int16_t t = ax; ax = bx; bx = t; t = ay; ay = by; by = t; }
+			if (ay > cy) { int16_t t = ax; ax = cx; cx = t; int16_t tt = ay; ay = cy; cy = tt; }
+			if (by > cy) { int16_t t = bx; bx = cx; cx = t; int16_t tt = by; by = cy; cy = tt; }
+
+			Rgb8::color_t color{};
+
+			// Degenerate full-flat (all y equal)
+			if (ay == cy)
+			{
+				int16_t xMin = ax, xMax = ax;
+				if (bx < xMin) xMin = bx; if (bx > xMax) xMax = bx;
+				if (cx < xMin) xMin = cx; if (cx > xMax) xMax = cx;
+				if (ay >= 0 && ay < SurfaceHeight)
+				{
+					if (xMin < 0) xMin = 0;
+					if (xMax >= SurfaceWidth) xMax = int16_t(SurfaceWidth - 1);
+					for (int_fast16_t x = xMin; x <= xMax; ++x)
+						if (pixelShader(color, x, ay)) Surface.Pixel(color, x, ay);
+				}
+				return;
+			}
+
+			const bool flatBottom = (by == cy); // two bottom verts share y
+			const bool flatTop = (ay == by); // two top verts share y
+
+			// Use two persistent walkers
+			// Walker API: Init(x0,y0,x1,y1) with y0 <= y1, Step() advances one scanline (y+1) updating x by Bresenham-like error.
+			if (flatBottom)
+			{
+				// A is top, B & C form flat bottom at y=by(=cy). Fill ay..by inclusive.
+				WalkerLeft.Init(ax, ay, bx, by);
+				WalkerRight.Init(ax, ay, cx, cy);
+
+				int16_t yStart = ay < 0 ? 0 : ay;
+				while (WalkerLeft.y < yStart && WalkerLeft.y < WalkerLeft.yEnd) WalkerLeft.Step();
+				while (WalkerRight.y < yStart && WalkerRight.y < WalkerRight.yEnd) WalkerRight.Step();
+
+				for (int_fast16_t y = yStart; y <= by && y < SurfaceHeight; ++y)
+				{
+					if (y >= 0)
+					{
+						int16_t xL = WalkerLeft.x;
+						int16_t xR = WalkerRight.x;
+						if (xL > xR) { int16_t t = xL; xL = xR; xR = t; }
+						if (xL < 0) xL = 0;
+						if (xR >= SurfaceWidth) xR = int16_t(SurfaceWidth - 1);
+						for (int_fast16_t x = xL; x <= xR; ++x)
+							if (pixelShader(color, x, y)) Surface.Pixel(color, x, y);
+					}
+					WalkerLeft.Step();
+					WalkerRight.Step();
+				}
+			}
+			else if (flatTop)
+			{
+				// A & B form flat top at y=ay(=by); C is bottom.
+				WalkerLeft.Init(ax, ay, cx, cy);
+				WalkerRight.Init(bx, by, cx, cy);
+
+				// We fill from ay .. cy inclusive.
+				int16_t yStart = ay < 0 ? 0 : ay;
+				while (WalkerLeft.y < yStart && WalkerLeft.y < WalkerLeft.yEnd) WalkerLeft.Step();
+				while (WalkerRight.y < yStart && WalkerRight.y < WalkerRight.yEnd) WalkerRight.Step();
+
+				for (int_fast16_t y = yStart; y <= cy && y < SurfaceHeight; ++y)
+				{
+					if (y >= 0)
+					{
+						int16_t xL = WalkerLeft.x;
+						int16_t xR = WalkerRight.x;
+						if (xL > xR) { int16_t t = xL; xL = xR; xR = t; }
+						if (xL < 0) xL = 0;
+						if (xR >= SurfaceWidth) xR = int16_t(SurfaceWidth - 1);
+						for (int_fast16_t x = xL; x <= xR; ++x)
+							if (pixelShader(color, x, y)) Surface.Pixel(color, x, y);
+					}
+					WalkerLeft.Step();
+					WalkerRight.Step();
+				}
+			}
+			else
+			{
+
+				// General triangle: A (top), B (middle), C (bottom)
+				WalkerLeft.Init(ax, ay, bx, by);
+				WalkerRight.Init(ax, ay, cx, cy);
+
+				// Top half: y in [ay, by) (exclusive of middle to avoid double)
+				int16_t yStart = ay < 0 ? 0 : ay;
+				while (WalkerLeft.y < yStart && WalkerLeft.y < WalkerLeft.yEnd) WalkerLeft.Step();
+				while (WalkerRight.y < yStart && WalkerRight.y < WalkerRight.yEnd) WalkerRight.Step();
+
+				for (int_fast16_t y = yStart; y < by && y < SurfaceHeight; ++y)
+				{
+					if (y >= 0)
+					{
+						int16_t xL = WalkerLeft.x;
+						int16_t xR = WalkerRight.x;
+						if (xL > xR) { int16_t t = xL; xL = xR; xR = t; }
+						if (xL < 0) xL = 0;
+						if (xR >= SurfaceWidth) xR = int16_t(SurfaceWidth - 1);
+						for (int_fast16_t x = xL; x <= xR; ++x)
+							if (pixelShader(color, x, y)) Surface.Pixel(color, x, y);
+					}
+					WalkerLeft.Step();
+					WalkerRight.Step();
+				}
+
+				// Bottom half: rebuild left edge from B->C (right keeps A->C), now y in [by, cy] inclusive.
+				WalkerLeft.Init(bx, by, cx, cy);
+				while (WalkerLeft.y < by) WalkerLeft.Step();
+				while (WalkerRight.y < by) WalkerRight.Step();
+
+				for (int_fast16_t y = by; y <= cy && y < SurfaceHeight; ++y)
+				{
+					if (y >= 0)
+					{
+						int16_t xL = WalkerLeft.x;
+						int16_t xR = WalkerRight.x;
+						if (xL > xR) { int16_t t = xL; xL = xR; xR = t; }
+						if (xL < 0) xL = 0;
+						if (xR >= SurfaceWidth) xR = int16_t(SurfaceWidth - 1);
+						for (int_fast16_t x = xL; x <= xR; ++x)
+							if (pixelShader(color, x, y)) Surface.Pixel(color, x, y);
+					}
+					WalkerLeft.Step();
+					WalkerRight.Step();
+				}
 			}
 		}
 	};
