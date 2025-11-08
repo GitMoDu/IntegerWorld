@@ -30,15 +30,12 @@ namespace IntegerWorld
 		// Ref: convex triangle (3) clipped by 4 half-planes -> max 6-vertex convex polygon.
 		static constexpr uint8_t TRI_CLIP_MAX_VERTS = 6;
 
-		// Temporary buffer for Sutherland–Hodgman clipping (triangle in, convex polygon out).
+		// Temporary buffer for Sutherland-Hodgman clipping (triangle in, convex polygon out).
 		point2d_t clippedPolygon[TRI_CLIP_MAX_VERTS];
 
 		// Reusable small buffers for edge ping-pong. Max 6 vertices after clipping a triangle to a rect.
 		point2d_t clipScratchA[TRI_CLIP_MAX_VERTS];
 		point2d_t clipScratchB[TRI_CLIP_MAX_VERTS];
-
-		// Reusable points for clipping calculations.
-		point2d_t p0, p1, p2;
 
 	public:
 		Abstract2dDrawer(SurfaceType& surface)
@@ -176,12 +173,11 @@ namespace IntegerWorld
 			}
 			else // Both endpoints are outside the window.
 			{
-				// Trivial reject: both endpoints outside on the same side of the window
-				uint8_t out1 = 0, out2 = 0;
-				if (x1 < 0) out1 |= 1; else if (x1 >= SurfaceWidth) out1 |= 2;
-				if (y1 < 0) out1 |= 4; else if (y1 >= SurfaceHeight) out1 |= 8;
-				if (x2 < 0) out2 |= 1; else if (x2 >= SurfaceWidth) out2 |= 2;
-				if (y2 < 0) out2 |= 4; else if (y2 >= SurfaceHeight) out2 |= 8;
+				// Trivial reject: both endpoints outside on the same side of the window.
+				const uint8_t out1 = (x1 < 0 ? 1 : 0) | (x1 >= SurfaceWidth ? 2 : 0) |
+					(y1 < 0 ? 4 : 0) | (y1 >= SurfaceHeight ? 8 : 0);
+				const uint8_t out2 = (x2 < 0 ? 1 : 0) | (x2 >= SurfaceWidth ? 2 : 0) |
+					(y2 < 0 ? 4 : 0) | (y2 >= SurfaceHeight ? 8 : 0);
 				if (out1 & out2)
 					return; // Both endpoints are outside on the same side
 
@@ -191,17 +187,10 @@ namespace IntegerWorld
 
 				// If either endpoint is not inside, or the segment is degenerate, reject.
 				if (!IsInsideWindow(x1c, y1c) || !IsInsideWindow(x2c, y2c))
-					return; // No visible segment after clipping
+					return; // No visible segment after clipping.
 			}
 
-			if (x1c == x2c && y1c == y2c)
-			{
-				Surface.Pixel(color, x1c, y1c);
-			}
-			else
-			{
-				Surface.Line(color, x1c, y1c, x2c, y2c);
-			}
+			Surface.Line(color, x1c, y1c, x2c, y2c);
 		}
 
 		/// <summary>
@@ -217,59 +206,54 @@ namespace IntegerWorld
 		/// <param name="y3">Y of third vertex.</param>
 		void DrawTriangle(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3)
 		{
-			// Fast path: fully inside
-			if (IsInsideWindow(x1, y1) && IsInsideWindow(x2, y2) && IsInsideWindow(x3, y3))
-			{
-				Surface.TriangleFill(color, x1, y1, x2, y2, x3, y3);
-				return;
-			}
-
-			// Clip the triangle against the window (Sutherland–Hodgman with integer arithmetic).
+			// Cache triangle vertices into the clipping polygon buffer.
 			clippedPolygon[0] = { x1, y1 };
 			clippedPolygon[1] = { x2, y2 };
 			clippedPolygon[2] = { x3, y3 };
+
+			// Clip triangle to window using Sutherland-Hodgman algorithm.
 			const uint8_t clippedVertexCount = ClipTriangleToWindow();
-
-			if (clippedVertexCount == 0)
+			switch (clippedVertexCount)
 			{
-				return; // Fully outside
-			}
-			else if (clippedVertexCount == 1)
-			{
-				// Collapsed to a point
-				if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y))
-					Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
-				return;
-			}
-			else if (clippedVertexCount == 2)
-			{
-				// Collapsed to a line
-				if (clippedPolygon[0].x == clippedPolygon[1].x && clippedPolygon[0].y == clippedPolygon[1].y)
+			case 0: // Fully clipped, nothing to draw.
+				break;
+			case 1: // Degenerate triangle collapsed to a point.
+				Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
+				break;
+			case 2: // Degenerate triangle collapsed to a line.
+				Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[1].x, clippedPolygon[1].y);
+				break;
+			case 3: // Fast path, whole triangle inside window.
+				Surface.TriangleFill(color, clippedPolygon[0].x, clippedPolygon[0].y,
+					clippedPolygon[1].x, clippedPolygon[1].y,
+					clippedPolygon[2].x, clippedPolygon[2].y);
+				break;
+			default: // General convex polygon (up to 6 vertices) -> triangulate as a fan.
+				for (uint8_t i = 1; i + 1 < clippedVertexCount; i++)
 				{
-					if (IsInsideWindow(clippedPolygon[0].x, clippedPolygon[0].y))
+					if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x &&
+						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
+					{
+						// Degenerate triangle collapsed to a point.
 						Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
+					}
+					else if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x ||
+						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
+					{
+						// Degenerate triangle collapsed to a line.
+						Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y,
+							clippedPolygon[i].x, clippedPolygon[i].y);
+						Surface.Line(color, clippedPolygon[i].x, clippedPolygon[i].y,
+							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
+					}
+					else
+					{
+						Surface.TriangleFill(color, clippedPolygon[0].x, clippedPolygon[0].y,
+							clippedPolygon[i].x, clippedPolygon[i].y,
+							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
+					}
 				}
-				else
-				{
-					Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[1].x, clippedPolygon[1].y);
-				}
-				return;
-			}
-
-			// General convex polygon (up to 6 vertices) -> triangulate as a fan
-			p0 = clippedPolygon[0];
-			int32_t area2 = 0;
-			for (uint8_t i = 1; i + 1 < clippedVertexCount; ++i)
-			{
-				p1 = clippedPolygon[i];
-				p2 = clippedPolygon[i + 1];
-
-				// Skip degenerate triangles
-				area2 = int32_t(p1.x - p0.x) * int32_t(p2.y - p0.y) - int32_t(p2.x - p0.x) * int32_t(p1.y - p0.y);
-				if (area2 != 0)
-				{
-					Surface.TriangleFill(color, p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
-				}
+				break;
 			}
 		}
 
@@ -283,47 +267,20 @@ namespace IntegerWorld
 		/// <param name="y2">The y-coordinate of the opposite corner of the rectangle.</param>
 		void DrawRectangle(const Rgb8::color_t color, const int16_t x1, const int16_t y1, const int16_t x2, const int16_t y2)
 		{
-			uint8_t inCount = IsInsideWindow(x1, y1);
-			inCount += IsInsideWindow(x1, y2);
-			inCount += IsInsideWindow(x2, y1);
-			inCount += IsInsideWindow(x2, y2);
+			const uint8_t inCount = IsInsideWindow(x1, y1) + IsInsideWindow(x1, y2) +
+				IsInsideWindow(x2, y1) + IsInsideWindow(x2, y2);
 
-			if (inCount > 0)
-			{
-				const int16_t x1c = LimitValue(x1, int16_t(0), int16_t(SurfaceWidth - 1));
-				const int16_t x2c = LimitValue(x2, int16_t(0), int16_t(SurfaceWidth - 1));
-				const int16_t y1c = LimitValue(y1, int16_t(0), int16_t(SurfaceHeight - 1));
-				const int16_t y2c = LimitValue(y2, int16_t(0), int16_t(SurfaceHeight - 1));
+			if (!inCount)
+				return; // Whole rectangle is out of bounds.
 
-				if (x1c == x2c)
-				{
-					if (y1c == y2c)
-					{
-						// Degenerate rectangle, only draw a single pixel.
-						Surface.Pixel(color, x1c, y1c);
-					}
-					else
-					{
-						// Degenerate rectangle, only draw a line.
-						Surface.Line(color, x1c, y1c, x1c, y2c);
-					}
-				}
-				else if (y1c == y2c)
-				{
-					// Degenerate rectangle, only draw a line.
-					Surface.Line(color, x1c, y1c, x2c, y1c);
-				}
-				else
-				{
-					// Cropped rectangle.
-					Surface.RectangleFill(color, x1c, y1c, x2c, y2c);
-				}
-			}
-			else
-			{
-				// Whole rectangle is out of bounds.
-			}
+			const int16_t x1c = LimitValue<int16_t>(x1, 0, SurfaceWidth - 1);
+			const int16_t x2c = LimitValue<int16_t>(x2, 0, SurfaceWidth - 1);
+			const int16_t y1c = LimitValue<int16_t>(y1, 0, SurfaceHeight - 1);
+			const int16_t y2c = LimitValue<int16_t>(y2, 0, SurfaceHeight - 1);
+
+			Surface.RectangleFill(color, x1c, y1c, x2c, y2c);
 		}
+
 
 	protected:
 		/// <summary>
@@ -395,21 +352,25 @@ namespace IntegerWorld
 
 			// Clip sequentially: Left, Right, Top, Bottom
 			uint8_t countB = ClipAgainstEdge(clipScratchA, countA, clipScratchB, ClipEdgeEnum::Left, SurfaceWidth, SurfaceHeight);
-			if (countB == 0) return 0;
+			if (countB == 0)
+				return 0;
 
 			countA = ClipAgainstEdge(clipScratchB, countB, clipScratchA, ClipEdgeEnum::Right, SurfaceWidth, SurfaceHeight);
-			if (countA == 0) return 0;
+			if (countA == 0)
+				return 0;
 
 			countB = ClipAgainstEdge(clipScratchA, countA, clipScratchB, ClipEdgeEnum::Top, SurfaceWidth, SurfaceHeight);
-			if (countB == 0) return 0;
+			if (countB == 0)
+				return 0;
 
 			countA = ClipAgainstEdge(clipScratchB, countB, clipScratchA, ClipEdgeEnum::Bottom, SurfaceWidth, SurfaceHeight);
-			if (countA == 0) return 0;
+			if (countA == 0)
+				return 0;
 
 			// Normalize results to window and remove duplicate vertices.
 			uint8_t write = 0;
 			point2d_t prev = { INT16_MIN, INT16_MIN };
-			for (uint8_t i = 0; i < countA; ++i)
+			for (uint8_t i = 0; i < countA; i++)
 			{
 				point2d_t p = clipScratchA[i];
 
@@ -429,9 +390,11 @@ namespace IntegerWorld
 			}
 
 			// If polygon closed itself (last == first), drop the duplicate last.
-			if (write >= 2 && clippedPolygon[0].x == clippedPolygon[write - 1].x && clippedPolygon[0].y == clippedPolygon[write - 1].y)
+			if (write >= 2 &&
+				clippedPolygon[0].x == clippedPolygon[write - 1].x &&
+				clippedPolygon[0].y == clippedPolygon[write - 1].y)
 			{
-				--write;
+				write--;
 			}
 
 			return write;

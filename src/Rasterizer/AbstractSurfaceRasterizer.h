@@ -55,7 +55,7 @@ namespace IntegerWorld
 		/// <summary>
 		/// Fixed-point scale used by line and triangle rendering.
 		/// </summary>
-		static constexpr uint8_t BRESENHAM_SCALE = 16;
+		static constexpr uint8_t BRESENHAM_SCALE = 8;
 
 		// Fixed-point rounding helper: add half-unit for the current Bresenham scale, then arithmetic right-shift.
 		static constexpr int32_t FP_ROUND_HALF = (int32_t(1) << (BRESENHAM_SCALE - 1));
@@ -77,7 +77,7 @@ namespace IntegerWorld
 
 	protected:
 		/// <summary>
-		/// Outcode bit mask for Cohen–Sutherland style region tests.
+		/// Outcode bit mask for Cohen-Sutherland style region tests.
 		/// </summary>
 		enum class OutcodeEnum : uint8_t
 		{
