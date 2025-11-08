@@ -51,33 +51,8 @@ namespace IntegerWorld
 			}
 			else if (!in1 || !in2)
 			{
-				// One endpoint is behind z=0, clip to z=0 plane
-				// Interpolate intersection with z=0
-				const vertex16_t* front = in1 ? &s : &e;
-				const vertex16_t* back = in1 ? &e : &s;
-
-				int16_t dz = front->z - back->z;
-				if (dz == 0) return; // Degenerate, should not happen
-
-				// t = front->z / (front->z - back->z)
-				int16_t t_num = front->z;
-				int16_t t_den = dz;
-
-				int16_t ix = front->x + (int16_t)(((int32_t)(back->x - front->x) * t_num) / t_den);
-				int16_t iy = front->y + (int16_t)(((int32_t)(back->y - front->y) * t_num) / t_den);
-
-				if (in1)
-				{
-					e.x = ix;
-					e.y = iy;
-					e.z = 0;
-				}
-				else
-				{
-					s.x = ix;
-					s.y = iy;
-					s.z = 0;
-				}
+				// TODO: One endpoint is behind z=0, clip to z=0 plane
+				return;
 			}
 
 			// Now both s.z and e.z >= 0, so we can rasterize in 2D
