@@ -231,34 +231,36 @@ namespace IntegerWorld
 
 		bool IsPointInside(const vertex16_t& point, const uint16_t planeTolerance = VERTEX16_UNIT / 16) const
 		{
+			// Sphere culling - early distance check.
+			{
+				const int16_t dx = point.x - origin.x;
+				const int16_t dy = point.y - origin.y;
+				const int16_t dz = point.z - origin.z;
+				const int32_t squareDistance = (static_cast<int32_t>(dx) * dx) + (static_cast<int32_t>(dy) * dy) + (static_cast<int32_t>(dz) * dz);
+
+				// If point is outside the bounding sphere, it's definitely outside the frustum.
+				if (squareDistance > radiusSquared)
+					return false;
+			}
+
 			// Check against near plane. Z axis points forward, so point must be in front of near plane.
 			if (PlaneDistanceToPoint(cullingNearPlane, point) < 0)
 				return false;
 
 			// Check against left plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingLeftPlane, point) - planeTolerance > 0)
+			if (PlaneDistanceToPoint(cullingLeftPlane, point) > planeTolerance)
 				return false;
 
 			// Check against right plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingRightPlane, point) - planeTolerance > 0)
+			if (PlaneDistanceToPoint(cullingRightPlane, point) > planeTolerance)
 				return false;
 
 			// Check against top plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingTopPlane, point) - planeTolerance > 0)
+			if (PlaneDistanceToPoint(cullingTopPlane, point) > planeTolerance)
 				return false;
 
 			// Check against bottom plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingBottomPlane, point) - planeTolerance > 0)
-				return false;
-
-			// Sphere culling - distance check.
-			const int16_t dx = point.x - origin.x;
-			const int16_t dy = point.y - origin.y;
-			const int16_t dz = point.z - origin.z;
-			const int32_t squareDistance = (int32_t(dx) * dx) + (int32_t(dy) * dy) + (int32_t(dz) * dz);
-
-			// If point is outside the bounding sphere, it's definitely outside the frustum.
-			if (squareDistance > radiusSquared)
+			if (PlaneDistanceToPoint(cullingBottomPlane, point) > planeTolerance)
 				return false;
 
 			// If it passed all plane tests, the point is inside the frustum.
@@ -266,7 +268,7 @@ namespace IntegerWorld
 		}
 
 	private:
-		static int32_t PlaneDistanceToPoint(const plane16_t& plane, const vertex16_t& point)
+		static int16_t PlaneDistanceToPoint(const plane16_t& plane, const vertex16_t& point)
 		{
 			// Calculate dot product between normal and point, normalized by VERTEX16_UNIT.
 			const int32_t dotProduct = SignedRightShift(DotProduct16(plane, point), GetBitShifts(VERTEX16_UNIT));
