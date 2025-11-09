@@ -15,6 +15,9 @@ namespace IntegerWorld
 	template<typename SurfaceType>
 	class Abstract3dRasterizer : public Abstract3dDrawer<SurfaceType>
 	{
+	private:
+		using Base = Abstract3dDrawer<SurfaceType>;
+
 	public:
 		using Abstract3dDrawer<SurfaceType>::RasterLine;     // 2D variant
 		using Abstract3dDrawer<SurfaceType>::RasterTriangle; // 2D variant
@@ -62,7 +65,7 @@ namespace IntegerWorld
 			}
 
 			// Now both s.z and e.z >= 0, so we can rasterize in 2D
-			Abstract2dRasterizer<SurfaceType>::RasterLine(s.x, s.y, e.x, e.y, pixelShader);
+			Base::template RasterLine<blendMode>(s.x, s.y, e.x, e.y, pixelShader);
 		}
 
 		/// <summary>
@@ -90,7 +93,7 @@ namespace IntegerWorld
 				// Screen plane 2D triangle, only need to check one point for bounds.
 				if (a.z > 0)
 				{
-					Abstract2dRasterizer<SurfaceType>::RasterTriangle(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
+					Base::template RasterTriangle<blendMode>(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
 				}
 				else
 				{
@@ -114,7 +117,7 @@ namespace IntegerWorld
 					break;
 				case 3:
 					// Whole triangle is in bounds.
-					Abstract2dRasterizer<SurfaceType>::RasterTriangle(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
+					Base::template RasterTriangle<blendMode>(a.x, a.y, b.x, b.y, c.x, c.y, pixelShader);
 					break;
 				default:
 					break;

@@ -97,11 +97,12 @@ namespace IntegerWorld
 				namespace VertexShade
 				{
 					template<typename TextureSourceType,
-						typename TexturePixelShaderType = PixelShaders::TextureUnlit<TextureSourceType>>
-						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_vertex_fragment_t, TextureSourceType, TexturePixelShaderType>;
+						typename TexturePixelShaderType = PixelShaders::TextureUnlit<TextureSourceType>,
+						pixel_blend_mode_t blendMode = pixel_blend_mode_t::Replace>
+					using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_vertex_fragment_t, TextureSourceType, TexturePixelShaderType, blendMode>;
 
 					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler,
-						pixel_blend_mode_t = pixel_blend_mode_t::Replace>
+						pixel_blend_mode_t blendMode = pixel_blend_mode_t::Replace>
 					class ColorInterpolateShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
