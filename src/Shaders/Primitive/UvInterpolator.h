@@ -7,7 +7,7 @@ namespace IntegerWorld
 {
 	namespace PrimitiveShaders
 	{
-		enum class UvInterpolationMode : uint8_t
+		enum class UvInterpolationModeEnum : uint8_t
 		{
 			Fast,
 			Accurate
@@ -34,62 +34,32 @@ namespace IntegerWorld
 				UvC = fragment.uvC;
 			}
 
-			coordinate_t UvFast(const ufraction8_t fractionA, const ufraction8_t fractionB, const ufraction8_t fractionC) const
-			{
-				return coordinate_t{
-					MaxValue<int16_t>(0, Fraction<int16_t>(fractionA, UvA.x + Bias)
-						+ Fraction<int16_t>(fractionB, UvB.x + Bias)
-						+ Fraction<int16_t>(fractionC, UvC.x + Bias)),
-					MaxValue<int16_t>(0, Fraction<int16_t>(fractionA, UvA.y + Bias)
-						+ Fraction<int16_t>(fractionB, UvB.y + Bias)
-						+ Fraction<int16_t>(fractionC, UvC.y + Bias)) };
-			}
-
 			coordinate_t UvFast(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
 			{
 				return coordinate_t{
-					MaxValue<int16_t>(0, Fraction<int16_t>(fractionA, UvA.x + Bias)
-						+ Fraction<int16_t>(fractionB, UvB.x + Bias)
-						+ Fraction<int16_t>(fractionC, UvC.x + Bias)),
-					MaxValue<int16_t>(0, Fraction<int16_t>(fractionA, UvA.y + Bias)
-						+ Fraction<int16_t>(fractionB, UvB.y + Bias)
-						+ Fraction<int16_t>(fractionC, UvC.y + Bias)) };
-			}
-
-			coordinate_t UvAccurate(const ufraction8_t fractionA, const ufraction8_t fractionB, const ufraction8_t fractionC) const
-			{
-				const uint32_t sum = static_cast<uint32_t>(fractionA) + fractionB + fractionC;
-
-				const int32_t numU = static_cast<int32_t>(UvA.x) * fractionA
-					+ static_cast<int32_t>(UvB.x) * fractionB
-					+ static_cast<int32_t>(UvC.x) * fractionC;
-
-				const int32_t numV = static_cast<int32_t>(UvA.y) * fractionA
-					+ static_cast<int32_t>(UvB.y) * fractionB
-					+ static_cast<int32_t>(UvC.y) * fractionC;
-
-				const int16_t u = static_cast<int16_t>(MaxValue<int32_t>(0, static_cast<int32_t>((numU + SignedRightShift(sum, 1)) / sum)));
-				const int16_t v = static_cast<int16_t>(MaxValue<int32_t>(0, static_cast<int32_t>((numV + SignedRightShift(sum, 1)) / sum)));
-
-				return coordinate_t{ u, v };
+					static_cast<int16_t>(Fraction<int16_t>(fractionA, UvA.x + Bias) +
+					 Fraction<int16_t>(fractionB, UvB.x + Bias) +
+					Fraction<int16_t>(fractionC, UvC.x + Bias)),
+					static_cast<int16_t>(Fraction<int16_t>(fractionA, UvA.y + Bias) +
+					 Fraction<int16_t>(fractionB, UvB.y + Bias) +
+					 Fraction<int16_t>(fractionC, UvC.y + Bias)) };
 			}
 
 			coordinate_t UvAccurate(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
 			{
 				const uint32_t sum = static_cast<uint32_t>(fractionA) + fractionB + fractionC;
 
-				const int32_t numU = static_cast<int32_t>(UvA.x) * fractionA
-					+ static_cast<int32_t>(UvB.x) * fractionB
-					+ static_cast<int32_t>(UvC.x) * fractionC;
+				const uint32_t numU = static_cast<uint32_t>(UvA.x) * fractionA
+					+ static_cast<uint32_t>(UvB.x) * fractionB
+					+ static_cast<uint32_t>(UvC.x) * fractionC;
 
-				const int32_t numV = static_cast<int32_t>(UvA.y) * fractionA
-					+ static_cast<int32_t>(UvB.y) * fractionB
-					+ static_cast<int32_t>(UvC.y) * fractionC;
+				const uint32_t numV = static_cast<uint32_t>(UvA.y) * fractionA
+					+ static_cast<uint32_t>(UvB.y) * fractionB
+					+ static_cast<uint32_t>(UvC.y) * fractionC;
 
-				const int16_t u = static_cast<int16_t>(MaxValue<int32_t>(0, static_cast<int32_t>((numU + SignedRightShift(sum, 1)) / sum)));
-				const int16_t v = static_cast<int16_t>(MaxValue<int32_t>(0, static_cast<int32_t>((numV + SignedRightShift(sum, 1)) / sum)));
-
-				return coordinate_t{ u, v };
+				return coordinate_t{
+						static_cast<int16_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numU + SignedRightShift(sum, 1)) / sum))),
+						static_cast<int16_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numV + SignedRightShift(sum, 1)) / sum))) };
 			}
 		};
 	}

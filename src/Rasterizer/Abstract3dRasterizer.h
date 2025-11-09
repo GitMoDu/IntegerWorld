@@ -34,8 +34,14 @@ namespace IntegerWorld
 		/// <param name="start">The starting vertex of the line segment, containing x, y, and z coordinates.</param>
 		/// <param name="end">The ending vertex of the line segment, containing x, y, and z coordinates.</param>
 		/// <param name="pixelShader">A callable that determines color/visibility of each pixel along the line.</param>
-		template<typename PixelShader>
-		void RasterLine(const vertex16_t& start, const vertex16_t& end, PixelShader&& pixelShader)
+		template<typename pixel_shader_t>
+		void RasterLine(const vertex16_t& start, const vertex16_t& end, pixel_shader_t&& pixelShader)
+		{
+			RasterLine<pixel_blend_mode_t::Replace>(start, end, pixelShader);
+		}
+
+		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
+		void RasterLine(const vertex16_t& start, const vertex16_t& end, pixel_shader_t&& pixelShader)
 		{
 			// Z-plane clipping: only draw if at least part of the line is in front of z=0
 			const bool in1 = start.z >= 0;
@@ -69,8 +75,14 @@ namespace IntegerWorld
 		/// <param name="b">The second vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="c">The third vertex of the triangle, including x, y, and z coordinates.</param>
 		/// <param name="pixelShader">A callable object or function that determines the color and visibility of each pixel along the triangle surface.</param>
-		template<typename PixelShader>
-		void RasterTriangle(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, PixelShader&& pixelShader)
+		template<typename pixel_shader_t>
+		void RasterTriangle(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, pixel_shader_t&& pixelShader)
+		{
+			RasterTriangle<pixel_blend_mode_t::Replace>(a, b, c, pixelShader);
+		}
+
+		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
+		void RasterTriangle(const vertex16_t& a, const vertex16_t& b, const vertex16_t& c, pixel_shader_t&& pixelShader)
 		{
 			if (a.z == b.z
 				&& a.z == c.z)

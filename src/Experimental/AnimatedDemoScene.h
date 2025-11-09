@@ -112,8 +112,8 @@ private:
 #endif
 
 	// Shared mesh vertex shaders.
-	RenderObjects::Mesh::FragmentShaders::VertexShade::ColorInterpolateShader<PrimitiveShaders::TrianglePerspectiveCorrectSampler> VertexShader{};
-	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader VertexZShader{};
+	RenderObjects::Mesh::FragmentShaders::VertexShade::ColorInterpolateShader<> VertexShader{};
+	RenderObjects::Mesh::FragmentShaders::VertexShade::ZInterpolateShader<> VertexZShader{};
 	RenderObjects::Mesh::FragmentShaders::VertexShade::WireframeShader VertexWireframeShader{};
 
 	// Custom billboard shaders for point light sources.
@@ -219,7 +219,7 @@ public:
 		// Configure object dynamic materials.
 		ObjectSphere.SetMaterial(material_t{ 0, UFRACTION8_1X, 0, 0 });
 		ObjectSphere.SetMaterial(material_t{ 0, UFRACTION8_1X, 0, 0 });
-		ObjectStar.SetMaterial(material_t{ 0, UFRACTION8_1X / 8, UFRACTION8_1X, 0 });
+		ObjectStar.SetMaterial(material_t{ 0, UFRACTION8_1X / 4, UFRACTION8_1X, UFRACTION8_1X / 2 });
 
 		// Configure background shader.
 		ObjectBackground.FragmentShader = &BackgroundShader;

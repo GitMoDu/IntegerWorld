@@ -31,6 +31,7 @@ namespace IntegerWorld
 
 	enum class pixel_blend_mode_t : uint8_t
 	{
+		Replace, 	// Replaces the existing pixel color with the new color.
 		Alpha,		// Blends the new color with the existing pixel color using alpha blending.
 		Add,		// Adds the new color to the existing pixel color.
 		Subtract,	// Subtracts the new color from the existing pixel color.

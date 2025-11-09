@@ -7,18 +7,31 @@ namespace IntegerWorld
 {
 	namespace PrimitiveShaders
 	{
-		struct triangle_sample_weights_t
-		{
-			int16_t WeightA;
-			int16_t WeightB;
-			int16_t WeightC;
-		};
-
 		struct triangle_sample_fractions_t
 		{
 			ufraction16_t FractionA;
 			ufraction16_t FractionB;
 			ufraction16_t FractionC;
+		};
+
+		struct triangle_sample_weights_t
+		{
+			int16_t WeightA;
+			int16_t WeightB;
+			int16_t WeightC;
+
+			triangle_sample_fractions_t GetFractions() const
+			{
+				//const uint16_t totalWeight = MinValue<uint32_t>(UINT16_MAX, static_cast<uint32_t>(WeightA) + WeightB + WeightC);
+				const uint16_t totalWeight = static_cast<uint16_t>(WeightA) + WeightB + WeightC;
+
+				// Weights are already normalized to fit in int16_t and properly perspective-corrected.
+				const ufraction16_t fA = UFraction16::GetScalar<uint16_t>(WeightA, totalWeight);
+				const ufraction16_t fB = UFraction16::GetScalar<uint16_t>(WeightB, totalWeight);
+				const ufraction16_t fC = LimitValue<int32_t, 0, UFRACTION16_1X>(static_cast<int32_t>(UFRACTION16_1X) - fA - fB);
+
+				return triangle_sample_fractions_t{ fA, fB, fC };
+			}
 		};
 
 		namespace Abstract
@@ -39,7 +52,7 @@ namespace IntegerWorld
 				int16_t CmAy = 0;
 				int16_t AmCx = 0;
 
-				int16_t ReducedArea = 0;
+				uint16_t ReducedArea = 0;
 				bool Swapped = false;
 
 			protected:
@@ -57,69 +70,50 @@ namespace IntegerWorld
 						static_cast<int32_t>(fragment.vertexB.y - fragment.vertexC.y) * (fragment.vertexA.x - fragment.vertexC.x)
 						- static_cast<int32_t>(fragment.vertexB.x - fragment.vertexC.x) * (fragment.vertexA.y - fragment.vertexC.y);
 
-					if (area2 == 0)
-						return false;
-
 					// Normalize orientation: ensure positive area by swapping B<->C logically.
 					Swapped = (area2 < 0);
 					if (Swapped) area2 = -area2;
 
-					const vertex16_t& A = fragment.vertexA;
-					const vertex16_t& B = Swapped ? fragment.vertexC : fragment.vertexB;
-					const vertex16_t& C = Swapped ? fragment.vertexB : fragment.vertexC;
+					if (area2 < 1)
+						return false;
+
+					const vertex16_t& a = fragment.vertexA;
+					const vertex16_t& b = Swapped ? fragment.vertexC : fragment.vertexB;
+					const vertex16_t& c = Swapped ? fragment.vertexB : fragment.vertexC;
 
 					// Precompute edge-function coefficients with C as pivot.
-					int32_t bmc = static_cast<int32_t>(B.y) - C.y;
-					int32_t cmbx = static_cast<int32_t>(C.x) - B.x;
-					int32_t cmay = static_cast<int32_t>(C.y) - A.y;
-					int32_t amcx = static_cast<int32_t>(A.x) - C.x;
+					BmCy = b.y - c.y;
+					CmBx = c.x - b.x;
+					CmAy = c.y - a.y;
+					AmCx = a.x - c.x;
 
 					// Reduce to fit in int16 while preserving ratios for area.
 					while (area2 > INT16_MAX)
 					{
-						area2 >>= 1;
-						bmc = SignedRightShift(bmc, 1);
-						cmbx = SignedRightShift(cmbx, 1);
-						cmay = SignedRightShift(cmay, 1);
-						amcx = SignedRightShift(amcx, 1);
+						area2 >>= 1; // Areas is always positive here.
+						BmCy = SignedRightShift(BmCy, 1);
+						CmBx = SignedRightShift(CmBx, 1);
+						CmAy = SignedRightShift(CmAy, 1);
+						AmCx = SignedRightShift(AmCx, 1);
 					}
 
-					ReducedArea = static_cast<int16_t>(area2);
-					BmCy = static_cast<int16_t>(bmc);
-					CmBx = static_cast<int16_t>(cmbx);
-					CmAy = static_cast<int16_t>(cmay);
-					AmCx = static_cast<int16_t>(amcx);
+					if (area2 < 1)
+						return false;
+
+					ReducedArea = static_cast<uint16_t>(area2);
 
 					// Always store C as the pivot for fast evaluation.
-					Cx = C.x;
-					Cy = C.y;
+					Cx = c.x;
+					Cy = c.y;
 
 					return true;
-				}
-
-			public:
-				triangle_sample_weights_t Weights(const int16_t x, const int16_t y) const
-				{
-					const int16_t xmCx = x - Cx;
-					const int16_t ymCy = y - Cy;
-
-					const int16_t wA = LimitValue<int32_t>(
-						static_cast<int32_t>(BmCy) * xmCx + static_cast<int32_t>(CmBx) * ymCy, 0, ReducedArea);
-					const int16_t wB = LimitValue<int32_t>(
-						static_cast<int32_t>(CmAy) * xmCx + static_cast<int32_t>(AmCx) * ymCy, 0, ReducedArea);
-					const int16_t wC = static_cast<int16_t>(ReducedArea - MinValue<int32_t>(static_cast<int32_t>(wA) + wB, ReducedArea));
-
-					// Map back to original vertex order if we swapped.
-					return Swapped ? triangle_sample_weights_t{ wA, wC, wB }
-					: triangle_sample_weights_t{ wA, wB, wC };
 				}
 			};
 		}
 
-
 		/// <summary>
 		/// Linear (affine) triangle sampler.
-		/// Provides standard barycentric interpolation without perspective correction.
+		/// Provides standard barycentric weights without perspective correction.
 		/// </summary>
 		class TriangleAffineSampler : public Abstract::AbstractSampler
 		{
@@ -133,36 +127,51 @@ namespace IntegerWorld
 				return SetTriangle(fragment);
 			}
 
-			triangle_sample_fractions_t Fractions(const int16_t x, const int16_t y) const
+			/// <summary>
+			/// Compute sample weights for the triangle's vertices at a given sample position. 
+			/// </summary>
+			/// <param name="x">Sample x coordinate (int16_t) in the same coordinate space used by the triangle.</param>
+			/// <param name="y">Sample y coordinate (int16_t) in the same coordinate space used by the triangle.</param>
+			/// <returns>A triangle_sample_weights_t containing three non-negative weights (int16_t) corresponding to the triangle vertices A, B, and C. The weights are computed from internal area calculations, mapped back to the original vertex order if a swap occurred, and clamped to a minimum of 0.</returns>
+			triangle_sample_weights_t GetWeights(const int16_t x, const int16_t y) const
 			{
-				const int16_t xmCx = x - Cx;
-				const int16_t ymCy = y - Cy;
-				const int16_t wA = LimitValue<int32_t>((static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy), 0, ReducedArea);
-				const int16_t wB = LimitValue<int32_t>((static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy), 0, ReducedArea);
+				int16_t wA{}, wB{}, wC{};
+				{
+					const int16_t xmCx = x - Cx;
+					const int16_t ymCy = y - Cy;
 
-				const ufraction16_t fA = UFraction16::GetScalar(wA, ReducedArea);
-				const ufraction16_t fB = UFraction16::GetScalar(wB, ReducedArea);
-				const ufraction16_t fC = LimitValue<int32_t, 0, UFRACTION16_1X>(static_cast<int32_t>(UFRACTION16_1X) - fA - fB);
+					wA = (static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy);
+					wB = (static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy);
+					wC = static_cast<int16_t>(ReducedArea) - wA - wB;
 
-				if (Swapped)
-					return triangle_sample_fractions_t{ fA, fC, fB };
-				else
-					return triangle_sample_fractions_t{ fA, fB, fC };
+					// Map back to original vertex order if we swapped.
+					if (Swapped)
+					{
+						const uint16_t temp = wB;
+						wB = wC;
+						wC = temp;
+					}
+				}
+
+				return triangle_sample_weights_t{
+					MaxValue<int16_t>(wA, 0),
+					MaxValue<int16_t>(wB, 0),
+					MaxValue<int16_t>(wC, 0) };
 			}
 		};
 
 		/// <summary>
 		/// Perspective-correct triangle sampler.
-		/// Stores per-vertex depth reciprocals and provides perspective-correct barycentric interpolation.
+		/// Stores per-vertex depth reciprocals and provides perspective-correct barycentric weights.
 		/// </summary>
 		class TrianglePerspectiveCorrectSampler : public Abstract::AbstractSampler
 		{
 		private:
 			// Q format parameters for perspective correction.
 			static constexpr uint8_t Qbits = 24;
-			static constexpr uint32_t Qscale = (static_cast<uint32_t>(1) << Qbits);
+			static constexpr uint32_t Qscale = static_cast<uint32_t>(1) << Qbits;
 
-			// Perspective-correction reciprocals (Qi = (1<<Qbits)/z_i).
+			// Perspective-correction reciprocals (Qi = (1<<qBits)/z_i).
 			uint16_t Qa{}, Qb{}, Qc{};
 
 		public:
@@ -170,7 +179,6 @@ namespace IntegerWorld
 
 			/// <summary>
 			/// Configure perspective-correct interpolation for the current triangle.
-			/// Stores per-vertex reciprocals Qi = (1<<qBits)/z_i using clamped z>=1.
 			/// Returns false if the triangle is degenerate (SetTriangle fails).
 			/// </summary>
 			/// <typeparam name="fragment_t">The fragment type. Must be acceptable to Abstract::AbstractSampler::SetTriangle and provide vertexA, vertexB, and vertexC with a numeric z component (used in MaxValue<int16_t> calls).</typeparam>
@@ -179,7 +187,6 @@ namespace IntegerWorld
 			template<typename fragment_t>
 			bool SetFragmentData(const fragment_t& fragment)
 			{
-				//return SetTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC);
 				if (!Abstract::AbstractSampler::SetTriangle(fragment))
 					return false;
 
@@ -191,80 +198,55 @@ namespace IntegerWorld
 			}
 
 			/// <summary>
-			/// Perspective-correct "weights" (numerators) n_i = w_i * Q_i.
-			/// Sum of returned weights is the perspective-correct denominator.
+			/// Compute normalized sample weights for a point (x, y) with respect to a triangle.
 			/// </summary>
-			triangle_sample_weights_t Weights(const int16_t x, const int16_t y) const
+			/// <param name="x">The x coordinate of the sample point (int16_t) in the same coordinate space as the triangle vertices.</param>
+			/// <param name="y">The y coordinate of the sample point (int16_t) in the same coordinate space as the triangle vertices.</param>
+			/// <returns>A triangle_sample_weights_t holding three int16_t weights for vertices A, B and C (in the original vertex order).
+			/// Each weight is non-negative and scaled down if necessary so the total fits within INT16_MAX while preserving relative ratios.</returns>
+			triangle_sample_weights_t GetWeights(const int16_t x, const int16_t y) const
 			{
-				const int16_t xmCx = x - Cx;
-				const int16_t ymCy = y - Cy;
-				const int16_t wA = LimitValue<int32_t>((static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy), 0, ReducedArea);
-				const int16_t wB = LimitValue<int32_t>((static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy), 0, ReducedArea);
-				const int16_t wC = ReducedArea - MinValue<int32_t>(static_cast<int32_t>(wA) + wB, ReducedArea);
-
-				int32_t nA = static_cast<int32_t>(wA) * Qa;
-				int32_t nB, nC;
-
-				// Map internal weights to original vertices before applying Qi.
-				if (Swapped)
+				uint32_t nA{}, nB{}, nC{};
 				{
-					nB = static_cast<int32_t>(wC) * Qb;
-					nC = static_cast<int32_t>(wB) * Qc;
-				}
-				else
-				{
-					nB = static_cast<int32_t>(wB) * Qb;
-					nC = static_cast<int32_t>(wC) * Qc;
+					int16_t wA{}, wB{}, wC{};
+					{
+						const int16_t xmCx = x - Cx;
+						const int16_t ymCy = y - Cy;
+
+						wA = (static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy);
+						wB = (static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy);
+						wC = static_cast<int16_t>(ReducedArea) - wA - wB;
+
+						wA = MaxValue<int16_t>(wA, 0);
+						wB = MaxValue<int16_t>(wB, 0);
+						wC = MaxValue<int16_t>(wC, 0);
+
+						// Map back to original vertex order if we swapped.
+						if (Swapped)
+						{
+							const uint16_t temp = wB;
+							wB = wC;
+							wC = temp;
+						}
+					}
+
+					nA = static_cast<uint32_t>(wA) * Qa;
+					nB = static_cast<uint32_t>(wB) * Qb;
+					nC = static_cast<uint32_t>(wC) * Qc;
 				}
 
 				// Normalize to fit in int16_t if needed, preserving ratios.
-				while (AbsValue(nA + nB + nC) > INT16_MAX)
+				while ((nA + nB + nC) > INT16_MAX)
 				{
-					nA = SignedRightShift(nA, 1);
-					nB = SignedRightShift(nB, 1);
-					nC = SignedRightShift(nC, 1);
+					nA >>= 1;
+					nB >>= 1;
+					nC >>= 1;
 				}
 
 				return triangle_sample_weights_t{
 					static_cast<int16_t>(nA),
 					static_cast<int16_t>(nB),
-					static_cast<int16_t>(nC)
-				};
-			}
-
-			triangle_sample_fractions_t Fractions(const int16_t x, const int16_t y) const
-			{
-				const triangle_sample_weights_t weights = Weights(x, y);
-				const int16_t denom = weights.WeightA + weights.WeightB + weights.WeightC;
-
-				if (denom == 0)
-				{
-					// Fallback to linear if denominator is zero
-					const int16_t xmCx = x - Cx;
-					const int16_t ymCy = y - Cy;
-					const int16_t wA = LimitValue<int32_t>((static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy), 0, ReducedArea);
-					const int16_t wB = LimitValue<int32_t>((static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy), 0, ReducedArea);
-
-					const ufraction16_t fA = UFraction16::GetScalar(wA, ReducedArea);
-					const ufraction16_t fB = UFraction16::GetScalar(wB, ReducedArea);
-					const ufraction16_t fC = LimitValue<int32_t, 0, UFRACTION16_1X>(static_cast<int32_t>(UFRACTION16_1X) - fA - fB);
-
-					if (Swapped)
-						return triangle_sample_fractions_t{ fA, fC, fB };
-					else
-						return triangle_sample_fractions_t{ fA, fB, fC };
-				}
-				else
-				{
-					// Weights are already normalized to fit in int16_t and properly perspective-corrected
-					const ufraction16_t fA = static_cast<ufraction16_t>(LimitValue<int32_t, 0, UFRACTION16_1X>(
-						(static_cast<int32_t>(weights.WeightA) * static_cast<int32_t>(UFRACTION16_1X) + SignedRightShift(denom, 1)) / denom));
-					const ufraction16_t fB = static_cast<ufraction16_t>(LimitValue<int32_t, 0, UFRACTION16_1X>(
-						(static_cast<int32_t>(weights.WeightB) * static_cast<int32_t>(UFRACTION16_1X) + SignedRightShift(denom, 1)) / denom));
-					const ufraction16_t fC = LimitValue<int32_t, 0, UFRACTION16_1X>(static_cast<int32_t>(UFRACTION16_1X) - fA - fB);
-
-					return triangle_sample_fractions_t{ fA, fB, fC };
-				}
+					static_cast<int16_t>(nC) };
 			}
 		};
 	}

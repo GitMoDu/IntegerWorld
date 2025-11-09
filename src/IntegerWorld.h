@@ -43,14 +43,14 @@
 #include "RenderObjects/Edge/AbstractObject.h"
 #include "RenderObjects/Edge/LineShadeObject.h"
 #include "RenderObjects/Edge/VertexShadeObject.h"
-#include "RenderObjects/Edge/Functors.h"
+#include "RenderObjects/Edge/PixelShaders.h"
 #include "RenderObjects/Edge/FragmentShaders.h"
 
 // Mesh render objects.
 #include "RenderObjects/Mesh/AbstractObject.h"
 #include "RenderObjects/Mesh/TriangleShadeObject.h"
 #include "RenderObjects/Mesh/VertexShadeObject.h"
-#include "RenderObjects/Mesh/Functors.h"
+#include "RenderObjects/Mesh/PixelShaders.h"
 #include "RenderObjects/Mesh/FragmentShaders.h"
 
 // Scene shaders, including lights.

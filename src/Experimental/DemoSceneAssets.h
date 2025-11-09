@@ -668,10 +668,10 @@ namespace Assets
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
-		using TextureVertexLitFunctor = Mesh::FragmentShaders::Functors::Texture::VertexLitFunctor<
+		using TextureVertexLitFunctor = Mesh::PixelShaders::TextureVertexLit<
 			PrimitiveSources::Texture::Static::Source,
 			PrimitiveShaders::TrianglePerspectiveCorrectSampler,
-			PrimitiveShaders::UvInterpolationMode::Accurate>;
+			PrimitiveShaders::UvInterpolationModeEnum::Accurate>;
 
 		class CubeTexturedVertexLitShader
 			: public Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
@@ -691,10 +691,10 @@ namespace Assets
 			}
 		};
 #else
-		using TextureTriangleLitFunctor = Mesh::FragmentShaders::Functors::Texture::TriangleLitFunctor<
+		using TextureTriangleLitFunctor = Mesh::PixelShaders::TextureTriangleLit<
 			PrimitiveSources::Texture::Static::Source,
 			PrimitiveShaders::TriangleAffineSampler,
-			PrimitiveShaders::UvInterpolationMode::Fast>;
+			PrimitiveShaders::UvInterpolationModeEnum::Fast>;
 
 		class CubeTexturedTriangleLitShader
 			: public Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<

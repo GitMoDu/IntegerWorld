@@ -3,7 +3,7 @@
 
 #include "../AbstractObject.h"
 #include "../../Shaders/Primitive/DepthSampler.h"
-#include "Functors.h"
+#include "PixelShaders.h"
 
 namespace IntegerWorld
 {
@@ -24,7 +24,7 @@ namespace IntegerWorld
 						}
 					};
 
-					struct InterpolateShader : IFragmentShader<edge_line_fragment_t>
+					struct ColorInterpolateShader : IFragmentShader<edge_line_fragment_t>
 					{
 						void FragmentShade(WindowRasterizer& rasterizer, const edge_line_fragment_t& fragment)
 						{
@@ -43,51 +43,52 @@ namespace IntegerWorld
 						}
 					};
 
-					class InterpolateZShader : public IFragmentShader<edge_line_fragment_t>
+					class ZInterpolateShader : public IFragmentShader<edge_line_fragment_t>
 					{
 					private:
-						Functors::ZFunctor<edge_line_fragment_t> Functor{};
+						PixelShaders::ZInterpolate<edge_line_fragment_t> PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const edge_line_fragment_t& fragment)
 						{
-							Functor.SetFragmentData(fragment);
-							rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, Functor);
+							PixelShader.SetFragmentData(fragment);
+							rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, PixelShader);
 						}
 					};
 				}
 
 				namespace VertexShade
 				{
-					class InterpolateShader : public IFragmentShader<edge_vertex_fragment_t>
+					template<pixel_blend_mode_t blendMode = pixel_blend_mode_t::Replace>
+					class ColorInterpolateShader : public IFragmentShader<edge_vertex_fragment_t>
 					{
 					private:
-						Functors::ColorFunctor Functor{};
+						PixelShaders::VertexColorInterpolate PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const edge_vertex_fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(
+							if (PixelShader.SetFragmentData(
 								fragment.vertexA,
 								fragment.vertexB,
 								Rgb8::Color(fragment.redA, fragment.greenA, fragment.blueA),
 								Rgb8::Color(fragment.redB, fragment.greenB, fragment.blueB)))
 							{
-								rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, Functor);
+								rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, PixelShader);
 							}
 						}
 					};
 
-					class InterpolateZShader : public IFragmentShader<edge_vertex_fragment_t>
+					class ZInterpolateShader : public IFragmentShader<edge_vertex_fragment_t>
 					{
 					private:
-						Functors::ZFunctor<edge_vertex_fragment_t> Functor{};
+						PixelShaders::ZInterpolate<edge_vertex_fragment_t> PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const edge_vertex_fragment_t& fragment)
 						{
-							Functor.SetFragmentData(fragment);
-							rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, Functor);
+							PixelShader.SetFragmentData(fragment);
+							rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, PixelShader);
 						}
 					};
 				}

@@ -3,8 +3,8 @@
 
 #include "../AbstractObject.h"
 #include "../../Shaders/Primitive/DepthSampler.h"
-#include "Functors.h"
-#include "../Edge/Functors.h"
+#include "PixelShaders.h"
+#include "../Edge/PixelShaders.h"
 
 namespace IntegerWorld
 {
@@ -18,34 +18,34 @@ namespace IntegerWorld
 				{
 					template<typename fragment_t,
 						typename TextureSourceType,
-						typename TextureFunctorType = Functors::Texture::UnlitFunctor<TextureSourceType>>
-						class TemplateTextureShader : public IFragmentShader<fragment_t>
+						typename TexturePixelShaderType = PixelShaders::TextureUnlit<TextureSourceType>,
+						pixel_blend_mode_t blendMode = pixel_blend_mode_t::Replace>
+					class TemplateTextureShader : public IFragmentShader<fragment_t>
 					{
 					private:
-						TextureFunctorType Functor;
+						TexturePixelShaderType PixelShader;
 
 					public:
 						TemplateTextureShader(TextureSourceType& textureSource)
-							: Functor(textureSource)
+							: PixelShader(textureSource)
 						{
 						}
 
 						void FragmentShade(WindowRasterizer& rasterizer, const fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(fragment))
+							if (PixelShader.SetFragmentData(fragment))
 							{
-								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, Functor);
+								rasterizer.RasterTriangle<blendMode>(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
 							}
 						}
 					};
 				}
 
-
 				namespace TriangleShade
 				{
 					template<typename TextureSourceType,
-						typename TextureFunctorType = Functors::Texture::UnlitFunctor<TextureSourceType>>
-						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_triangle_fragment_t, TextureSourceType, TextureFunctorType>;
+						typename TexturePixelShaderType = PixelShaders::TextureUnlit<TextureSourceType>>
+						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_triangle_fragment_t, TextureSourceType, TexturePixelShaderType>;
 
 					struct FillShader : IFragmentShader<mesh_triangle_fragment_t>
 					{
@@ -70,14 +70,14 @@ namespace IntegerWorld
 					class ZInterpolateShader : public IFragmentShader<mesh_triangle_fragment_t>
 					{
 					private:
-						Functors::ZFunctor<mesh_triangle_fragment_t> Functor{};
+						PixelShaders::ZInterpolate<mesh_triangle_fragment_t> PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_triangle_fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(fragment))
+							if (PixelShader.SetFragmentData(fragment))
 							{
-								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, Functor);
+								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
 							}
 						}
 					};
@@ -97,36 +97,38 @@ namespace IntegerWorld
 				namespace VertexShade
 				{
 					template<typename TextureSourceType,
-						typename TextureFunctorType = Functors::Texture::UnlitFunctor<TextureSourceType>>
-						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_vertex_fragment_t, TextureSourceType, TextureFunctorType>;
+						typename TexturePixelShaderType = PixelShaders::TextureUnlit<TextureSourceType>>
+						using TemplateTextureShader = Abstract::TemplateTextureShader<mesh_vertex_fragment_t, TextureSourceType, TexturePixelShaderType>;
 
-					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
+					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler,
+						pixel_blend_mode_t = pixel_blend_mode_t::Replace>
 					class ColorInterpolateShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
-						Functors::ColorFunctor<TriangleSamplerType> Functor{};
+						PixelShaders::VertexColorInterpolate<TriangleSamplerType> PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_vertex_fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(fragment))
+							if (PixelShader.SetFragmentData(fragment))
 							{
-								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, Functor);
+								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
 							}
 						}
 					};
 
+					template<typename TriangleSamplerType = PrimitiveShaders::TriangleAffineSampler>
 					class ZInterpolateShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
-						Functors::ZFunctor<mesh_vertex_fragment_t> Functor{};
+						PixelShaders::ZInterpolate<mesh_vertex_fragment_t, TriangleSamplerType> PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_vertex_fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(fragment))
+							if (PixelShader.SetFragmentData(fragment))
 							{
-								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, Functor);
+								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
 							}
 						}
 					};
@@ -134,28 +136,28 @@ namespace IntegerWorld
 					class WireframeShader : public IFragmentShader<mesh_vertex_fragment_t>
 					{
 					private:
-						Edge::FragmentShaders::Functors::ColorFunctor Functor{};
+						Edge::PixelShaders::VertexColorInterpolate PixelShader{};
 
 					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const mesh_vertex_fragment_t& fragment)
 						{
-							if (Functor.SetFragmentData(fragment.vertexA, fragment.vertexB,
+							if (PixelShader.SetFragmentData(fragment.vertexA, fragment.vertexB,
 								Rgb8::Color(fragment.redA, fragment.greenA, fragment.blueA),
 								Rgb8::Color(fragment.redB, fragment.greenB, fragment.blueB)))
 							{
-								rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, Functor);
+								rasterizer.RasterLine<>(fragment.vertexA, fragment.vertexB, PixelShader);
 
-								if (Functor.SetFragmentData(fragment.vertexA, fragment.vertexC,
+								if (PixelShader.SetFragmentData(fragment.vertexA, fragment.vertexC,
 									Rgb8::Color(fragment.redA, fragment.greenA, fragment.blueA),
 									Rgb8::Color(fragment.redC, fragment.greenC, fragment.blueC)))
 								{
-									rasterizer.RasterLine(fragment.vertexA, fragment.vertexC, Functor);
+									rasterizer.RasterLine<>(fragment.vertexA, fragment.vertexC, PixelShader);
 
-									if (Functor.SetFragmentData(fragment.vertexB, fragment.vertexC,
+									if (PixelShader.SetFragmentData(fragment.vertexB, fragment.vertexC,
 										Rgb8::Color(fragment.redB, fragment.greenB, fragment.blueB),
 										Rgb8::Color(fragment.redC, fragment.greenC, fragment.blueC)))
 									{
-										rasterizer.RasterLine(fragment.vertexB, fragment.vertexC, Functor);
+										rasterizer.RasterLine<>(fragment.vertexB, fragment.vertexC, PixelShader);
 									}
 								}
 							}
