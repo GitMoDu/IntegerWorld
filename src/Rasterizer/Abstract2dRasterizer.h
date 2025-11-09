@@ -156,11 +156,9 @@ namespace IntegerWorld
 			case 0: // Fully clipped, nothing to draw.
 				break;
 			case 1: // Degenerate triangle collapsed to a point.
-			{
 				Base::template BlendPixel<blendMode>(pixelShader(clippedPolygon[0].x, clippedPolygon[0].y),
 					clippedPolygon[0].x, clippedPolygon[0].y);
-			}
-			break;
+				break;
 			case 2: // Degenerate triangle collapsed to a line.
 				RasterLine<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[1].x, clippedPolygon[1].y, pixelShader);
 				break;
@@ -361,11 +359,30 @@ namespace IntegerWorld
 				const int16_t dyTotal = y3 - y1;
 				const int16_t dySegment = y2 - y1;
 
+				if (dyTotal == 0 || dySegment == 0)
+				{
+					// Degenerate case, avoid division by zero.
+					return;
+				}
+
 				const int16_t splitX = FixedRoundToInt(IntToFixed(x1)
 					+ (IntToFixed(dxTotal) * dySegment) / dyTotal);
 
-				BresenhamTriangleFlatBottom<blendMode>(x1, y1, x2, y2, splitX, y2, pixelShader);
-				BresenhamTriangleFlatTop<blendMode>(x2, y2, splitX, y2, x3, y3, pixelShader);
+				// Avoid double-drawing the shared split scanline (y == y2)
+				// by shifting the lower (flat-bottom) sub-triangle up by one scanline AND
+				// moving its bottom vertices one step along their edges, preserving slopes.
+				//   x' = round( x - (dx/dy) ), where dx/dy is the per-scanline step of that edge.
+				const int32_t stepRight_fx = (IntToFixed(x2 - x1) / dySegment); // per-scanline step on edge (x1,y1)->(x2,y2)
+				const int32_t stepLeft_fx = (IntToFixed(splitX - x1) / dySegment); // per-scanline step on edge (x1,y1)->(splitX,y2)
+
+				const int16_t x2_upOne = FixedRoundToInt(IntToFixed(x2) - stepRight_fx);
+				const int16_t splitX_upOne = FixedRoundToInt(IntToFixed(splitX) - stepLeft_fx);
+				const int16_t yBottom = int16_t(y2 - 1);
+
+				// Recursive call to fill top and bottom sub-triangles.
+				// This accounts for the remaining triangles' degeneration to lines, points or discards.
+				RasterTriangleDispatch<blendMode>(x2, y2, splitX, y2, x3, y3, pixelShader);
+				RasterTriangleDispatch<blendMode>(x1, y1, x2_upOne, yBottom, splitX_upOne, yBottom, pixelShader);
 			}
 		}
 
@@ -381,13 +398,13 @@ namespace IntegerWorld
 			int32_t sx1 = IntToFixed(x1);
 			int32_t sx2 = sx1;
 
-			for (int16_t y = y1; y <= y2; y++)
+			for (int_fast16_t y = y1; y <= y2; y++)
 			{
 				int16_t startX = FixedRoundToInt(sx1);
 				int16_t endX = FixedRoundToInt(sx2);
 				if (startX > endX) { int16_t t = startX; startX = endX; endX = t; }
 
-				for (int16_t x = startX; x <= endX; x++)
+				for (int_fast16_t x = startX; x <= endX; x++)
 				{
 					Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
 				}
@@ -409,13 +426,13 @@ namespace IntegerWorld
 			int32_t sx1 = IntToFixed(x3);
 			int32_t sx2 = sx1;
 
-			for (int16_t y = y3; y >= y1; y--)
+			for (int_fast16_t y = y3; y >= y1; y--)
 			{
 				int16_t startX = FixedRoundToInt(sx1);
 				int16_t endX = FixedRoundToInt(sx2);
 				if (startX > endX) { int16_t t = startX; startX = endX; endX = t; }
 
-				for (int16_t x = startX; x <= endX; x++)
+				for (int_fast16_t x = startX; x <= endX; x++)
 				{
 					Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
 				}
