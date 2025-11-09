@@ -53,39 +53,39 @@ namespace IntegerWorld
 			Surface.RectangleFill(color, 0, 0, SurfaceWidth - 1, SurfaceHeight - 1);
 		}
 
-		///// <summary>
-		///// Blends a pixel at (x, y) using the specified blending mode, if inside the window.
-		///// </summary>
-		///// <param name="color">Source color.</param>
-		///// <param name="x">X coordinate.</param>
-		///// <param name="y">Y coordinate.</param>
-		///// <param name="blendMode">Blending mode (Alpha, Add, Subtract, Multiply, Screen).</param>
-		//void BlendPixel(const Rgb8::color_t color, const int16_t x, const int16_t y, pixel_blend_mode_t blendMode)
-		//{
-		//	switch (blendMode)
-		//	{
-		//	case pixel_blend_mode_t::Replace:
-		//		Surface.Pixel(color, x, y);
-		//		break;
-		//	case pixel_blend_mode_t::Alpha:
-		//		Surface.PixelBlendAlpha(color, x, y);
-		//		break;
-		//	case pixel_blend_mode_t::Add:
-		//		Surface.PixelBlendAdd(color, x, y);
-		//		break;
-		//	case pixel_blend_mode_t::Subtract:
-		//		Surface.PixelBlendSubtract(color, x, y);
-		//		break;
-		//	case pixel_blend_mode_t::Multiply:
-		//		Surface.PixelBlendMultiply(color, x, y);
-		//		break;
-		//	case pixel_blend_mode_t::Screen:
-		//		Surface.PixelBlendScreen(color, x, y);
-		//		break;
-		//	default:
-		//		break;
-		//	}
-		//}
+		/// <summary>
+		/// Blends a pixel at (x, y) using the specified blending mode, if inside the window.
+		/// </summary>
+		/// <param name="color">Source color.</param>
+		/// <param name="x">X coordinate.</param>
+		/// <param name="y">Y coordinate.</param>
+		/// <param name="blendMode">Blending mode (Alpha, Add, Subtract, Multiply, Screen).</param>
+		void BlendPixel(const Rgb8::color_t color, const int16_t x, const int16_t y, pixel_blend_mode_t blendMode)
+		{
+			switch (blendMode)
+			{
+			case pixel_blend_mode_t::Replace:
+				Surface.Pixel(color, x, y);
+				break;
+			case pixel_blend_mode_t::Alpha:
+				Surface.PixelBlendAlpha(color, x, y);
+				break;
+			case pixel_blend_mode_t::Add:
+				Surface.PixelBlendAdd(color, x, y);
+				break;
+			case pixel_blend_mode_t::Subtract:
+				Surface.PixelBlendSubtract(color, x, y);
+				break;
+			case pixel_blend_mode_t::Multiply:
+				Surface.PixelBlendMultiply(color, x, y);
+				break;
+			case pixel_blend_mode_t::Screen:
+				Surface.PixelBlendScreen(color, x, y);
+				break;
+			default:
+				break;
+			}
+		}
 
 		/// <summary>
 		/// Templated variant that inlines the blend mode at compile time.
