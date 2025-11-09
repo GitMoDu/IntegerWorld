@@ -359,12 +359,6 @@ namespace IntegerWorld
 				const int16_t dyTotal = y3 - y1;
 				const int16_t dySegment = y2 - y1;
 
-				if (dyTotal == 0 || dySegment == 0)
-				{
-					// Degenerate case, avoid division by zero.
-					return;
-				}
-
 				const int16_t splitX = FixedRoundToInt(IntToFixed(x1)
 					+ (IntToFixed(dxTotal) * dySegment) / dyTotal);
 
@@ -381,8 +375,10 @@ namespace IntegerWorld
 
 				// Recursive call to fill top and bottom sub-triangles.
 				// This accounts for the remaining triangles' degeneration to lines, points or discards.
-				RasterTriangleDispatch<blendMode>(x2, y2, splitX, y2, x3, y3, pixelShader);
-				RasterTriangleDispatch<blendMode>(x1, y1, x2_upOne, yBottom, splitX_upOne, yBottom, pixelShader);
+				RasterTriangleYOrdered<blendMode>(x2, y2, splitX, y2, x3, y3, pixelShader);
+
+				if (yBottom != y1) // Avoid degenerate flat-bottom triangle.
+					RasterTriangleYOrdered<blendMode>(x1, y1, x2_upOne, yBottom, splitX_upOne, yBottom, pixelShader);
 			}
 		}
 
