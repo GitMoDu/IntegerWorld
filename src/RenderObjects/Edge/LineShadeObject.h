@@ -111,15 +111,14 @@ namespace IntegerWorld
 
 					switch (frustumCulling)
 					{
-					case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 					case FrustumCullingEnum::PrimitiveCulling:
-						if (!frustum.IsPointInside(worldPosition))
+						if (!frustum.IsPointInside(Vertices[edge.a])
+							|| !frustum.IsPointInside(Vertices[edge.b]))
 						{
 							Primitives[primitiveIndex] = -VERTEX16_UNIT;
 							return false;
 						}
 						break;
-					case FrustumCullingEnum::NoCulling:
 					default:
 						break;
 					};
@@ -155,7 +154,7 @@ namespace IntegerWorld
 							// relative to the object center position.
 							auto vertexA = Vertices[edge.a];
 							auto vertexB = Vertices[edge.b];
-							worldNormal = { 
+							worldNormal = {
 								static_cast<int16_t>(Average(vertexA.x, vertexB.x) - WorldPosition.x),
 								static_cast<int16_t>(Average(vertexA.y, vertexB.y) - WorldPosition.y),
 								static_cast<int16_t>(Average(vertexA.z, vertexB.z) - WorldPosition.z) };

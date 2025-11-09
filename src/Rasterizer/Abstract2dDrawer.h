@@ -278,7 +278,6 @@ namespace IntegerWorld
 			Surface.RectangleFill(color, x1c, y1c, x2c, y2c);
 		}
 
-
 	protected:
 		/// <summary>
 		/// Clips the endpoint (x1, y1) of a line segment to the boundaries of the window, using (x2, y2) as the other endpoint.

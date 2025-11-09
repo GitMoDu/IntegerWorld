@@ -104,16 +104,12 @@ namespace IntegerWorld
 
 					const auto triangle = TriangleSource.GetTriangle(primitiveIndex);
 
-					const vertex16_t worldPosition{
-						AverageApproximate(Vertices[triangle.a].x, Vertices[triangle.b].x, Vertices[triangle.c].x),
-						AverageApproximate(Vertices[triangle.a].y, Vertices[triangle.b].y, Vertices[triangle.c].y),
-						AverageApproximate(Vertices[triangle.a].z, Vertices[triangle.b].z, Vertices[triangle.c].z) };
-
 					switch (frustumCulling)
 					{
-					case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 					case FrustumCullingEnum::PrimitiveCulling:
-						if (!frustum.IsPointInside(worldPosition))
+						if (!frustum.IsPointInside(Vertices[triangle.a])
+							&& !frustum.IsPointInside(Vertices[triangle.b])
+							&& !frustum.IsPointInside(Vertices[triangle.c]))
 						{
 							Primitives[primitiveIndex] = -VERTEX16_UNIT;
 							return false;
@@ -155,6 +151,11 @@ namespace IntegerWorld
 							worldNormal = GetNormal16(Vertices[triangle.a], Vertices[triangle.b], Vertices[triangle.c]);
 							NormalizeVertex16(worldNormal);
 						}
+
+						const vertex16_t worldPosition{
+								AverageApproximate(Vertices[triangle.a].x, Vertices[triangle.b].x, Vertices[triangle.c].x),
+								AverageApproximate(Vertices[triangle.a].y, Vertices[triangle.b].y, Vertices[triangle.c].y),
+								AverageApproximate(Vertices[triangle.a].z, Vertices[triangle.b].z, Vertices[triangle.c].z) };
 
 						// Apply scene shader to get lit color.
 						primitiveColor = SceneShader->GetLitColor(primitiveColor, primitiveMaterial, worldPosition, worldNormal);

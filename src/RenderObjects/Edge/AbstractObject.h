@@ -75,7 +75,6 @@ namespace IntegerWorld
 
 					switch (frustumCulling)
 					{
-					case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 					case FrustumCullingEnum::ObjectCulling:
 						if (!frustum.IsPointInside(WorldPosition))
 						{

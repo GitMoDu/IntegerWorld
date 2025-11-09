@@ -102,17 +102,14 @@ namespace IntegerWorld
 					{
 						switch (frustumCulling)
 						{
-						case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 						case FrustumCullingEnum::PrimitiveCulling:
 						{
 							const auto triangle = TriangleSource.GetTriangle(primitiveIndex);
-							const vertex16_t worldPosition{
-								AverageApproximate(Vertices[triangle.a].x, Vertices[triangle.b].x, Vertices[triangle.c].x),
-								AverageApproximate(Vertices[triangle.a].y, Vertices[triangle.b].y, Vertices[triangle.c].y),
-								AverageApproximate(Vertices[triangle.a].z, Vertices[triangle.b].z, Vertices[triangle.c].z) };
 
 							// If the triangle center is outside the frustum, mark it as culled.
-							if (!frustum.IsPointInside(worldPosition))
+							if (!frustum.IsPointInside(Vertices[triangle.a])
+								&& !frustum.IsPointInside(Vertices[triangle.b])
+								&& !frustum.IsPointInside(Vertices[triangle.c]))
 							{
 								Primitives[primitiveIndex] = -VERTEX16_UNIT;
 							}

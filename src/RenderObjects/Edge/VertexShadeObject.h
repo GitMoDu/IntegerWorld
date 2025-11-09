@@ -93,25 +93,19 @@ namespace IntegerWorld
 				/// <returns>false to continue processing; true when no more primitives are available.</returns>
 				virtual bool WorldShade(const frustum_t& frustum, const uint16_t primitiveIndex)
 				{
-					vertex16_t worldPosition;
-
 					if (primitiveIndex < EdgeCount
 						&&
 						(frustumCulling == FrustumCullingEnum::NoCulling || (Primitives[primitiveIndex] >= 0)))
 					{
 						switch (frustumCulling)
 						{
-						case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 						case FrustumCullingEnum::PrimitiveCulling:
 						{
 							const auto edge = EdgeSource.GetEdge(primitiveIndex);
-							const vertex16_t worldPosition{
-								Average(Vertices[edge.a].x, Vertices[edge.b].x),
-								Average(Vertices[edge.a].y, Vertices[edge.b].y),
-								Average(Vertices[edge.a].z, Vertices[edge.b].z) };
 
-							// If the edge center is outside the frustum, mark it as culled.
-							if (!frustum.IsPointInside(worldPosition))
+							// If the edge is outside the frustum, cull it.
+							if (!frustum.IsPointInside(Vertices[edge.a])
+								|| !frustum.IsPointInside(Vertices[edge.b]))
 							{
 								Primitives[primitiveIndex] = -VERTEX16_UNIT;
 							}

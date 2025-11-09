@@ -73,7 +73,6 @@ namespace IntegerWorld
 
 					switch (frustumCulling)
 					{
-					case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 					case FrustumCullingEnum::ObjectCulling:
 						zFlag = -VERTEX16_UNIT * !frustum.IsPointInside(WorldPosition);
 						break;
@@ -101,7 +100,6 @@ namespace IntegerWorld
 
 					switch (frustumCulling)
 					{
-					case FrustumCullingEnum::ObjectAndPrimitiveCulling:
 					case FrustumCullingEnum::PrimitiveCulling:
 						if (!frustum.IsPointInside(Vertices[primitiveIndex]))
 						{
