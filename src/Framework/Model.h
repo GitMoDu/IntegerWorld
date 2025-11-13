@@ -24,10 +24,7 @@ namespace IntegerWorld
 		ObjectCulling,
 
 		// Frustum culling is applied at the primitive level; individual primitives outside the frustum are not rendered.
-		PrimitiveCulling,
-
-		// Frustum culling is applied at both the object and primitive levels.
-		ObjectAndPrimitiveCulling
+		PrimitiveCulling
 	};
 
 	/// <summary>
