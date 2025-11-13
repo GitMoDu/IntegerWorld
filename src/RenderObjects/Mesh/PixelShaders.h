@@ -189,11 +189,13 @@ namespace IntegerWorld
 							break;
 						}
 
+						uint8_t a;
 						uint8_t r;
 						uint8_t g;
 						uint8_t b;
 						{
 							const Rgb8::color_t texel = TextureSource.GetTexel(uv.x, uv.y);
+							a = Rgb8::Alpha(texel);
 							r = Rgb8::Red(texel);
 							g = Rgb8::Green(texel);
 							b = Rgb8::Blue(texel);
@@ -247,6 +249,7 @@ namespace IntegerWorld
 					{
 						const auto fractions = Sampler.GetWeights(x, y).GetFractions();
 
+						uint8_t a;
 						uint8_t r;
 						uint8_t g;
 						uint8_t b;
@@ -264,12 +267,13 @@ namespace IntegerWorld
 							}
 
 							const Rgb8::color_t texel = TextureSource.GetTexel(uv.x, uv.y);
+							a = Rgb8::Alpha(texel);
 							r = Rgb8::Red(texel);
 							g = Rgb8::Green(texel);
 							b = Rgb8::Blue(texel);
 						}
 
-						return Rgb8::Color(
+						return Rgb8::Color(a,
 							static_cast<uint8_t>(MinValue<uint16_t>(UINT8_MAX,
 								((static_cast<uint16_t>(Fraction(fractions.FractionA, Ra))
 									+ Fraction(fractions.FractionB, Rb)

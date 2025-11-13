@@ -113,7 +113,7 @@ namespace IntegerWorld
 						{
 							if (PixelShader.SetFragmentData(fragment))
 							{
-								rasterizer.RasterTriangle(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
+								rasterizer.RasterTriangle<blendMode>(fragment.vertexA, fragment.vertexB, fragment.vertexC, PixelShader);
 							}
 						}
 					};
