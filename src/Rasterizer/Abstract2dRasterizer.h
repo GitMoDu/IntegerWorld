@@ -386,6 +386,7 @@ namespace IntegerWorld
 					slopeError -= scaledWidth;
 				}
 			}
+			Base::template BlendPixel<blendMode>(pixelShader(x2, y), x2, y); // last pixel
 		}
 
 		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
@@ -410,6 +411,7 @@ namespace IntegerWorld
 					slopeError -= scaledHeight;
 				}
 			}
+			Base::template BlendPixel<blendMode>(pixelShader(x, y2), x, y2); // last pixel
 		}
 	};
 }
