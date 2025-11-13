@@ -107,6 +107,16 @@ namespace IntegerWorld
 				{
 					return Rgb8::Color(ShadeR, ShadeG, ShadeB);
 				}
+
+				/// <summary>
+				/// Alpha-preserving overload of EndShade().
+				/// </summary>
+				/// <param name="alpha">Alpha component to include in the final color</param>
+				/// <returns>The final RGB color produced by the accumulation pipeline</returns>
+				Rgb8::color_t EndShade(const uint8_t alpha) const
+				{
+					return Rgb8::Color(alpha, ShadeR, ShadeG, ShadeB);
+				}
 			};
 		}
 	}
