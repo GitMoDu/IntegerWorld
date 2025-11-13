@@ -69,12 +69,12 @@ namespace IntegerWorld
 					LookYFilter.Step();
 				}
 
-				const int16_t lookX = Fraction(LookXSensitivity, LookXFilter.Get());
+				const int16_t lookX = -Fraction(LookXSensitivity, LookXFilter.Get());
 
 				Yaw += (deltaScale * lookX) >> LookGainShifts;
 				Yaw %= ANGLE_RANGE;
 
-				const fraction16_t lookY = Fraction16::GetScalar<int16_t>(LookYFilter.Get(), INT16_MAX);
+				const fraction16_t lookY = -Fraction16::GetScalar<int16_t>(LookYFilter.Get(), INT16_MAX);
 				const int16_t lookYScaled = Fraction(Fraction(LookYSensitivity, lookY), ANGLE_180);
 				Pitch += (deltaScale * lookYScaled) >> LookGainShifts;
 
@@ -90,8 +90,8 @@ namespace IntegerWorld
 
 				// --- Integer movement ---
 				const int16_t moveForward = Fraction(MoveXYSensitivity, MoveYFilter.Get());
-				const int16_t moveStrafe = Fraction(MoveXYSensitivity, MoveXFilter.Get());
-				const int16_t moveUp = Fraction(MoveZSensitivity, MoveZFilter.Get());
+				const int16_t moveStrafe = -Fraction(MoveXYSensitivity, MoveXFilter.Get());
+				const int16_t moveUp = -Fraction(MoveZSensitivity, MoveZFilter.Get());
 
 				// 0º yaw -> +Z
 				const fraction16_t sinYaw = Sine16(Yaw);
