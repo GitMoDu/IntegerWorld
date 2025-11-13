@@ -81,16 +81,6 @@ namespace IntegerWorld
 			return SignedRightShift(fx + (FP_UNIT - 1), BRESENHAM_SCALE);
 		}
 
-		///// <summary>
-		///// Rounds a fixed-point integer value down to the nearest FP_UNIT boundary by clearing its fractional bits.
-		///// </summary>
-		///// <param name="fx">Fixed-point value represented as an int32_t; fractional bits are implied by FP_UNIT.</param>
-		///// <returns>The largest multiple of FP_UNIT less than or equal to fx (fx with its fractional bits cleared).</returns>
-		//static constexpr int32_t FixedFloor(const int32_t fx)
-		//{
-		//	return fx & ~(FP_UNIT - 1);
-		//}
-
 		/// <summary>
 		/// Converts a 32-bit fixed-point value to a 16-bit integer by discarding its fractional part.
 		/// </summary>
@@ -100,8 +90,6 @@ namespace IntegerWorld
 		{
 			return SignedRightShift(fx, BRESENHAM_SCALE);
 		}
-
-
 
 	protected:
 		/// <summary>
