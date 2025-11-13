@@ -26,7 +26,7 @@ namespace IntegerWorld
 		using Abstract2dDrawer<SurfaceType>::IsInsideWindow;
 		using Abstract2dDrawer<SurfaceType>::ClipEndpointToWindow;
 		using Abstract2dDrawer<SurfaceType>::ClipTriangleToWindow;
-		using Abstract2dDrawer<SurfaceType>::FixedRoundToInt;
+		using Abstract2dDrawer<SurfaceType>::FixedCeilToInt;
 		using Abstract2dDrawer<SurfaceType>::IntToFixed;
 		using Abstract2dDrawer<SurfaceType>::clippedPolygon;
 
@@ -102,34 +102,23 @@ namespace IntegerWorld
 			}
 			else // General case: Bresenham's line algorithm.
 			{
-				bool xMajor;
-				{
-					const int16_t dxAbs = AbsValue<int16_t>(x2c - x1c);
-					const int16_t dyAbs = AbsValue<int16_t>(y2c - y1c);
-					xMajor = (dxAbs >= dyAbs);
-				}
+				const int16_t dxAbs = AbsValue<int16_t>(x2c - x1c);
+				const int16_t dyAbs = AbsValue<int16_t>(y2c - y1c);
+				const bool xMajor = (dxAbs >= dyAbs);
 
-				if (xMajor) // X-major: ensure x1 < x2 for BresenhamRight.
+				if (xMajor)
 				{
 					if (x2c < x1c)
-					{
 						BresenhamLineRight<blendMode>(x2c, y2c, x1c, y1c, pixelShader);
-					}
 					else
-					{
 						BresenhamLineRight<blendMode>(x1c, y1c, x2c, y2c, pixelShader);
-					}
 				}
-				else // Y-major: ensure y1 < y2 for BresenhamUp.
+				else
 				{
 					if (y2c < y1c)
-					{
 						BresenhamLineUp<blendMode>(x2c, y2c, x1c, y1c, pixelShader);
-					}
 					else
-					{
 						BresenhamLineUp<blendMode>(x1c, y1c, x2c, y2c, pixelShader);
-					}
 				}
 			}
 		}
@@ -144,58 +133,40 @@ namespace IntegerWorld
 		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
 		void RasterTriangle(const int16_t x1, const  int16_t y1, const int16_t x2, const int16_t y2, const int16_t x3, const int16_t y3, pixel_shader_t&& pixelShader)
 		{
-			// Cache triangle vertices into the clipping polygon buffer.
 			clippedPolygon[0] = { x1, y1 };
 			clippedPolygon[1] = { x2, y2 };
 			clippedPolygon[2] = { x3, y3 };
 
-			// Clip triangle to window using Sutherland-Hodgman algorithm.
 			const uint8_t clippedVertexCount = ClipTriangleToWindow();
 			switch (clippedVertexCount)
 			{
-			case 0: // Fully clipped, nothing to draw.
-				break;
-			case 1: // Degenerate triangle collapsed to a point.
+			case 0:
+				return;
+			case 1:
 				Base::template BlendPixel<blendMode>(pixelShader(clippedPolygon[0].x, clippedPolygon[0].y),
 					clippedPolygon[0].x, clippedPolygon[0].y);
-				break;
-			case 2: // Degenerate triangle collapsed to a line.
-				RasterLine<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[1].x, clippedPolygon[1].y, pixelShader);
-				break;
-			case 3: // Fast path, whole triangle inside window.
-				RasterTriangleDispatch<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y,
+				return;
+			case 2:
+				RasterLine<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y,
+					clippedPolygon[1].x, clippedPolygon[1].y, pixelShader);
+				return;
+			case 3:
+				RasterTriangleDispatch<blendMode>(
+					clippedPolygon[0].x, clippedPolygon[0].y,
 					clippedPolygon[1].x, clippedPolygon[1].y,
-					clippedPolygon[2].x, clippedPolygon[2].y, pixelShader);
-				break;
-			default: // General convex polygon (up to 6 vertices) -> triangulate as a fan.
-				for (uint8_t i = 1; i + 1 < clippedVertexCount; i++)
+					clippedPolygon[2].x, clippedPolygon[2].y,
+					pixelShader);
+				return;
+			default:
+				for (uint_fast8_t i = 1; i + 1 < clippedVertexCount; ++i)
 				{
-					if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x &&
-						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
-					{
-						// Degenerate triangle collapsed to a point.
-						Base::template BlendPixel<blendMode>(pixelShader(clippedPolygon[0].x, clippedPolygon[0].y),
-							clippedPolygon[0].x, clippedPolygon[0].y);
-					}
-					else if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x ||
-						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
-					{
-						// Degenerate triangle collapsed to a line.
-						RasterLine<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y,
-							clippedPolygon[i].x, clippedPolygon[i].y,
-							pixelShader);
-						RasterLine<blendMode>(clippedPolygon[i].x, clippedPolygon[i].y,
-							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y,
-							pixelShader);
-					}
-					else
-					{
-						RasterTriangleDispatch<blendMode>(clippedPolygon[0].x, clippedPolygon[0].y,
-							clippedPolygon[i].x, clippedPolygon[i].y,
-							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y, pixelShader);
-					}
+					RasterTriangleDispatch<blendMode>(
+						clippedPolygon[0].x, clippedPolygon[0].y,
+						clippedPolygon[i].x, clippedPolygon[i].y,
+						clippedPolygon[i + 1].x, clippedPolygon[i + 1].y,
+						pixelShader);
 				}
-				break;
+				return;
 			}
 		}
 
@@ -273,7 +244,7 @@ namespace IntegerWorld
 		}
 
 	private:
-		/// <summary>Triangle dispatcher (sorts by Y).</summary>
+		// Dispatches triangle vertices to edge-fill routine in sorted Y order.
 		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
 		void RasterTriangleDispatch(const int16_t x1, const  int16_t y1,
 			const int16_t x2, const  int16_t y2,
@@ -283,159 +254,114 @@ namespace IntegerWorld
 			if (y1 <= y2 && y1 <= y3)
 			{
 				if (y2 <= y3)
-					RasterTriangleYOrdered<blendMode>(x1, y1, x2, y2, x3, y3, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x1, y1, x2, y2, x3, y3, pixelShader);
 				else
-					RasterTriangleYOrdered<blendMode>(x1, y1, x3, y3, x2, y2, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x1, y1, x3, y3, x2, y2, pixelShader);
 			}
 			else if (y2 <= y1 && y2 <= y3)
 			{
 				if (y1 <= y3)
-					RasterTriangleYOrdered<blendMode>(x2, y2, x1, y1, x3, y3, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x2, y2, x1, y1, x3, y3, pixelShader);
 				else
-					RasterTriangleYOrdered<blendMode>(x2, y2, x3, y3, x1, y1, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x2, y2, x3, y3, x1, y1, pixelShader);
 			}
 			else
 			{
 				if (y1 <= y2)
-					RasterTriangleYOrdered<blendMode>(x3, y3, x1, y1, x2, y2, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x3, y3, x1, y1, x2, y2, pixelShader);
 				else
-					RasterTriangleYOrdered<blendMode>(x3, y3, x2, y2, x1, y1, pixelShader);
+					RasterTriangleEdgeFill<blendMode>(x3, y3, x2, y2, x1, y1, pixelShader);
 			}
 		}
 
-		/// <summary>Raster ordered triangle; splits if needed.</summary>
+		// Edge-function based triangle fill. Eliminates seams & overdraw (top-left rule).
 		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
-		void RasterTriangleYOrdered(const int16_t x1, const int16_t y1,
+		void RasterTriangleEdgeFill(const int16_t x0, const int16_t y0,
+			const int16_t x1, const int16_t y1,
 			const int16_t x2, const int16_t y2,
-			const int16_t x3, const int16_t y3,
 			pixel_shader_t&& pixelShader)
 		{
-			if (y1 == y2 && y2 == y3)
+			// Degenerate (all vertices share Y): single scanline fill.
+			if (y0 == y2)
 			{
-				if (x1 == x2 && x2 == x3)
-				{
-					Base::template BlendPixel<blendMode>(pixelShader(x1, y1), x1, y1);
-					return;
-				}
-				int16_t xMin = (x2 < x1 ? x2 : x1);
-				xMin = (x3 < xMin ? x3 : xMin);
-				int16_t xMax = (x2 > x1 ? x2 : x1);
-				xMax = (x3 > xMax ? x3 : xMax);
+				const int16_t xStart = MinValue<int16_t>(x0, MinValue<int16_t>(x1, x2));
+				const int16_t xEnd = MaxValue<int16_t>(x0, MaxValue<int16_t>(x1, x2));
 
-				for (int_fast16_t x = xMin; x <= xMax; ++x)
+				for (int_fast16_t x = xStart; x <= xEnd; x++)
 				{
-					Base::template BlendPixel<blendMode>(pixelShader(x, y1), x, y1);
+					Base::template BlendPixel<blendMode>(pixelShader(x, y0), x, y0);
 				}
+				return;
 			}
-			else if (y2 == y3)
+
+			// Fixed-point X positions for original vertices.
+			const int32_t fx0 = IntToFixed(x0);
+			const int32_t fx1 = IntToFixed(x1);
+			const int32_t fx2 = IntToFixed(x2);
+
+			// Sorted Y (already ensured by caller dispatch order).
+			const int16_t hTop = y1 - y0;      // Height of top segment.
+			const int16_t hBottom = y2 - y1;   // Height of bottom segment.
+			const int16_t hTotal = y2 - y0;    // Total height.
+
+			// Fixed-point per-scanline X deltas along each relevant edge.
+			const int16_t dxLong = (hTotal != 0) ? (IntToFixed(x2 - x0) / hTotal) : 0; // Edge x0->x2
+			const int16_t dxTop = (hTop != 0) ? (IntToFixed(x1 - x0) / hTop) : 0; // Edge x0->x1
+			const int16_t dxBottom = (hBottom != 0) ? (IntToFixed(x2 - x1) / hBottom) : 0; // Edge x1->x2
+
+			// Determine orientation: compare long edge X at y1 vs actual x1.
+			const bool longEdgeIsLeft = ((fx0 + dxLong * hTop) <= fx1);
+
+			// Raster top segment.
+			if (hTop > 0)
 			{
-				BresenhamTriangleFlatBottom<blendMode>(x1, y1, x2, y2, x3, y3, pixelShader);
-			}
-			else if (y1 == y2)
-			{
-				BresenhamTriangleFlatTop<blendMode>(x1, y1, x2, y2, x3, y3, pixelShader);
-			}
-			else if (y3 == y1)
-			{
-				if (x1 == x3)
+				// Working scanline edge positions and steps.
+				const int16_t stepLeft = longEdgeIsLeft ? dxLong : dxTop;
+				const int16_t stepRight = longEdgeIsLeft ? dxTop : dxLong;
+				int32_t fxLeft = fx0;
+				int32_t fxRight = fx0;
+
+				for (int_fast16_t y = y0; y < y1; y++)
 				{
-					Base::template BlendPixel<blendMode>(pixelShader(x1, y1), x1, y1);
-				}
-				else
-				{
-					const int8_t step = x1 <= x3 ? 1 : -1;
-					for (int_fast16_t x = x1; ; x += step)
+					const int16_t startX = FixedCeilToInt(MinValue<int32_t>(fxLeft, fxRight));
+					const int16_t endX = FixedCeilToInt(MaxValue<int32_t>(fxLeft, fxRight)) - 1;
+
+					if (startX <= endX)
 					{
-						Base::template BlendPixel<blendMode>(pixelShader(x, y1), x, y1);
-						if (x == x3)
-							break;
+						for (int_fast16_t x = startX; x <= endX; x++)
+							Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
 					}
+
+					fxLeft += stepLeft;
+					fxRight += stepRight;
 				}
 			}
-			else
+
+			// Raster bottom segment.
+			if (hBottom > 0)
 			{
-				// Split at scanline of middle vertex (fixed-point interpolation).
-				const int16_t dxTotal = x3 - x1;
-				const int16_t dyTotal = y3 - y1;
-				const int16_t dySegment = y2 - y1;
+				// Working scanline edge positions and steps.
+				const int16_t stepLeft = longEdgeIsLeft ? dxLong : dxBottom;
+				const int16_t stepRight = longEdgeIsLeft ? dxBottom : dxLong;
+				int32_t fxLeft = longEdgeIsLeft ? fx0 + dxLong * hTop : fx1;
+				int32_t fxRight = longEdgeIsLeft ? fx1 : fx0 + dxLong * hTop;
 
-				const int16_t splitX = FixedRoundToInt(IntToFixed(x1)
-					+ (IntToFixed(dxTotal) * dySegment) / dyTotal);
-
-				// Avoid double-drawing the shared split scanline (y == y2)
-				// by shifting the lower (flat-bottom) sub-triangle up by one scanline AND
-				// moving its bottom vertices one step along their edges, preserving slopes.
-				//   x' = round( x - (dx/dy) ), where dx/dy is the per-scanline step of that edge.
-				const int32_t stepRight_fx = (IntToFixed(x2 - x1) / dySegment); // per-scanline step on edge (x1,y1)->(x2,y2)
-				const int32_t stepLeft_fx = (IntToFixed(splitX - x1) / dySegment); // per-scanline step on edge (x1,y1)->(splitX,y2)
-
-				const int16_t x2_upOne = FixedRoundToInt(IntToFixed(x2) - stepRight_fx);
-				const int16_t splitX_upOne = FixedRoundToInt(IntToFixed(splitX) - stepLeft_fx);
-				const int16_t yBottom = int16_t(y2 - 1);
-
-				// Recursive call to fill top and bottom sub-triangles.
-				// This accounts for the remaining triangles' degeneration to lines, points or discards.
-				RasterTriangleYOrdered<blendMode>(x2, y2, splitX, y2, x3, y3, pixelShader);
-
-				if (yBottom != y1) // Avoid degenerate flat-bottom triangle.
-					RasterTriangleYOrdered<blendMode>(x1, y1, x2_upOne, yBottom, splitX_upOne, yBottom, pixelShader);
-			}
-		}
-
-		/// <summary>Fill flat-bottom triangle.</summary>
-		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
-		void BresenhamTriangleFlatBottom(int16_t x1, int16_t y1,
-			int16_t x2, int16_t y2,
-			int16_t x3, int16_t y3,
-			pixel_shader_t&& pixelShader)
-		{
-			const int32_t dx1 = IntToFixed(x2 - x1) / (y2 - y1);
-			const int32_t dx2 = IntToFixed(x3 - x1) / (y3 - y1);
-			int32_t sx1 = IntToFixed(x1);
-			int32_t sx2 = sx1;
-
-			for (int_fast16_t y = y1; y <= y2; y++)
-			{
-				int16_t startX = FixedRoundToInt(sx1);
-				int16_t endX = FixedRoundToInt(sx2);
-				if (startX > endX) { int16_t t = startX; startX = endX; endX = t; }
-
-				for (int_fast16_t x = startX; x <= endX; x++)
+				for (int_fast16_t y = y1; y < y2; y++)
 				{
-					Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
+					const int16_t startX = FixedCeilToInt(MinValue<int32_t>(fxLeft, fxRight));
+					const int16_t endX = FixedCeilToInt((MaxValue<int32_t>(fxLeft, fxRight))) - 1;
+
+					if (startX <= endX)
+					{
+						for (int_fast16_t x = startX; x <= endX; x++)
+							Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
+					}
+
+					fxLeft += stepLeft;
+					fxRight += stepRight;
 				}
-
-				sx1 += dx1;
-				sx2 += dx2;
 			}
-		}
-
-		/// <summary>Fill flat-top triangle.</summary>
-		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>
-		void BresenhamTriangleFlatTop(int16_t x1, int16_t y1,
-			int16_t x2, int16_t y2,
-			int16_t x3, int16_t y3,
-			pixel_shader_t&& pixelShader)
-		{
-			const int32_t dx1 = IntToFixed(x3 - x1) / (y3 - y1);
-			const int32_t dx2 = IntToFixed(x3 - x2) / (y3 - y2);
-			int32_t sx1 = IntToFixed(x3);
-			int32_t sx2 = sx1;
-
-			for (int_fast16_t y = y3; y >= y1; y--)
-			{
-				int16_t startX = FixedRoundToInt(sx1);
-				int16_t endX = FixedRoundToInt(sx2);
-				if (startX > endX) { int16_t t = startX; startX = endX; endX = t; }
-
-				for (int_fast16_t x = startX; x <= endX; x++)
-				{
-					Base::template BlendPixel<blendMode>(pixelShader(x, y), x, y);
-				}
-
-				sx1 -= dx1;
-				sx2 -= dx2;
-			}
+			// Bottom scanline excluded (half-open vertical interval).
 		}
 
 		template<pixel_blend_mode_t blendMode, typename pixel_shader_t>

@@ -3,7 +3,7 @@
 
 // #define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 
-#include "Abstract.h"
+#include "../Abstract.h"
 
 namespace IntegerWorld
 {
