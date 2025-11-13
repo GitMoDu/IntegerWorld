@@ -11,10 +11,11 @@ namespace IntegerWorld
 		{
 			namespace Static
 			{
-				template<ufraction8_t emissive,
-					ufraction8_t diffuse,
-					ufraction8_t specular,
-					ufraction8_t metallic>
+				template<ufraction8_t rough, // Surface roughness affecting light scattering. Inversely related to shininess.
+					ufraction8_t gloss, // Controls the sharpness of specular highlights and fresnel effect.
+					ufraction8_t specularTint, // Tints specular highlights towards the albedo color at low incidence angles.
+					fraction8_t fresnel // Strength of the fresnel effect on specular reflections at glancing angles. Positive values increases specular, negative values increase diffuse.
+				>
 				struct TemplateSource
 				{
 					static constexpr bool HasMaterials()
@@ -24,7 +25,7 @@ namespace IntegerWorld
 
 					static constexpr material_t GetMaterial(const uint16_t index)
 					{
-						return material_t{ emissive, diffuse, specular, metallic };
+						return material_t{ rough, gloss, specularTint, fresnel };
 					}
 				};
 
@@ -45,10 +46,10 @@ namespace IntegerWorld
 					{
 #if defined(ARDUINO_ARCH_AVR)
 						return material_t{
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Emissive)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Diffuse)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Specular)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Metallic))
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Rough)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Shine)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].SpecularTint)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[index].Fresnel))
 						};
 #else
 						return Materials[index];
@@ -78,10 +79,10 @@ namespace IntegerWorld
 #if defined(ARDUINO_ARCH_AVR)
 						const uint16_t palleteIndex = static_cast<uint16_t>(pgm_read_word(&PalleteIndexes[index]));
 						return material_t{
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Emissive)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Diffuse)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Specular)),
-							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Metallic)) };
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Rough)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Shine)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].SpecularTint)),
+							static_cast<ufraction8_t>(pgm_read_byte(&Materials[palleteIndex].Fresnel)) };
 #else
 						const uint8_t palleteIndex = PalleteIndexes[index];
 						return Materials[palleteIndex];
@@ -94,7 +95,7 @@ namespace IntegerWorld
 			{
 				struct SingleSource
 				{
-					material_t Material{ 0, UFRACTION8_1X, 0, 0 };
+					material_t Material{ UFRACTION8_1X, 0, 0, 0 };
 
 					static constexpr bool HasMaterials()
 					{
@@ -108,11 +109,11 @@ namespace IntegerWorld
 				};
 			}
 
-			using DiffuseMaterialSource = Static::TemplateSource<0, UFRACTION8_1X, 0, 0>;
-			using EmissiveMaterialSource = Static::TemplateSource<UFRACTION8_1X, 0, 0, 0>;
+			using DiffuseMaterialSource = Static::TemplateSource<UFRACTION8_1X, 0, 0, 0>;
+			using GlassyMaterialSource = Static::TemplateSource<0, UFRACTION8_1X, 0, 0>;
 
 			static constexpr DiffuseMaterialSource DiffuseMaterialSourceInstance{};
-			static constexpr EmissiveMaterialSource EmissiveMaterialSourceInstance{};
+			static constexpr GlassyMaterialSource GlassyMaterialSourceInstance{};
 		}
 	}
 }
