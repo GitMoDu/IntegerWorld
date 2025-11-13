@@ -59,10 +59,17 @@ namespace IntegerWorld
 
 	struct material_t
 	{
-		ufraction8_t Emissive;
-		ufraction8_t Diffuse;
-		ufraction8_t Specular;
-		ufraction8_t Metallic;
+		// Surface roughness affecting light scattering. Inversely related to shininess.
+		ufraction8_t Rough; 
+
+		// Surface glossiness affecting specular and fresnel focus.
+		ufraction8_t Gloss; 
+
+		// Specular tinting towards albedo color at low specular angles.
+		ufraction8_t SpecularTint; 
+
+		// Fresnel control for energy redistribution between diffuse and specular at grazing angles.
+		fraction8_t Fresnel; 
 	};
 
 	struct edge_line_t

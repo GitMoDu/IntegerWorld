@@ -117,6 +117,56 @@ namespace IntegerWorld
 				{
 					return Rgb8::Color(alpha, ShadeR, ShadeG, ShadeB);
 				}
+
+			protected:
+				/// <summary>
+				/// Bit shifts in the 32-bit result of DotProduct16() when using vertex16_t inputs.
+				/// Used to align dot product magnitude into ufraction16_t space.
+				/// </summary>
+				static constexpr uint8_t DOT_SHIFTS = GetBitShifts(VERTEX16_DOT);
+
+				/// <summary>
+				/// Bit shifts representing the fixed-point scale of UFraction16::FRACTION_1X.
+				/// </summary>
+				static constexpr uint8_t FRAC_SHIFTS = GetBitShifts(UFRACTION16_1X);
+
+				/// <summary>
+				/// Number of shifts required to convert a positive 32-bit dot product into ufraction16_t.
+				/// Equals DOT_SHIFTS - FRAC_SHIFTS.
+				/// </summary>
+				static constexpr uint8_t DOT_CONVERT_SHIFTS = DOT_SHIFTS - FRAC_SHIFTS;
+
+				/// <summary>
+				/// Produces a narrowed "focus" value by repeatedly squaring an unsigned fixed-point fraction and clamping the result to the 1.0 fixed-point maximum.
+				/// </summary>
+				/// <typeparam name="FocusFactor">Compile-time number of repeated-squaring iterations to apply. Each iteration squares the current value and shifts by FRAC_SHIFTS; larger values produce a progressively narrower focus.</typeparam>
+				/// <param name="wide">Input unsigned fixed-point fraction (ufraction16_t) representing the initial, wider focus to be narrowed. Passed by value as a const.</param>
+				/// <returns>A ufraction16_t containing the narrowed focus value, computed as the repeated-squared result clamped to UFRACTION16_1X (the fixed-point 1.0 maximum).</returns>
+				template<uint8_t FocusFactor>
+				static ufraction16_t FocusFraction(const ufraction16_t wide)
+				{
+					uint32_t narrow = wide;
+
+					// Narrower focus via repeated squaring.
+					for (uint_fast8_t i = 0; i < FocusFactor; i++)
+					{
+						narrow = (narrow * narrow) >> FRAC_SHIFTS;
+					}
+
+					return static_cast<ufraction16_t>(MinValue<uint32_t>(UFRACTION16_1X, narrow));
+				}
+
+				/// <summary>
+				/// Converts a signed dot-product value to a 16-bit unsigned fractional representation by right-shifting the positive value; returns zero for non-positive inputs.
+				/// </summary>
+				/// <param name="dotProduct">Signed 32-bit dot product value to convert.</param>
+				/// <returns>ufraction16_t fractional result. Returns 0 if dotProduct is zero or negative.</returns>
+				static ufraction16_t DotProductToFraction(const int32_t dotProduct)
+				{
+					return (dotProduct > 0)
+						? static_cast<ufraction16_t>((static_cast<uint32_t>(dotProduct) >> DOT_CONVERT_SHIFTS))
+						: 0;
+				}
 			};
 		}
 	}
