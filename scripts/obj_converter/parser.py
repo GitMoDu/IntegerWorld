@@ -8,15 +8,15 @@ Face = Tuple[IndexTriple, ...]
 FacesWithMaterials = List[Tuple[Face, Optional[str]]]
 
 
-def read_obj(data: str) -> tuple[
+def read_obj(data: str) -> Tuple[
     List[Vertex],
     List[TexCoord],
     List[Normal],
     FacesWithMaterials,
 ]:
     """
-    Parses OBJ data and extracts vertices, texture coordinates, normals, and faces,
-    associating faces with materials based on 'usemtl' directives.
+    Parses OBJ data (supports negative indices) and extracts vertices, texture
+    coordinates, normals, and faces with materials.
     """
     vertices: List[Vertex] = []
     texture_coords: List[TexCoord] = []
@@ -24,32 +24,27 @@ def read_obj(data: str) -> tuple[
     faces_with_materials: FacesWithMaterials = []
     current_material: Optional[str] = None
 
-    for raw in data.splitlines():
+    lines = data.splitlines()
+    for raw in lines:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
         parts = line.split()
-        if not parts:
-            continue
-
         prefix = parts[0]
 
         if prefix == "v":
             try:
-                vertex = tuple(map(float, parts[1:4]))
-                vertices.append(vertex)  # type: ignore[arg-type]
+                vertices.append(tuple(map(float, parts[1:4])))  # type: ignore[arg-type]
             except ValueError:
                 continue
         elif prefix == "vt":
             try:
-                vt: TexCoord = tuple(map(float, parts[1:]))
-                texture_coords.append(vt)
+                texture_coords.append(tuple(map(float, parts[1:])))
             except ValueError:
                 continue
         elif prefix == "vn":
             try:
-                normal = tuple(map(float, parts[1:4]))
-                normals.append(normal)  # type: ignore[arg-type]
+                normals.append(tuple(map(float, parts[1:4])))  # type: ignore[arg-type]
             except ValueError:
                 continue
         elif prefix == "usemtl":
@@ -58,23 +53,38 @@ def read_obj(data: str) -> tuple[
             face_indices: List[IndexTriple] = []
             try:
                 for part in parts[1:]:
-                    indices = part.split("/")
-                    v_idx = int(indices[0]) - 1
-
-                    vt_idx = None
-                    if len(indices) > 1 and indices[1]:
-                        vt_idx = int(indices[1]) - 1
-
-                    vn_idx = None
-                    if len(indices) > 2 and indices[2]:
-                        vn_idx = int(indices[2]) - 1
-
+                    v_str, vt_str, vn_str = _split_face_token(part)
+                    v_idx = _resolve_index(v_str, len(vertices))
+                    vt_idx = _resolve_index(vt_str, len(texture_coords)) if vt_str else None
+                    vn_idx = _resolve_index(vn_str, len(normals)) if vn_str else None
                     face_indices.append((v_idx, vt_idx, vn_idx))
                 faces_with_materials.append((tuple(face_indices), current_material))
-            except ValueError:
+            except (ValueError, IndexError):
                 continue
         else:
-            # Ignore other lines
             pass
 
     return vertices, texture_coords, normals, faces_with_materials
+
+
+def _split_face_token(token: str) -> Tuple[str, Optional[str], Optional[str]]:
+    parts = token.split("/")
+    if len(parts) == 1:
+        return parts[0], None, None
+    if len(parts) == 2:
+        return parts[0], parts[1], None
+    return parts[0], parts[1], parts[2]
+
+
+def _resolve_index(raw: str, count: int) -> int:
+    """
+    OBJ supports negative indices: -1 refers to last defined element.
+    """
+    idx = int(raw)
+    if idx > 0:
+        return idx - 1
+    # negative
+    resolved = count + idx
+    if resolved < 0 or resolved >= count:
+        raise IndexError("Negative index out of range")
+    return resolved

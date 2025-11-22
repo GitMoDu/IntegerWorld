@@ -1,1 +1,5 @@
-numpy
+# Dependencies for OBJ conversion tooling
+numpy>=1.23
+# Optional:
+# rich>=13.0.0        # nicer CLI output
+# types-numpy         # type stubs if using mypy/pyright

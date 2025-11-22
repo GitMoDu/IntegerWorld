@@ -9,35 +9,20 @@ from obj_converter import (
     iter_obj_files,
     read_text,
     write_text,
-    mount_colab_if_requested,
 )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Convert .obj files to custom C++ arrays.")
-    parser.add_argument("--base-dir", default="", help="Base directory. If set, uses <base>/Input and <base>/Output.")
-    parser.add_argument("--input-dir", default="", help="Input directory containing .obj files. Overrides --base-dir if set.")
-    parser.add_argument("--output-dir", default="", help="Output directory for generated .txt files. Overrides --base-dir if set.")
-    parser.add_argument("--colab", action="store_true", help="Mount Google Drive in Colab at /content/drive.")
-    parser.add_argument("--file", default="", help="Optional specific .obj file name to process from the input directory.")
+    parser.add_argument("--base-dir", default="", help="Base directory containing Input/ and Output/.")
+    parser.add_argument("--input-dir", default="", help="Override input directory.")
+    parser.add_argument("--output-dir", default="", help="Override output directory.")
+    parser.add_argument("--file", default="", help="Process only this .obj file name.")
+    parser.add_argument("--config-filter", default="", help="Substring filter on configuration name (e.g. _raw_).")
     args = parser.parse_args()
 
-    mount_colab_if_requested(args.colab)
-
-    # Resolve directories
-    if args.input_dir:
-        input_dir = args.input_dir
-    elif args.base_dir:
-        input_dir = os.path.join(args.base_dir, "Input")
-    else:
-        input_dir = os.path.join(os.getcwd(), "Input")
-
-    if args.output_dir:
-        output_dir = args.output_dir
-    elif args.base_dir:
-        output_dir = os.path.join(args.base_dir, "Output")
-    else:
-        output_dir = os.path.join(os.getcwd(), "Output")
+    input_dir = args.input_dir or (os.path.join(args.base_dir, "Input") if args.base_dir else os.path.join(os.getcwd(), "Input"))
+    output_dir = args.output_dir or (os.path.join(args.base_dir, "Output") if args.base_dir else os.path.join(os.getcwd(), "Output"))
 
     if not os.path.isdir(input_dir):
         print(f"Error: Input directory not found: {input_dir}")
@@ -52,30 +37,36 @@ def main() -> int:
             print(f"Error: File {args.file} not found in {input_dir}")
             return 3
 
+    active_configs = OUTPUT_CONFIGURATIONS
+    if args.config_filter:
+        active_configs = [c for c in OUTPUT_CONFIGURATIONS if args.config_filter in c["name"]]
+        if not active_configs:
+            print(f"No configurations match filter: {args.config_filter}")
+            return 4
+
     for name, path in pairs:
-        print(f"Processing file: {name}")
+        print(f"[PROCESS] {name}")
         try:
             data = read_text(path)
         except Exception as e:
-            print(f"Failed to read {path}: {e}")
+            print(f"  Read failure: {e}")
             continue
 
         try:
-            vertices, texture_coords, normals, faces_with_materials = read_obj(data)
-            print(
-                f"Parsed {len(vertices)} vertices, {len(texture_coords)} texture coordinates, "
-                f"{len(normals)} normals, and {len(faces_with_materials)} faces."
-            )
+            vertices, texcoords, normals, faces_with_materials = read_obj(data)
+            print(f"  Parsed: V={len(vertices)} VT={len(texcoords)} N={len(normals)} F={len(faces_with_materials)}")
         except Exception as e:
-            print(f"Failed to parse {name}: {e}")
+            print(f"  Parse failure: {e}")
+            continue
+
+        if not faces_with_materials or not vertices:
+            print("  [SKIP] Empty geometry or faces.")
             continue
 
         stem, _ = os.path.splitext(name)
-
-        for cfg in OUTPUT_CONFIGURATIONS:
-            suffix = cfg["name"]
-            out_ns = stem + suffix
-            out_text = convert_to_custom_format(
+        for cfg in active_configs:
+            out_ns = stem + cfg["name"]
+            text = convert_to_custom_format(
                 vertices,
                 normals,
                 faces_with_materials,
@@ -84,13 +75,12 @@ def main() -> int:
                 apply_winding_normalization=cfg["apply_winding_normalization"],
                 invert_winding_logic=cfg["invert_winding_logic"],
             )
-
-            out_file = os.path.join(output_dir, f"{stem}{suffix}.txt")
+            out_file = os.path.join(output_dir, f"{stem}{cfg['name']}.txt")
             try:
-                write_text(out_file, out_text)
-                print(f"Wrote: {out_file}")
+                write_text(out_file, text)
+                print(f"    -> {out_file}")
             except Exception as e:
-                print(f"Failed to write {out_file}: {e}")
+                print(f"    Write failure: {e}")
 
     return 0
 

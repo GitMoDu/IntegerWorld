@@ -1,5 +1,5 @@
 import os
-from typing import Iterable, Tuple, Optional
+from typing import Iterable, Tuple
 
 
 def ensure_dir(path: str) -> None:
@@ -20,23 +20,3 @@ def read_text(path: str) -> str:
 def write_text(path: str, data: str) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.write(data)
-
-
-def mount_colab_if_requested(enable: bool) -> bool:
-    """
-    Mount Google Drive in Colab when requested.
-    Returns True if mounted, False otherwise.
-    """
-    if not enable:
-        return False
-    try:
-        from google.colab import drive  # type: ignore
-        if not os.path.isdir("/content/drive"):
-            print("Mounting Google Drive...")
-            drive.mount("/content/drive")
-        else:
-            print("Google Drive is already mounted.")
-        return True
-    except Exception as exc:
-        print(f"Colab mount not available: {exc}")
-        return False
