@@ -74,6 +74,8 @@ def main() -> int:
                 center_vertices=cfg["center_vertices"],
                 apply_winding_normalization=cfg["apply_winding_normalization"],
                 invert_winding_logic=cfg["invert_winding_logic"],
+                emit_vertex_normals=cfg.get("emit_vertex_normals", False),
+                emit_face_normals=cfg.get("emit_face_normals", False),
             )
             out_file = os.path.join(output_dir, f"{stem}{cfg['name']}.txt")
             try:

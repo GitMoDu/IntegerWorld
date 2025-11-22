@@ -62,6 +62,8 @@ def process_one(
             center_vertices=cfg["center_vertices"],
             apply_winding_normalization=cfg["apply_winding_normalization"],
             invert_winding_logic=cfg["invert_winding_logic"],
+            emit_vertex_normals=cfg.get("emit_vertex_normals", False),
+            emit_face_normals=cfg.get("emit_face_normals", False),
         )
         if not text.strip():
             print(f"    [WARN] Empty output for config {cfg['name']}")
