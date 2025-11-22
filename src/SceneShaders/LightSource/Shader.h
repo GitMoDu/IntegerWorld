@@ -23,9 +23,9 @@ namespace IntegerWorld
 			class Shader : public Abstract::Shader
 			{
 			private:
-				static constexpr int FocusSpecular = 4; // Max sharpness of specular highlights.
-				static constexpr int FocusCone = 4; // Max tightness of spot light cones.
-				static constexpr int FocusFresnel = 2; // Curve steepness for Fresnel modulation.
+				static constexpr uint8_t FocusSpecular = 4; // Max sharpness of specular highlights.
+				static constexpr uint8_t FocusCone = 4; // Max tightness of spot light cones.
+				static constexpr uint8_t FocusFresnel = 2; // Curve steepness for Fresnel modulation.
 
 #if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
 			public:
