@@ -27,6 +27,8 @@ namespace IntegerWorld
 		uint16_t ObjectCount = 0; // Tracks the current number of objects.
 		RenderObjectType Objects[MaxObjectCount]{}; // The fixed-size storage for objects.
 
+		IFrameListener* FrameListener = nullptr; // Optional frame listener.
+
 	public:
 		/// <summary>
 		/// Constructor. Registers the task with the provided scheduler.
@@ -36,6 +38,12 @@ namespace IntegerWorld
 			, TS::Task(TASK_IMMEDIATE, TASK_FOREVER, &scheduler, false)
 		{
 		}
+
+		void SetFrameListener(IFrameListener* frameListener) final
+		{
+			FrameListener = frameListener;
+		}
+
 
 		/// <summary>
 		/// Removes all objects from the task.
@@ -92,7 +100,7 @@ namespace IntegerWorld
 		{
 			Disabled,			// Engine is disabled.
 			EngineStart,		// Initial state, prepares the surface.
-			CycleStart,			// Prepares for a new frame.
+			CycleStart,			// Prepares for a new frame and notifies frame listeners of frame start.
 			ObjectShade,		// Object-level shading.
 			VertexShade,		// Vertex shading stage.
 			WorldTransform,		// World transform stage.
@@ -235,6 +243,10 @@ namespace IntegerWorld
 				if (Rasterizer.StartSurface())
 				{
 					State = StateEnum::CycleStart;
+					if (FrameListener != nullptr)
+					{
+						FrameListener->OnFrameStart();
+					}
 				}
 				else
 				{
@@ -274,6 +286,7 @@ namespace IntegerWorld
 				{
 					State = StateEnum::WaitForSurface;
 				}
+
 #if defined(INTEGER_WORLD_PERFORMANCE_DEBUG)
 				Status.FramePreparation += micros() - MeasureStart;
 #else
@@ -533,6 +546,11 @@ namespace IntegerWorld
 					StatusCopy = Status;
 					Rasterizer.FlipSurface();
 					State = StateEnum::CycleStart;
+
+					if (FrameListener != nullptr)
+					{
+						FrameListener->OnFrameStart();
+					}
 				}
 				break;
 			default:
@@ -590,7 +608,6 @@ namespace IntegerWorld
 					if (State != StateEnum::EngineStart)
 					{
 						State = StateEnum::CycleStart;
-
 					}
 					return true;
 				}

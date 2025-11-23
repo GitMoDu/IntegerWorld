@@ -208,11 +208,17 @@ namespace IntegerWorld
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex) = 0;
 	};
 
+	struct IFrameListener
+	{
+		virtual void OnFrameStart() = 0;
+	};
 
 	struct IEngineRenderer
 	{
 		virtual void Start() = 0;
 		virtual void Stop() = 0;
+
+		virtual void SetFrameListener(IFrameListener* frameListener) = 0;
 
 		virtual bool AddObject(IRenderObject* renderObject) = 0;
 		virtual void ClearObjects() = 0;
