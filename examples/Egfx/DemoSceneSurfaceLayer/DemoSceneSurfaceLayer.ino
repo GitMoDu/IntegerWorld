@@ -244,14 +244,7 @@ void loop()
 	SchedulerBase.execute();
 }
 
-#if defined(ARDUINO_ARCH_NRF52)
-void BufferTaskCallback()
-{
-	GraphicsEngine.BufferTaskCallback(nullptr);
-}
-#else
 void BufferTaskCallback(void* parameter)
 {
 	GraphicsEngine.BufferTaskCallback(parameter);
 }
-#endif
