@@ -16,8 +16,7 @@ def convert_to_custom_format(
     file_name: str,
     *,
     center_vertices: bool = False,
-    # Engine consumes clockwise (CW) mesh winding; we emit CW indices but keep original
-    # CCW ordering for geometric normal computation to preserve outward orientation.
+    # Engine consumes clockwise (CW) mesh winding; we emit CW indices.
     emit_vertex_normals: bool = True,
     emit_face_normals: bool = True,
     use_macro_for_normal_scale: bool = True,
@@ -30,25 +29,12 @@ def convert_to_custom_format(
     uv_wrap_mode: str = "auto",
 ) -> str:
     """
-    Converts OBJ data to custom C++ header-like text format.
-
-    Winding:
-      OBJ faces are typically CCW. We output triangles with CW index order for the engine
-      by swapping the second and third vertex of each triangle. Geometric normals are
-      still computed using the original CCW order (v1,v2,v3) so their direction matches
-      the original OBJ vertex normals and points outward (avoids sign flip).
-
-    Normals:
-      VertexNormals:
-        Averaged from OBJ-corner normals per vertex index; fallback adds geometric face
-        normals (CCW computed) to vertices lacking contributions, then normalizes.
-      FaceNormals:
-        If all three corners have vertex normal indices: average those three vertex
-        normals (n1 + n2 + n3). Else use geometric CCW normal. No unintended inversion.
-
-    UV handling:
-      uv_v_flip: flip V (1 - v) after normalization/wrapping.
-      uv_wrap_mode: clamp | wrap | auto
+    Normal orientation fix:
+      Previous versions computed geometric normals using CCW order while emitting CW indices,
+      producing inverted normals in the engine. Now geometric normals are derived from CW order
+      (v1, v3, v2). Averaged face normals (from vertex normals) are re-oriented to match the CW
+      geometric normal. Vertex normals are also re-oriented by comparing with a stored reference
+      CW geometric normal (first triangle encountered).
     """
     vertex_unit = 128
     NORMAL_SCALE = 8192
@@ -116,7 +102,7 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);\n")
 
-    # Triangulation
+    # Triangulation (CW indices)
     triangles_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
     unique_materials: Dict[Optional[str], int] = {}
     material_index_counter = 0
@@ -136,30 +122,36 @@ def convert_to_custom_format(
     face_norm_vectors: List[np.ndarray] = []
     vertex_normal_accum = np.zeros((len(processed_vertices), 3), dtype=float)
     vertex_normal_count = np.zeros(len(processed_vertices), dtype=int)
-    per_triangle_face_normal: List[np.ndarray] = []
+    vertex_reference_normal = np.zeros((len(processed_vertices), 3), dtype=float)  # for orientation correction
+
+    geometric_cw_normals: List[np.ndarray] = []
 
     for (v1i, v2i, v3i), material in triangles_with_materials:
         v1_idx, v2_idx, v3_idx = v1i[0], v2i[0], v3i[0]
 
-        # CW triangle indices for engine (swap second/third)
+        # Emit CW indices (v1, v3, v2)
         processed_triangles.append((v1_idx, v3_idx, v2_idx))
         processed_triples_with_materials.append(((v1i, v3i, v2i), material))
 
-        # Geometric CCW normal (original order v1,v2,v3)
         a = processed_vertices[v1_idx]
-        b_ccw = processed_vertices[v2_idx]
-        c_ccw = processed_vertices[v3_idx]
-        geo_face_normal = np.cross(b_ccw - a, c_ccw - a)  # Correct outward orientation
-        per_triangle_face_normal.append(geo_face_normal)
+        b_cw = processed_vertices[v3_idx]  # second emitted index
+        c_cw = processed_vertices[v2_idx]  # third emitted index
 
-        # Accumulate vertex normals from OBJ (per original corner order, sign preserved)
+        # Geometric normal using CW order so it matches engine expectation.
+        geo_face_normal_cw = np.cross(b_cw - a, c_cw - a)
+        geometric_cw_normals.append(geo_face_normal_cw)
+
+        # Accumulate vertex normals from OBJ (original per-corner)
         if emit_vertex_normals and normals:
-            for (vidx, _, nidx) in (v1i, v2i, v3i):  # use original CCW order
+            for (vidx, _, nidx) in (v1i, v2i, v3i):
                 if nidx is not None and 0 <= nidx < len(normals):
                     vn = np.array(normals[nidx], dtype=float)
                     if np.linalg.norm(vn) > 1e-9:
                         vertex_normal_accum[vidx] += vn
                         vertex_normal_count[vidx] += 1
+                        # Capture a reference geometric CW normal once
+                        if np.linalg.norm(vertex_reference_normal[vidx]) < 1e-9 and np.linalg.norm(geo_face_normal_cw) > 1e-9:
+                            vertex_reference_normal[vidx] = geo_face_normal_cw
 
         if emit_face_normals:
             have_all_corner_normals = (
@@ -170,9 +162,13 @@ def convert_to_custom_format(
                 n1 = np.array(normals[v1i[2]], dtype=float)
                 n2 = np.array(normals[v2i[2]], dtype=float)
                 n3 = np.array(normals[v3i[2]], dtype=float)
-                face_norm_vectors.append(n1 + n2 + n3)
+                averaged = n1 + n2 + n3
+                # Re-orient averaged to match CW geometric if needed.
+                if np.linalg.norm(geo_face_normal_cw) > 1e-9 and np.dot(averaged, geo_face_normal_cw) < 0:
+                    averaged = -averaged
+                face_norm_vectors.append(averaged)
             else:
-                face_norm_vectors.append(geo_face_normal)
+                face_norm_vectors.append(geo_face_normal_cw)
 
     # Emit triangle indices
     for a_idx, b_idx, c_idx in processed_triangles:
@@ -197,15 +193,24 @@ def convert_to_custom_format(
         else:
             need_fallback = list(range(len(processed_vertices)))
 
+        # Fallback: use geometric CW normals where missing
         if need_fallback:
             for tri_idx, (a_idx, b_idx, c_idx) in enumerate(processed_triangles):
-                fn = per_triangle_face_normal[tri_idx]
+                fn = geometric_cw_normals[tri_idx]
                 fn_unit = normalize_float(fn)
                 for vidx in (a_idx, b_idx, c_idx):
                     if vidx in need_fallback:
                         vertex_normal_accum[vidx] += fn_unit
+                        if np.linalg.norm(vertex_reference_normal[vidx]) < 1e-9 and np.linalg.norm(fn_unit) > 1e-9:
+                            vertex_reference_normal[vidx] = fn_unit
             for vidx in need_fallback:
                 vertex_normal_accum[vidx] = normalize_float(vertex_normal_accum[vidx])
+
+        # Re-orient vertex normals to match reference CW geometric normal
+        for i in range(len(processed_vertices)):
+            ref = vertex_reference_normal[i]
+            if np.linalg.norm(ref) > 1e-9 and np.dot(vertex_normal_accum[i], ref) < 0:
+                vertex_normal_accum[i] = -vertex_normal_accum[i]
 
         output_lines.append("    static constexpr vertex16_t VertexNormals[] PROGMEM\n    {")
         for i in range(len(processed_vertices)):
@@ -251,11 +256,8 @@ def convert_to_custom_format(
                     all(-eps <= u <= 1.0 + eps for u in u_values) and
                     all(-eps <= v <= 1.0 + eps for v in v_values))
 
-        def wrap01(x: float) -> float:
-            return ((x % 1.0) + 1.0) % 1.0
-
-        def next_pow2(n: int) -> int:
-            return 1 << (n - 1).bit_length()
+        def wrap01(x: float) -> float: return ((x % 1.0) + 1.0) % 1.0
+        def next_pow2(n: int) -> int: return 1 << (n - 1).bit_length()
 
         base_w = max(1, int(texture_width))
         base_h = max(1, int(texture_height))
@@ -311,15 +313,14 @@ def convert_to_custom_format(
         output_lines.append("    };\n")
 
         MIN_MIP_DIM = 8
-
         def level_count(w: int, h: int) -> int:
             cnt = 1
             while w > MIN_MIP_DIM or h > MIN_MIP_DIM:
-                mw2 = max(MIN_MIP_DIM, w // 2)
-                mh2 = max(MIN_MIP_DIM, h // 2)
-                if mw2 == w and mh2 == h:
+                w = max(MIN_MIP_DIM, w // 2)
+                h = max(MIN_MIP_DIM, h // 2)
+                if w == MIN_MIP_DIM and h == MIN_MIP_DIM:
+                    cnt += 1
                     break
-                w, h = mw2, mh2
                 cnt += 1
             return cnt
 
@@ -327,11 +328,11 @@ def convert_to_custom_format(
             mip_w, mip_h = width, height
             level = 1
             while mip_w > MIN_MIP_DIM or mip_h > MIN_MIP_DIM:
-                mip_w_next = max(MIN_MIP_DIM, mip_w // 2)
-                mip_h_next = max(MIN_MIP_DIM, mip_h // 2)
-                if mip_w_next == mip_w and mip_h_next == mip_h:
+                mw2 = max(MIN_MIP_DIM, mip_w // 2)
+                mh2 = max(MIN_MIP_DIM, mip_h // 2)
+                if mw2 == mip_w and mh2 == mip_h:
                     break
-                mip_w, mip_h = mip_w_next, mip_h_next
+                mip_w, mip_h = mw2, mh2
                 output_lines.append(f"    static constexpr coordinate_t UVs{mip_w}x{mip_h}_L{level}[UvCount] PROGMEM\n    {{")
                 for u_q_master, v_q_master in master_uvs:
                     u_q = min(mip_w - 1, u_q_master >> level)
@@ -339,31 +340,19 @@ def convert_to_custom_format(
                     output_lines.append(f"        {{{u_q}, {v_q}}},")
                 output_lines.append("    };\n")
                 level += 1
-            # Count levels (including base)
-            def level_count_final(w: int, h: int) -> int:
-                cnt = 1
-                while w > MIN_MIP_DIM or h > MIN_MIP_DIM:
-                    w = max(MIN_MIP_DIM, w // 2)
-                    h = max(MIN_MIP_DIM, h // 2)
-                    if w == MIN_MIP_DIM and h == MIN_MIP_DIM:
-                        cnt += 1
-                        break
-                    cnt += 1
-                return cnt
-            output_lines.append(f"    static constexpr uint8_t UvMipLevelCount = {level_count_final(width, height)};\n")
+            output_lines.append(f"    static constexpr uint8_t UvMipLevelCount = {level_count(width, height)};\n")
         else:
             output_lines.append("    static constexpr uint8_t UvMipLevelCount = 1;\n")
 
     output_lines.append("}\n")
 
-    # Diagnostics
     print(f"Processed {file_name}: CW triangles={len(processed_triangles)}; "
           f"vertex_normals={'yes' if emit_vertex_normals else 'no'}, face_normals={'yes' if emit_face_normals else 'no'}")
     if emit_vertex_normals:
-        print("  VertexNormals: outward orientation preserved (no sign flip).")
+        print("  VertexNormals: oriented to CW geometric normals.")
     if emit_face_normals and face_norm_vectors:
-        print("  FaceNormals: averaged per-corner or geometric CCW.")
-    if emit_uv and has_texture_dims:
-        print("  UVs: emitted using CW triangle order.")
+        print("  FaceNormals: CW geometric or re-oriented averaged.")
+    if emit_uv and (texture_width is not None and texture_height is not None):
+        print("  UVs emitted.")
 
     return "\n".join(output_lines)
