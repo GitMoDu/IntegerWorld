@@ -18,12 +18,41 @@ def convert_to_custom_format(
     invert_winding_logic: bool = False,
     emit_vertex_normals: bool = False,
     emit_face_normals: bool = False,
+    use_macro_for_normal_scale: bool = True,  # if False will emit raw 8192 number
 ) -> str:
     """
     Converts parsed OBJ data to the custom C++ header-like text format.
-    Adds optional vertex/face normals scaled to VERTEX16_UNIT.
+    Optional vertex / face normals are normalized and scaled so vector magnitude == VERTEX16_UNIT (8192).
+    Each component = round(unit_component * VERTEX16_UNIT). Degenerate normals fall back to {0,0,VERTEX16_UNIT}.
     """
-    vertex_unit = 128  # scale unit for vertices; already used
+    vertex_unit = 128  # vertex position scale
+    NORMAL_SCALE = 8192  # matches VERTEX16_UNIT
+    macro_name = "VERTEX16_UNIT"
+
+    def format_component(value: int) -> str:
+        # Replace exact +/- NORMAL_SCALE with +/- macro for readability if requested
+        if use_macro_for_normal_scale:
+            if value == NORMAL_SCALE:
+                return macro_name
+            if value == -NORMAL_SCALE:
+                return f"-{macro_name}"
+        return str(value)
+
+    def normalize_and_scale(vec: np.ndarray) -> Tuple[int, int, int]:
+        mag = float(np.linalg.norm(vec))
+        if mag > 1e-6:
+            unit = vec / mag
+            x = int(round(unit[0] * NORMAL_SCALE))
+            y = int(round(unit[1] * NORMAL_SCALE))
+            z = int(round(unit[2] * NORMAL_SCALE))
+            # Clamp to avoid overflow due to rounding
+            x = max(-NORMAL_SCALE, min(NORMAL_SCALE, x))
+            y = max(-NORMAL_SCALE, min(NORMAL_SCALE, y))
+            z = max(-NORMAL_SCALE, min(NORMAL_SCALE, z))
+            return x, y, z
+        # Degenerate -> default +Z
+        return 0, 0, NORMAL_SCALE
+
     output_lines: List[str] = []
     output_lines.append(f"namespace {file_name}\n{{")
 
@@ -70,7 +99,7 @@ def convert_to_custom_format(
             unique_materials[material] = material_index_counter
             material_index_counter += 1
 
-    # Process winding and emit triangles
+    # Process winding and collect face normals
     output_lines.append("    static constexpr triangle_face_t Triangles[] PROGMEM\n    {")
     processed_triangles: List[Tuple[int, int, int]] = []
     reversed_count = 0
@@ -78,7 +107,7 @@ def convert_to_custom_format(
     normals_used_count = 0
     calculated_normals_used_count = 0
 
-    face_norm_vectors: List[np.ndarray] = []  # store for optional FaceNormals
+    face_norm_vectors: List[np.ndarray] = []
 
     for tri, _ in triangles_with_materials:
         v1i, v2i, v3i = tri
@@ -107,6 +136,7 @@ def convert_to_custom_format(
 
             norm_mag = np.linalg.norm(face_normal)
             normal_dir = face_normal / norm_mag if norm_mag > 1e-6 else np.array([0.0, 0.0, 0.0])
+            # Default "front" toward +Z
             view_direction = np.array([0.0, 0.0, 1.0], dtype=float)
             dot_product = float(np.dot(normal_dir, view_direction))
 
@@ -118,7 +148,6 @@ def convert_to_custom_format(
                     should_reverse = True
         elif invert_winding_logic:
             should_reverse = True
-            # compute face_normal anyway if we want face normals
             a = processed_vertices[v1_idx]
             b = processed_vertices[v2_idx]
             c = processed_vertices[v3_idx]
@@ -126,7 +155,6 @@ def convert_to_custom_format(
 
         if should_reverse:
             processed_triangles.append((v1_idx, v3_idx, v2_idx))
-            # reverse face normal if we computed it
             if face_normal is not None:
                 face_normal = -face_normal
             reversed_count += 1
@@ -134,7 +162,6 @@ def convert_to_custom_format(
             processed_triangles.append((v1_idx, v2_idx, v3_idx))
 
         if emit_face_normals:
-            # fallback if not calculated yet and winding normalization disabled
             if face_normal is None:
                 a = processed_vertices[v1_idx]
                 b = processed_vertices[v2_idx]
@@ -156,40 +183,27 @@ def convert_to_custom_format(
         output_lines.append(f"        {chunk},")
     output_lines.append("    };\n")
 
-    # Vertex normals (per vertex) scaled to VERTEX16_UNIT
+    # Vertex normals (synthetic: direction of vertex from origin) scaled to NORMAL_SCALE
     if emit_vertex_normals:
         output_lines.append("    static constexpr vertex16_t VertexNormals[] PROGMEM\n    {")
-        VERTEX16_UNIT = "VERTEX16_UNIT"  # expect macro in C++ code
         for v in processed_vertices:
-            length = np.linalg.norm(v)
-            if length > 1e-6:
-                nx = int(round((v[0] / length) * 1024))
-                ny = int(round((v[1] / length) * 1024))
-                nz = int(round((v[2] / length) * 1024))
-                # scale by macro at emit time (use * VERTEX16_UNIT)
-                output_lines.append(f"        {{{nx}, {ny}, {nz}}},")
-            else:
-                # Degenerate vertex -> default up normal
-                output_lines.append(f"        {{0, 0, {VERTEX16_UNIT}}},")
+            x, y, z = normalize_and_scale(v)
+            output_lines.append(
+                f"        {{{format_component(x)}, {format_component(y)}, {format_component(z)}}},"
+            )
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto VertexNormalCount = sizeof(VertexNormals) / sizeof(vertex16_t);\n")
 
-    # Face normals (per triangle) scaled to VERTEX16_UNIT
+    # Face normals (per triangle)
     if emit_face_normals:
-        output_lines.append("    static constexpr vertex16_t FaceNormals[TriangleCount] PROGMEM\n    {")
+        output_lines.append("    static constexpr vertex16_t FaceNormals[] PROGMEM\n    {")
+        for nvec in face_norm_vectors:
+            x, y, z = normalize_and_scale(nvec)
+            output_lines.append(
+                f"        {{{format_component(x)}, {format_component(y)}, {format_component(z)}}},"
+            )
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto FaceNormalCount = sizeof(FaceNormals) / sizeof(vertex16_t);\n")
-        VERTEX16_UNIT = "VERTEX16_UNIT"
-        for nvec in face_norm_vectors:
-            mag = np.linalg.norm(nvec)
-            if mag > 1e-6:
-                nx = int(round((nvec[0] / mag) * 1))
-                ny = int(round((nvec[1] / mag) * 1))
-                nz = int(round((nvec[2] / mag) * 1))
-                output_lines.append(f"        {{{nx}*{VERTEX16_UNIT}, {ny}*{VERTEX16_UNIT}, {nz}*{VERTEX16_UNIT}}},")
-            else:
-                output_lines.append("        {0,0,0},")
-        output_lines.append("    };\n")
 
     output_lines.append("}\n")
 
@@ -208,8 +222,8 @@ def convert_to_custom_format(
         print(f"Processed {file_name}: Winding normalization skipped.")
 
     if emit_vertex_normals:
-        print(f"  Emitted {len(processed_vertices)} vertex normals.")
+        print(f"  Emitted {len(processed_vertices)} vertex normals (scale {NORMAL_SCALE}).")
     if emit_face_normals:
-        print(f"  Emitted {len(face_norm_vectors)} face normals.")
+        print(f"  Emitted {len(face_norm_vectors)} face normals (scale {NORMAL_SCALE}).")
 
     return "\n".join(output_lines)
