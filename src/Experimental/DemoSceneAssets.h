@@ -667,48 +667,50 @@ namespace Assets
 		};
 
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
+		using TextureSourceType = PrimitiveSources::Texture::Static::Source<TextureSize128x128>;
+
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
 		using TextureVertexLitPixelShaderType = Mesh::PixelShaders::TextureVertexLit<
-			PrimitiveSources::Texture::Static::Source,
+			TextureSourceType,
 			PrimitiveShaders::TrianglePerspectiveCorrectSampler,
 			PrimitiveShaders::UvInterpolationModeEnum::Accurate>;
 
 		class CubeTexturedVertexLitShader
 			: public Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
-			PrimitiveSources::Texture::Static::Source,
+			TextureSourceType,
 			TextureVertexLitPixelShaderType>
 		{
 		private:
-			PrimitiveSources::Texture::Static::Source TextureSource;
+			TextureSourceType TextureSource;
 
 		public:
 			CubeTexturedVertexLitShader()
-				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width)
+				: TextureSource(Texture::Cube::Atlas)
 				, Mesh::FragmentShaders::VertexShade::TemplateTextureShader<
-				PrimitiveSources::Texture::Static::Source,
+				TextureSourceType,
 				TextureVertexLitPixelShaderType>(TextureSource)
 			{
 			}
 		};
 #else
 		using TextureTriangleLitPixelShaderType = Mesh::PixelShaders::TextureTriangleLit<
-			PrimitiveSources::Texture::Static::Source,
+			TextureSourceType,
 			PrimitiveShaders::TriangleAffineSampler,
 			PrimitiveShaders::UvInterpolationModeEnum::Fast>;
 
 		class CubeTexturedTriangleLitShader
 			: public Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
-			PrimitiveSources::Texture::Static::Source,
+			TextureSourceType,
 			TextureTriangleLitPixelShaderType>
 		{
 		private:
-			PrimitiveSources::Texture::Static::Source TextureSource;
+			TextureSourceType TextureSource;
 
 		public:
 			CubeTexturedTriangleLitShader()
 				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width)
 				, Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
-				PrimitiveSources::Texture::Static::Source,
+				TextureSourceType,
 				TextureTriangleLitPixelShaderType>(TextureSource)
 			{
 			}

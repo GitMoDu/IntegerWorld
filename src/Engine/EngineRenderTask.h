@@ -91,6 +91,7 @@ namespace IntegerWorld
 	protected:
 		using Base::Objects;
 		using Base::ObjectCount;
+		using Base::FrameListener;
 
 	private:
 		/// <summary>

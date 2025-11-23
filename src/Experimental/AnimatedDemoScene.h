@@ -185,11 +185,9 @@ public:
 		// Setup lights.
 		SceneLights[uint8_t(SceneLightsEnum::DirectionalLightGlobal)] = SceneShaders::LightSource::DirectionalLightSource(GlobalLightColor,
 			{ -VERTEX16_UNIT, -VERTEX16_UNIT, VERTEX16_UNIT }, UFRACTION16_1X / 4);
-
 		SceneLights[uint8_t(SceneLightsEnum::PointLightRed)] = SceneShaders::LightSource::PointLightSource(Light1Color,
 			{ int16_t(-(ShapeMoveX * 4) / 10) , int16_t((DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
 			LightMinDistance, LightMaxDistance);
-
 		SceneLights[uint8_t(SceneLightsEnum::PointLightGreen)] = SceneShaders::LightSource::PointLightSource(Light2Color * 0,
 			{ int16_t((ShapeMoveX * 4) / 10) , int16_t((DistanceUnit * 3) / 20) , int16_t((DistanceUnit * 9) / 10) },
 			LightMinDistance, LightMaxDistance);
@@ -217,9 +215,8 @@ public:
 		ObjectFloor.Translation.z = BaseDistance;
 
 		// Configure object dynamic materials.
-		ObjectSphere.SetMaterial(material_t{ 0, UFRACTION8_1X, 0, 0 });
-		ObjectSphere.SetMaterial(material_t{ 0, UFRACTION8_1X, 0, 0 });
-		ObjectStar.SetMaterial(material_t{ 0, UFRACTION8_1X / 4, UFRACTION8_1X, UFRACTION8_1X / 2 });
+		ObjectSphere.SetMaterial(material_t{ UFRACTION8_1X, UFRACTION8_1X / 3, 0, FRACTION8_NEGATIVE_1X / 2 });
+		ObjectStar.SetMaterial(material_t{ UFRACTION8_1X / 16, UFRACTION8_1X, UFRACTION8_1X, FRACTION8_1X / 8 });
 
 		// Configure background shader.
 		ObjectBackground.FragmentShader = &BackgroundShader;
@@ -424,10 +421,10 @@ public:
 #endif
 	}
 
-	void SetEmissiveShadeEnabled(const bool enabled)
+	void SetFresnelShadeEnabled(const bool enabled)
 	{
 #if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
-		LightSourceShader.Emissive = enabled;
+		LightSourceShader.Fresnel = enabled;
 #endif
 	}
 
