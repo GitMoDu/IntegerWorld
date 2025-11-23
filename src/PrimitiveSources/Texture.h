@@ -14,25 +14,43 @@ namespace IntegerWorld
 				/// <summary>
 				/// Read-only texture source stored in program/ROM memory.
 				/// Provides random access to texels using row-major addressing.
+				/// Texture dimensions must be powers of two.
+				/// The texture can be offset in both X and Y directions.
+				/// Wrapping is performed using bitmasking based on texture size.
 				/// </summary>
+				template<typename TextureSize>
 				class Source
 				{
 				private:
 					/// <summary>Pointer to texel data.</summary>
 					const Rgb8::color_t* Texels = nullptr;
 
-					/// <summary>Texture width in texels (row stride).</summary>
-					const uint16_t Width =0;
+					static constexpr uint16_t WidthMask = TextureSize::Width - 1;
+					static constexpr uint16_t HeightMask = TextureSize::Height - 1;
+
+				public:
+					int16_t OffsetX = 0;
+					int16_t OffsetY = 0;
 
 				public:
 					/// <summary>
 					/// Construct a static texture source.
 					/// </summary>
 					/// <param name="texels">Pointer to immutable texel data.</param>
-					/// <param name="width">Texture width (row stride) in texels.</param>
-					Source(const Rgb8::color_t* texels, const uint16_t width)
-						: Texels(texels), Width(width)
+					Source(const Rgb8::color_t* texels)
+						: Texels(texels)
 					{
+					}
+
+					/// <summary>
+					/// Set the texture offsets.
+					/// </summary>
+					/// <param name="offsetX"></param>
+					/// <param name="offsetY"></param>
+					void SetOffsets(const int16_t offsetX, const int16_t offsetY)
+					{
+						OffsetX = offsetX;
+						OffsetY = offsetY;
 					}
 
 					/// <summary>
@@ -45,7 +63,7 @@ namespace IntegerWorld
 					/// <returns>Texel color at (u, v).</returns>
 					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
 					{
-						const size_t index = ((static_cast<size_t>(v) * Width) + (u));
+						const size_t index = ((static_cast<size_t>((v + OffsetY) & HeightMask) * TextureSize::Width) + ((u + OffsetX) & WidthMask));
 #if defined(ARDUINO_ARCH_AVR)
 						return static_cast<Rgb8::color_t>(pgm_read_dword(&Texels[index]));
 #else
@@ -60,15 +78,23 @@ namespace IntegerWorld
 				/// <summary>
 				/// Read/write texture source stored in RAM.
 				/// Provides random access to texels using row-major addressing.
+				/// Texture dimensions must be powers of two.
+				/// The texture can be offset in both X and Y directions.
+				/// Wrapping is performed using bitmasking based on texture size.
 				/// </summary>
+				template<typename TextureSize>
 				class Source
 				{
 				public:
 					/// <summary>External texel buffer (mutable).</summary>
 					Rgb8::color_t* Texels;
 
-					/// <summary>Texture width in texels (row stride).</summary>
-					uint16_t Width;
+					static constexpr uint16_t WidthMask = TextureSize::Width - 1;
+					static constexpr uint16_t HeightMask = TextureSize::Height - 1;
+
+				public:
+					int16_t OffsetX = 0;
+					int16_t OffsetY = 0;
 
 				public:
 					/// <summary>
@@ -76,11 +102,20 @@ namespace IntegerWorld
 					/// </summary>
 					/// <param name="texels">Pointer to texel buffer in RAM.</param>
 					/// <param name="width">Texture width (row stride) in texels.</param>
-					Source(Rgb8::color_t* texels
-						, const uint16_t width)
+					Source(Rgb8::color_t* texels)
 						: Texels(texels)
-						, Width(width)
 					{
+					}
+
+					/// <summary>
+					/// Set the texture offsets.
+					/// </summary>
+					/// <param name="offsetX"></param>
+					/// <param name="offsetY"></param>
+					void SetOffsets(const int16_t offsetX, const int16_t offsetY)
+					{
+						OffsetX = offsetX;
+						OffsetY = offsetY;
 					}
 
 					/// <summary>
@@ -93,7 +128,7 @@ namespace IntegerWorld
 					/// <returns>Texel color at (u, v).</returns>
 					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
 					{
-						const size_t index = ((static_cast<size_t>(v) * Width) + (u));
+						const size_t index = ((static_cast<size_t>((v + OffsetY) & HeightMask) * TextureSize::Width) + ((u + OffsetX) & WidthMask));
 
 						return static_cast<Rgb8::color_t>(Texels[index]);
 					}

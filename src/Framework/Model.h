@@ -54,20 +54,61 @@ namespace IntegerWorld
 		WorldSpace
 	};
 
+	/// <summary>
+	/// Texture dimensions as powers of two.
+	/// </summary>
+	enum class TextureDimensionEnum : uint8_t
+	{
+		Dimension8 = 3,
+		Dimension16 = 4,
+		Dimension32 = 5,
+		Dimension64 = 6,
+		Dimension128 = 7,
+		Dimension256 = 8,
+		Dimension512 = 9,
+		Dimension1024 = 10,
+		Dimension2048 = 11,
+		Dimension4096 = 12
+	};
+
+
 	struct material_t
 	{
 		// Surface roughness affecting light scattering. Inversely related to shininess.
-		ufraction8_t Rough; 
+		ufraction8_t Rough;
 
 		// Surface glossiness affecting specular and fresnel focus.
-		ufraction8_t Gloss; 
+		ufraction8_t Gloss;
 
 		// Specular tinting towards albedo color at low specular angles.
-		ufraction8_t SpecularTint; 
+		ufraction8_t SpecularTint;
 
 		// Fresnel control for energy redistribution between diffuse and specular at grazing angles.
-		fraction8_t Fresnel; 
+		fraction8_t Fresnel;
 	};
+
+
+	/// <summary>
+	/// Compile-time texture size struct that computes power-of-two Width and Height from enum-based dimension exponents.
+	/// </summary>
+	/// <typeparam name="widthDimension">A TextureDimensionEnum value used as the exponent for the width.</typeparam>
+	/// <typeparam name="heightDimension">A TextureDimensionEnum value used as the exponent for the height</typeparam>
+	template<TextureDimensionEnum widthDimension,
+		TextureDimensionEnum heightDimension>
+	struct TemplateTextureSize
+	{
+		// Power-of-two texture dimensions derived from enum values.
+		static constexpr uint16_t Width = static_cast<uint16_t>(1) << static_cast<uint8_t>(widthDimension);
+		static constexpr uint16_t Height = static_cast<uint16_t>(1) << static_cast<uint8_t>(heightDimension);
+	};
+
+	using TextureSize8x8 = TemplateTextureSize<TextureDimensionEnum::Dimension8, TextureDimensionEnum::Dimension8>;
+	using TextureSize16x16 = TemplateTextureSize<TextureDimensionEnum::Dimension16, TextureDimensionEnum::Dimension16>;
+	using TextureSize32x32 = TemplateTextureSize<TextureDimensionEnum::Dimension32, TextureDimensionEnum::Dimension32>;
+	using TextureSize64x64 = TemplateTextureSize<TextureDimensionEnum::Dimension64, TextureDimensionEnum::Dimension64>;
+	using TextureSize128x128 = TemplateTextureSize<TextureDimensionEnum::Dimension128, TextureDimensionEnum::Dimension128>;
+	using TextureSize256x256 = TemplateTextureSize<TextureDimensionEnum::Dimension256, TextureDimensionEnum::Dimension256>;
+
 
 	struct edge_line_t
 	{
