@@ -27,20 +27,18 @@ def convert_to_custom_format(
     texture_width: Optional[int] = None,
     texture_height: Optional[int] = None,
     uv_force_pow2: bool = True,
+    uv_v_flip: bool = True,            # DEFAULT FLIP ENABLED
+    uv_wrap_mode: str = "auto",        # 'auto' | 'clamp' | 'wrap'
 ) -> str:
     """
-    Converts parsed OBJ data to the custom C++ header-like text format.
-    - Normals scaled to VERTEX16_UNIT (8192).
-    - UVs: emitted ONLY if texture_width/texture_height are provided (from an image).
-      When provided:
-        * Dimensions optionally rounded up to power-of-two if uv_force_pow2=True.
-        * If all UVs are within [0,1], scale directly to pixel grid.
-        * Otherwise normalize over min..max before quantization.
-      Mip levels: DO NOT go below 8 in any dimension (minimum mip dimension is 8x?).
-      Arrays:
-        static constexpr coordinate_t UVs{W}x{H}[UvCount] PROGMEM
-        Optional mips UVs{w}x{h}_L{level} until both width and height <= 8.
-      Note: UvMipLevelCount includes the master level (level 0).
+    Converts OBJ data to custom C++ header-like text format.
+    UV handling:
+      uv_v_flip (default True): flip V (v = 1 - v) after normalization/wrapping to match typical top-left texture origin.
+      uv_wrap_mode:
+        clamp: clamp UVs into [0,1]
+        wrap:  wrap UVs via fractional part (supports negative values)
+        auto:  wrap if any UV outside [0,1], otherwise clamp
+    UVs emitted only when texture dimensions provided.
     """
     vertex_unit = 128
     NORMAL_SCALE = 8192
@@ -72,7 +70,6 @@ def convert_to_custom_format(
     output_lines.append("    static constexpr int16_t UpSize = 1;\n")
     output_lines.append("    static constexpr int16_t DownSize = 1;\n")
 
-    # Optional centering
     if center_vertices and vertices:
         vertices_np = np.array(vertices, dtype=float)
         center = np.mean(vertices_np, axis=0)
@@ -81,7 +78,6 @@ def convert_to_custom_format(
     else:
         processed_vertices = np.array(vertices, dtype=float)
 
-    # Vertices
     output_lines.append("    static constexpr vertex16_t Vertices[] PROGMEM\n    {")
     for v in processed_vertices:
         output_lines.append(
@@ -92,7 +88,6 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);\n")
 
-    # Triangulation
     triangles_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
     unique_materials: Dict[Optional[str], int] = {}
     material_index_counter = 0
@@ -100,13 +95,11 @@ def convert_to_custom_format(
         if len(face) >= 3:
             v1 = face[0]
             for i in range(1, len(face) - 1):
-                tri = (v1, face[i], face[i + 1])
-                triangles_with_materials.append((tri, material))
+                triangles_with_materials.append(((v1, face[i], face[i + 1]), material))
         if material not in unique_materials:
             unique_materials[material] = material_index_counter
             material_index_counter += 1
 
-    # Triangles & normals
     output_lines.append("    static constexpr triangle_face_t Triangles[] PROGMEM\n    {")
     processed_triangles: List[Tuple[int, int, int]] = []
     reversed_count = 0
@@ -165,14 +158,12 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);\n")
 
-    # Group indices
     output_lines.append("    static constexpr uint8_t Group[TriangleCount] PROGMEM\n    {")
     material_indices = [unique_materials.get(mat, 0) for _, mat in triangles_with_materials]
     for i in range(0, len(material_indices), 16):
         output_lines.append("        " + ", ".join(str(x) for x in material_indices[i:i+16]) + ",")
     output_lines.append("    };\n")
 
-    # Normals
     if emit_vertex_normals:
         output_lines.append("    static constexpr vertex16_t VertexNormals[] PROGMEM\n    {")
         for v in processed_vertices:
@@ -189,14 +180,12 @@ def convert_to_custom_format(
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto FaceNormalCount = sizeof(FaceNormals) / sizeof(vertex16_t);\n")
 
-    # UV emission (only if a texture was found)
     has_texture_dims = texture_width is not None and texture_height is not None
     if emit_uv and has_texture_dims:
         used_uv_indices: List[int] = []
         for tri, _ in triangles_with_materials:
             for idx_trip in tri:
-                uv_index = idx_trip[1]
-                used_uv_indices.append(uv_index if uv_index is not None else -1)
+                used_uv_indices.append(idx_trip[1] if idx_trip[1] is not None else -1)
 
         if not texcoords:
             texcoords = [(float(v[0]), float(v[1])) for v in processed_vertices]
@@ -207,22 +196,17 @@ def convert_to_custom_format(
             if 0 <= uv_idx < len(texcoords):
                 uv = texcoords[uv_idx]
                 if len(uv) >= 2:
-                    u_values.append(uv[0])
-                    v_values.append(uv[1])
+                    u_values.append(uv[0]); v_values.append(uv[1])
 
         if not u_values or not v_values:
-            u_values = [0.0]
-            v_values = [0.0]
+            u_values = [0.0]; v_values = [0.0]
 
-        u_min, u_max = min(u_values), max(u_values)
-        v_min, v_max = min(v_values), max(v_values)
-        if abs(u_max - u_min) < 1e-9:
-            u_max = u_min + 1.0
-        if abs(v_max - v_min) < 1e-9:
-            v_max = v_min + 1.0
-
+        out_of_range = any(u < 0.0 or u > 1.0 for u in u_values) or any(v < 0.0 or v > 1.0 for v in v_values)
         eps = 1e-6
-        all_norm = all(-eps <= u <= 1.0 + eps for u in u_values) and all(-eps <= v <= 1.0 + eps for v in v_values)
+        all_norm = not out_of_range and all(-eps <= u <= 1.0 + eps for u in u_values) and all(-eps <= v <= 1.0 + eps for v in v_values)
+
+        def wrap01(x: float) -> float:
+            return ((x % 1.0) + 1.0) % 1.0
 
         def next_pow2(n: int) -> int:
             return 1 << (n - 1).bit_length()
@@ -232,15 +216,26 @@ def convert_to_custom_format(
         if uv_force_pow2:
             base_w = next_pow2(base_w)
             base_h = next_pow2(base_h)
-        width = base_w
-        height = base_h
-        direct_scale = all_norm
+        width, height = base_w, base_h
+
+        if uv_wrap_mode == "auto":
+            mode = "wrap" if out_of_range else "clamp"
+        elif uv_wrap_mode in ("wrap", "clamp"):
+            mode = uv_wrap_mode
+        else:
+            mode = "clamp"
 
         output_lines.append(f"    static constexpr uint16_t UvMasterWidth = {width};\n")
         output_lines.append(f"    static constexpr uint16_t UvMasterHeight = {height};\n")
         output_lines.append("    static constexpr uint16_t UvCount = TriangleCount * 3;\n")
 
         master_uvs: List[Tuple[int, int]] = []
+        # Precompute min/max only once for range mode
+        u_min, u_max = min(u_values), max(u_values)
+        v_min, v_max = min(v_values), max(v_values)
+        if abs(u_max - u_min) < 1e-9: u_max = u_min + 1.0
+        if abs(v_max - v_min) < 1e-9: v_max = v_min + 1.0
+
         for tri, _ in triangles_with_materials:
             for idx_trip in tri:
                 uv_idx = idx_trip[1]
@@ -250,12 +245,22 @@ def convert_to_custom_format(
                     vpos = processed_vertices[idx_trip[0]]
                     u_raw, v_raw = float(vpos[0]), float(vpos[1])
 
-                if direct_scale:
-                    u_norm = max(0.0, min(1.0, u_raw))
-                    v_norm = max(0.0, min(1.0, v_raw))
+                if all_norm:
+                    if mode == "wrap":
+                        u_norm = wrap01(u_raw); v_norm = wrap01(v_raw)
+                    else:
+                        u_norm = min(max(u_raw, 0.0), 1.0)
+                        v_norm = min(max(v_raw, 0.0), 1.0)
                 else:
-                    u_norm = (u_raw - u_min) / (u_max - u_min)
-                    v_norm = (v_raw - v_min) / (v_max - v_min)
+                    if mode == "wrap":
+                        u_norm = wrap01(u_raw)
+                        v_norm = wrap01(v_raw)
+                    else:
+                        u_norm = (u_raw - u_min) / (u_max - u_min)
+                        v_norm = (v_raw - v_min) / (v_max - v_min)
+
+                if uv_v_flip:
+                    v_norm = 1.0 - v_norm
 
                 u_q = int(round(u_norm * (width - 1)))
                 v_q = int(round(v_norm * (height - 1)))
@@ -266,7 +271,6 @@ def convert_to_custom_format(
             output_lines.append(f"        {{{u_q}, {v_q}}},")
         output_lines.append("    };\n")
 
-        # Minimum mip dimension threshold
         MIN_MIP_DIM = 8
 
         def level_count(w: int, h: int) -> int:
@@ -275,7 +279,7 @@ def convert_to_custom_format(
                 w_next = max(MIN_MIP_DIM, w // 2)
                 h_next = max(MIN_MIP_DIM, h // 2)
                 if w_next == w and h_next == h:
-                    break  # cannot reduce further without dropping below threshold
+                    break
                 w, h = w_next, h_next
                 cnt += 1
             return cnt
@@ -291,12 +295,8 @@ def convert_to_custom_format(
                 mip_w, mip_h = mip_w_next, mip_h_next
                 output_lines.append(f"    static constexpr coordinate_t UVs{mip_w}x{mip_h}_L{level}[UvCount] PROGMEM\n    {{")
                 for (u_q_master, v_q_master) in master_uvs:
-                    # Shift relative to master scale, then clamp to new bounds
-                    # Using level shift still fine; if dimensions stopped early, shift continues.
-                    shift_uv_u = u_q_master >> level
-                    shift_uv_v = v_q_master >> level
-                    u_q = min(mip_w - 1, shift_uv_u)
-                    v_q = min(mip_h - 1, shift_uv_v)
+                    u_q = min(mip_w - 1, u_q_master >> level)
+                    v_q = min(mip_h - 1, v_q_master >> level)
                     output_lines.append(f"        {{{u_q}, {v_q}}},")
                 output_lines.append("    };\n")
                 level += 1
@@ -306,21 +306,8 @@ def convert_to_custom_format(
 
     output_lines.append("}\n")
 
-    # Diagnostics
-    if apply_winding_normalization:
-        print(f"Processed {file_name}: winding normalized (reversed {reversed_count}/{total_tris}); normals explicit {normals_used_count}, calculated {calculated_normals_used_count}.")
-    elif invert_winding_logic:
-        print(f"Processed {file_name}: winding inverted (reversed {reversed_count}/{total_tris}).")
-    else:
-        print(f"Processed {file_name}: winding untouched.")
-    if emit_vertex_normals:
-        print(f"  Emitted {len(processed_vertices)} vertex normals.")
-    if emit_face_normals:
-        print(f"  Emitted {len(face_norm_vectors)} face normals.")
-    if emit_uv:
-        if has_texture_dims:
-            print("  UVs: emitted (minimum mip dimension 8).")
-        else:
-            print("  UVs: skipped (no texture found).")
+    if emit_uv and has_texture_dims:
+        resolved_mode = ('wrap' if (uv_wrap_mode == 'wrap' or (uv_wrap_mode == 'auto' and out_of_range)) else 'clamp')
+        print(f"  UVs: mode={resolved_mode}, flipV={uv_v_flip}")
 
     return "\n".join(output_lines)
