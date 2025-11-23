@@ -17,8 +17,8 @@ def convert_to_custom_format(
     *,
     center_vertices: bool = False,
     # Engine consumes clockwise (CW) mesh winding; we now always emit CW only.
-    emit_vertex_normals: bool = False,
-    emit_face_normals: bool = False,
+    emit_vertex_normals: bool = True,          # default ON now
+    emit_face_normals: bool = True,            # default ON now
     use_macro_for_normal_scale: bool = True,
     emit_uv: bool = True,
     emit_uv_mips: bool = True,
@@ -35,7 +35,16 @@ def convert_to_custom_format(
       OBJ convention is typically counter-clockwise (CCW) for front faces.
       The engine expects clockwise (CW) ordering; all triangulated faces are
       converted to CW (second/third vertex swapped) unconditionally.
-      No CCW variant arrays are emitted.
+
+    Normals:
+      VertexNormals:
+        Averaged from all OBJ-corner normals referencing each vertex index.
+        If an OBJ corner lacks a normal index, we defer adding a contribution.
+        If a vertex receives no explicit normal contributions, a geometric
+        average of adjacent face normals is used as fallback.
+      FaceNormals:
+        Geometric face normals after CW winding enforcement.
+      Both arrays emitted by default.
 
     UV handling:
       uv_v_flip (default True): flip V (v = 1 - v) after normalization/wrapping.
@@ -83,6 +92,7 @@ def convert_to_custom_format(
     else:
         processed_vertices = np.array(vertices, dtype=float)
 
+    # Vertices
     output_lines.append("    static constexpr vertex16_t Vertices[] PROGMEM\n    {")
     for v in processed_vertices:
         output_lines.append(
@@ -93,7 +103,7 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);\n")
 
-    # --- Triangulation (collect original, then enforce CW) ---
+    # Triangulation -> CW enforcement
     triangles_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
     unique_materials: Dict[Optional[str], int] = {}
     material_index_counter = 0
@@ -109,36 +119,96 @@ def convert_to_custom_format(
     output_lines.append("    static constexpr triangle_face_t Triangles[] PROGMEM\n    {")
     processed_triangles: List[Tuple[int, int, int]] = []
     processed_triples_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
+
     face_norm_vectors: List[np.ndarray] = []
 
+    # For vertex normals accumulation
+    vertex_normal_accum = np.zeros((len(processed_vertices), 3), dtype=float)
+    vertex_normal_count = np.zeros(len(processed_vertices), dtype=int)
+
+    # Track face normals per triangle for fallback adjacency use
+    per_triangle_face_normal: List[np.ndarray] = []
+
     for (v1i, v2i, v3i), material in triangles_with_materials:
-        # Enforce CW: swap second and third vertex from original CCW (v1,v2,v3) -> (v1,v3,v2)
         v1_idx, v2_idx, v3_idx = v1i[0], v2i[0], v3i[0]
+        # Enforce CW by swapping second and third
         processed_triangles.append((v1_idx, v3_idx, v2_idx))
         processed_triples_with_materials.append(((v1i, v3i, v2i), material))
 
+        a = processed_vertices[v1_idx]
+        b = processed_vertices[v3_idx]
+        c = processed_vertices[v2_idx]
+        face_normal = np.cross(b - a, c - a)
+        per_triangle_face_normal.append(face_normal)
+
         if emit_face_normals:
-            a = processed_vertices[v1_idx]; b = processed_vertices[v3_idx]; c = processed_vertices[v2_idx]
-            # Recompute outward normal (original normal flipped by ordering change)
-            face_normal = np.cross(b - a, c - a)
             face_norm_vectors.append(face_normal)
 
-    for a, b, c in processed_triangles:
-        output_lines.append(f"        {{ {a}, {b}, {c} }},")
+        if emit_vertex_normals and normals:
+            # Accumulate OBJ corner normals if indices exist.
+            for (vidx, _, nidx) in (v1i, v3i, v2i):
+                if nidx is not None and 0 <= nidx < len(normals):
+                    vn = np.array(normals[nidx], dtype=float)
+                    if np.linalg.norm(vn) > 1e-9:
+                        vertex_normal_accum[vidx] += vn
+                        vertex_normal_count[vidx] += 1
+
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);\n")
 
-    # Material groups aligned with processed order.
+    # Material groups
     output_lines.append("    static constexpr uint8_t Group[TriangleCount] PROGMEM\n    {")
     material_indices = [unique_materials.get(mat, 0) for _, mat in processed_triples_with_materials]
     for i in range(0, len(material_indices), 16):
         output_lines.append("        " + ", ".join(str(x) for x in material_indices[i:i+16]) + ",")
     output_lines.append("    };\n")
 
+    # Build vertex normals: fallback to averaged adjacent face normals when no explicit contributions.
     if emit_vertex_normals:
+        # Fallback adjacency: sum face normals per vertex where no explicit contributions were added.
+        if normals:
+            # Normalize explicit accumulations first; mark which need fallback.
+            need_fallback = []
+            for i in range(len(processed_vertices)):
+                if vertex_normal_count[i] == 0:
+                    need_fallback.append(i)
+                else:
+                    # Normalize accumulated explicit normal
+                    n = vertex_normal_accum[i]
+                    l = np.linalg.norm(n)
+                    if l > 1e-9:
+                        vertex_normal_accum[i] = n / l
+                    else:
+                        need_fallback.append(i)
+        else:
+            # No source normals at all: all vertices need fallback.
+            need_fallback = list(range(len(processed_vertices)))
+
+        if need_fallback:
+            # Build adjacency from processed triangles
+            for tri_idx, (a_idx, b_idx, c_idx) in enumerate(processed_triangles):
+                fn = per_triangle_face_normal[tri_idx]
+                l = np.linalg.norm(fn)
+                if l > 1e-9:
+                    fn_unit = fn / l
+                else:
+                    fn_unit = np.array([0.0, 0.0, 0.0])
+                for vidx in (a_idx, b_idx, c_idx):
+                    if vidx in need_fallback:
+                        vertex_normal_accum[vidx] += fn_unit
+
+            # Normalize fallback
+            for vidx in need_fallback:
+                n = vertex_normal_accum[vidx]
+                l = np.linalg.norm(n)
+                if l > 1e-9:
+                    vertex_normal_accum[vidx] = n / l
+                else:
+                    vertex_normal_accum[vidx] = np.array([0.0, 0.0, 1.0])
+
         output_lines.append("    static constexpr vertex16_t VertexNormals[] PROGMEM\n    {")
-        for v in processed_vertices:
-            x, y, z = normalize_and_scale(v)
+        for i in range(len(processed_vertices)):
+            x, y, z = normalize_and_scale(vertex_normal_accum[i])
             output_lines.append(f"        {{{format_component(x)}, {format_component(y)}, {format_component(z)}}},")
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto VertexNormalCount = sizeof(VertexNormals) / sizeof(vertex16_t);\n")
@@ -151,7 +221,7 @@ def convert_to_custom_format(
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto FaceNormalCount = sizeof(FaceNormals) / sizeof(vertex16_t);\n")
 
-    # UV emission (uses processed CW triples).
+    # UV emission
     has_texture_dims = texture_width is not None and texture_height is not None
     if emit_uv and has_texture_dims:
         used_uv_indices: List[int] = []
@@ -174,7 +244,9 @@ def convert_to_custom_format(
 
         out_of_range = any(u < 0.0 or u > 1.0 for u in u_values) or any(v < 0.0 or v > 1.0 for v in v_values)
         eps = 1e-6
-        all_norm = not out_of_range and all(-eps <= u <= 1.0 + eps for u in u_values) and all(-eps <= v <= 1.0 + eps for v in v_values)
+        all_norm = (not out_of_range and
+                    all(-eps <= u <= 1.0 + eps for u in u_values) and
+                    all(-eps <= v <= 1.0 + eps for v in v_values))
 
         def wrap01(x: float) -> float:
             return ((x % 1.0) + 1.0) % 1.0
@@ -271,7 +343,8 @@ def convert_to_custom_format(
     output_lines.append("}\n")
 
     # Diagnostics
-    print(f"Processed {file_name}: emitted CW triangles only (total {len(processed_triangles)}).")
+    print(f"Processed {file_name}: CW triangles={len(processed_triangles)}; "
+          f"vertex_normals={'yes' if emit_vertex_normals else 'no'}, face_normals={'yes' if emit_face_normals else 'no'}")
     if emit_uv and has_texture_dims:
         print("  UVs: emitted using CW triangle order.")
 
