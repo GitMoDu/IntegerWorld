@@ -100,6 +100,10 @@ def convert_to_custom_format(
             unique_materials[material] = material_index_counter
             material_index_counter += 1
 
+    # Precompute model centroid for outward direction tests
+    model_centroid = np.mean(processed_vertices, axis=0) if len(processed_vertices) else np.array([0.0, 0.0, 0.0])
+
+    # Triangles & normals (updated winding logic)
     output_lines.append("    static constexpr triangle_face_t Triangles[] PROGMEM\n    {")
     processed_triangles: List[Tuple[int, int, int]] = []
     reversed_count = 0
@@ -111,46 +115,71 @@ def convert_to_custom_format(
     for tri, _ in triangles_with_materials:
         v1i, v2i, v3i = tri
         v1_idx, v2_idx, v3_idx = v1i[0], v2i[0], v3i[0]
+        a = processed_vertices[v1_idx]
+        b = processed_vertices[v2_idx]
+        c = processed_vertices[v3_idx]
+
+        # Base face normal
+        face_normal = np.cross(b - a, c - a)
+        area_mag = np.linalg.norm(face_normal)
+        if area_mag > 1e-12:
+            face_normal_dir = face_normal / area_mag
+        else:
+            face_normal_dir = np.array([0.0, 0.0, 0.0])
+
+        # Try vertex normals if all available
+        use_vertex_norms = (
+            apply_winding_normalization
+            and v1i[2] is not None
+            and v2i[2] is not None
+            and v3i[2] is not None
+            and normals
+        )
+        avg_vertex_normal = None
+        if use_vertex_norms:
+            vn1 = np.array(normals[v1i[2]], dtype=float)
+            vn2 = np.array(normals[v2i[2]], dtype=float)
+            vn3 = np.array(normals[v3i[2]], dtype=float)
+            avg_vertex_normal = (vn1 + vn2 + vn3) / 3.0
+            vm = np.linalg.norm(avg_vertex_normal)
+            if vm > 1e-12:
+                avg_vertex_normal /= vm
+
+        # Outward test
+        tri_centroid = (a + b + c) / 3.0
+        center_vec = tri_centroid - model_centroid
+        center_len = np.linalg.norm(center_vec)
+        if center_len > 1e-12:
+            center_dir = center_vec / center_len
+        else:
+            center_dir = np.array([0.0, 0.0, 0.0])
+
         should_reverse = False
-        face_normal = None
         if apply_winding_normalization:
-            if v1i[2] is not None and v2i[2] is not None and v3i[2] is not None and normals:
-                vn1 = np.array(normals[v1i[2]], dtype=float)
-                vn2 = np.array(normals[v2i[2]], dtype=float)
-                vn3 = np.array(normals[v3i[2]], dtype=float)
-                face_normal = (vn1 + vn2 + vn3) / 3.0
+            # Prefer vertex normals if present; ensure face normal aligns with outward direction
+            if avg_vertex_normal is not None:
+                if np.dot(face_normal_dir, avg_vertex_normal) < 0.0:
+                    should_reverse = True
                 normals_used_count += 1
             else:
-                a = processed_vertices[v1_idx]; b = processed_vertices[v2_idx]; c = processed_vertices[v3_idx]
-                face_normal = np.cross(b - a, c - a)
+                # Use centroid direction for outward orientation
+                if np.dot(face_normal_dir, center_dir) < 0.0:
+                    should_reverse = True
                 calculated_normals_used_count += 1
-            norm_mag = np.linalg.norm(face_normal)
-            normal_dir = face_normal / norm_mag if norm_mag > 1e-6 else np.array([0.0, 0.0, 0.0])
-            view_dir = np.array([0.0, 0.0, 1.0])
-            dot = float(np.dot(normal_dir, view_dir))
-            if invert_winding_logic:
-                if dot > 0.0:
-                    should_reverse = True
-            else:
-                if dot < 0.0:
-                    should_reverse = True
-        elif invert_winding_logic:
-            should_reverse = True
-            a = processed_vertices[v1_idx]; b = processed_vertices[v2_idx]; c = processed_vertices[v3_idx]
-            face_normal = np.cross(b - a, c - a)
+
+        # Optional global inversion
+        if invert_winding_logic:
+            should_reverse = not should_reverse
 
         if should_reverse:
             processed_triangles.append((v1_idx, v3_idx, v2_idx))
-            if face_normal is not None:
-                face_normal = -face_normal
+            face_normal = -face_normal
             reversed_count += 1
         else:
             processed_triangles.append((v1_idx, v2_idx, v3_idx))
 
         if emit_face_normals:
-            if face_normal is None:
-                a = processed_vertices[v1_idx]; b = processed_vertices[v2_idx]; c = processed_vertices[v3_idx]
-                face_normal = np.cross(b - a, c - a)
+            # Store (possibly flipped) face normal
             face_norm_vectors.append(face_normal)
 
     for a, b, c in processed_triangles:
