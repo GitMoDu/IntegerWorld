@@ -1,57 +1,47 @@
 from typing import List, Dict, Any
 
-# Output configurations replicated from the original script.
-# Added UV emission related flags:
-#   emit_uv: emit master UV + mip UV arrays
-#   emit_uv_mips: emit halved rectangular mip levels (each step width>>1, height>>1 until both reach 1)
+# Updated configurations: removed obsolete CCW/CW and winding normalization flags.
+# All output is now forced CW inside converter.py, so variants only differ by
+# centering and whether face normals are emitted.
+# Fields supported by converter:
+#   center_vertices
+#   emit_vertex_normals
+#   emit_face_normals
+#   emit_uv
+#   emit_uv_mips
+# (UV related feature flags like uv_v_flip, uv_wrap_mode, uv_force_pow2, etc.
+# use converter defaults unless exposed here.)
+
 OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
     {
-        "name": "_raw_CCW",
+        "name": "_raw",
         "center_vertices": False,
-        "apply_winding_normalization": True,
-        "invert_winding_logic": False,
-        "emit_vertex_normals": True,
-        "emit_face_normals": True,
-        "emit_uv": True,
-        "emit_uv_mips": True,
-    },
-    {
-        "name": "_centered_CCW",
-        "center_vertices": True,
-        "apply_winding_normalization": True,
-        "invert_winding_logic": False,
-        "emit_vertex_normals": True,
-        "emit_face_normals": True,
-        "emit_uv": True,
-        "emit_uv_mips": True,
-    },
-    {
-        "name": "_inverted_CW",
-        "center_vertices": True,
-        "apply_winding_normalization": True,
-        "invert_winding_logic": True,
-        "emit_vertex_normals": True,
-        "emit_face_normals": True,
-        "emit_uv": True,
-        "emit_uv_mips": True,
-    },
-    {
-        "name": "_raw_no_norm_CCW",
-        "center_vertices": False,
-        "apply_winding_normalization": False,
-        "invert_winding_logic": False,
         "emit_vertex_normals": True,
         "emit_face_normals": False,
         "emit_uv": True,
         "emit_uv_mips": True,
     },
     {
-        "name": "_raw_no_norm_CW",
-        "center_vertices": False,
-        "apply_winding_normalization": False,
-        "invert_winding_logic": True,
+        "name": "_centered",
+        "center_vertices": True,
         "emit_vertex_normals": True,
         "emit_face_normals": False,
+        "emit_uv": True,
+        "emit_uv_mips": True,
+    },
+    {
+        "name": "_raw_facenorm",
+        "center_vertices": False,
+        "emit_vertex_normals": True,
+        "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
+    },
+    {
+        "name": "_centered_facenorm",
+        "center_vertices": True,
+        "emit_vertex_normals": True,
+        "emit_face_normals": True,
         "emit_uv": True,
         "emit_uv_mips": True,
     },
