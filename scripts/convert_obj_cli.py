@@ -10,6 +10,28 @@ from obj_converter import (
     read_text,
     write_text,
 )
+# If you already added image detection utilities, keep using them.
+# Fallback lightweight detector: look for <stem>.png/.jpg/.jpeg next to OBJ and read size with imageinfo.
+try:
+    from obj_converter.imageinfo import get_image_size
+except Exception:
+    get_image_size = None  # type: ignore[assignment]
+
+
+def _find_texture_for_obj(obj_path: str):
+    directory, filename = os.path.split(obj_path)
+    stem, _ = os.path.splitext(filename)
+    candidates = [
+        os.path.join(directory, stem + ".png"),
+        os.path.join(directory, stem + ".jpg"),
+        os.path.join(directory, stem + ".jpeg"),
+    ]
+    if get_image_size:
+        for c in candidates:
+            dims = get_image_size(c)
+            if dims:
+                return dims
+    return None, None
 
 
 def main() -> int:
@@ -19,6 +41,8 @@ def main() -> int:
     parser.add_argument("--output-dir", default="", help="Override output directory.")
     parser.add_argument("--file", default="", help="Process only this .obj file name.")
     parser.add_argument("--config-filter", default="", help="Substring filter on configuration name (e.g. _raw_).")
+    parser.add_argument("--no-uv-mips", action="store_true", help="Do not emit UV mip levels.")
+    parser.add_argument("--no-force-pow2", action="store_true", help="Use actual texture size (no round up) if found.")
     args = parser.parse_args()
 
     input_dir = args.input_dir or (os.path.join(args.base_dir, "Input") if args.base_dir else os.path.join(os.getcwd(), "Input"))
@@ -63,9 +87,15 @@ def main() -> int:
             print("  [SKIP] Empty geometry or faces.")
             continue
 
-        stem, _ = os.path.splitext(name)
+        tex_w, tex_h = _find_texture_for_obj(path)
+        if tex_w and tex_h:
+            print(f"  Texture: {tex_w}x{tex_h} (source image)")
+            emit_uv = True
+        else:
+            print("  Texture: not found -> UVs will be skipped")
+            emit_uv = False
 
-        # New: per-object output subdirectory
+        stem, _ = os.path.splitext(name)
         object_out_dir = os.path.join(output_dir, stem)
         ensure_dir(object_out_dir)
         print(f"  Output folder: {object_out_dir}")
@@ -74,6 +104,7 @@ def main() -> int:
             out_ns = stem + cfg["name"]
             text = convert_to_custom_format(
                 vertices,
+                texcoords,
                 normals,
                 faces_with_materials,
                 out_ns,
@@ -82,6 +113,11 @@ def main() -> int:
                 invert_winding_logic=cfg["invert_winding_logic"],
                 emit_vertex_normals=cfg.get("emit_vertex_normals", False),
                 emit_face_normals=cfg.get("emit_face_normals", False),
+                emit_uv=emit_uv,
+                emit_uv_mips=not args.no_uv_mips,
+                texture_width=tex_w,
+                texture_height=tex_h,
+                uv_force_pow2=not args.no_force_pow2,
             )
             out_file = os.path.join(object_out_dir, f"{stem}{cfg['name']}.txt")
             try:

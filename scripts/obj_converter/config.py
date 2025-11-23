@@ -1,6 +1,9 @@
 from typing import List, Dict, Any
 
 # Output configurations replicated from the original script.
+# Added UV emission related flags:
+#   emit_uv: emit master UV + mip UV arrays
+#   emit_uv_mips: emit halved rectangular mip levels (each step width>>1, height>>1 until both reach 1)
 OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
     {
         "name": "_raw_CCW",
@@ -9,6 +12,8 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "invert_winding_logic": False,
         "emit_vertex_normals": True,
         "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
     },
     {
         "name": "_centered_CCW",
@@ -17,6 +22,8 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "invert_winding_logic": False,
         "emit_vertex_normals": True,
         "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
     },
     {
         "name": "_inverted_CW",
@@ -25,6 +32,8 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "invert_winding_logic": True,
         "emit_vertex_normals": True,
         "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
     },
     {
         "name": "_raw_no_norm_CCW",
@@ -33,6 +42,8 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "invert_winding_logic": False,
         "emit_vertex_normals": True,
         "emit_face_normals": False,
+        "emit_uv": True,
+        "emit_uv_mips": True,
     },
     {
         "name": "_raw_no_norm_CW",
@@ -41,5 +52,7 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "invert_winding_logic": True,
         "emit_vertex_normals": True,
         "emit_face_normals": False,
+        "emit_uv": True,
+        "emit_uv_mips": True,
     },
 ]
