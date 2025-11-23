@@ -27,8 +27,8 @@ def convert_to_custom_format(
     texture_width: Optional[int] = None,
     texture_height: Optional[int] = None,
     uv_force_pow2: bool = True,
-    uv_v_flip: bool = True,            # DEFAULT FLIP ENABLED
-    uv_wrap_mode: str = "auto",        # 'auto' | 'clamp' | 'wrap'
+    uv_v_flip: bool = True,
+    uv_wrap_mode: str = "auto",
 ) -> str:
     """
     Converts OBJ data to custom C++ header-like text format.
@@ -88,6 +88,7 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto VertexCount = sizeof(Vertices) / sizeof(vertex16_t);\n")
 
+    # --- Triangulation (collect original) ---
     triangles_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
     unique_materials: Dict[Optional[str], int] = {}
     material_index_counter = 0
@@ -100,86 +101,69 @@ def convert_to_custom_format(
             unique_materials[material] = material_index_counter
             material_index_counter += 1
 
-    # Precompute model centroid for outward direction tests
-    model_centroid = np.mean(processed_vertices, axis=0) if len(processed_vertices) else np.array([0.0, 0.0, 0.0])
-
-    # Triangles & normals (updated winding logic)
+    # --- Winding normalization (now storing FULL processed triples, not just vertex indices) ---
     output_lines.append("    static constexpr triangle_face_t Triangles[] PROGMEM\n    {")
     processed_triangles: List[Tuple[int, int, int]] = []
+    processed_triples_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []  # NEW
     reversed_count = 0
     normals_used_count = 0
     calculated_normals_used_count = 0
     face_norm_vectors: List[np.ndarray] = []
     total_tris = len(triangles_with_materials)
 
-    for tri, _ in triangles_with_materials:
-        v1i, v2i, v3i = tri
+    model_centroid = np.mean(processed_vertices, axis=0) if len(processed_vertices) else np.array([0.0, 0.0, 0.0])
+
+    for (v1i, v2i, v3i), material in triangles_with_materials:
         v1_idx, v2_idx, v3_idx = v1i[0], v2i[0], v3i[0]
-        a = processed_vertices[v1_idx]
-        b = processed_vertices[v2_idx]
-        c = processed_vertices[v3_idx]
-
-        # Base face normal
+        a = processed_vertices[v1_idx]; b = processed_vertices[v2_idx]; c = processed_vertices[v3_idx]
         face_normal = np.cross(b - a, c - a)
-        area_mag = np.linalg.norm(face_normal)
-        if area_mag > 1e-12:
-            face_normal_dir = face_normal / area_mag
-        else:
-            face_normal_dir = np.array([0.0, 0.0, 0.0])
+        mag = np.linalg.norm(face_normal)
+        face_dir = face_normal / mag if mag > 1e-12 else np.array([0.0, 0.0, 0.0])
 
-        # Try vertex normals if all available
         use_vertex_norms = (
-            apply_winding_normalization
-            and v1i[2] is not None
-            and v2i[2] is not None
-            and v3i[2] is not None
-            and normals
+            apply_winding_normalization and
+            v1i[2] is not None and v2i[2] is not None and v3i[2] is not None and normals
         )
-        avg_vertex_normal = None
+        avg_vn = None
         if use_vertex_norms:
             vn1 = np.array(normals[v1i[2]], dtype=float)
             vn2 = np.array(normals[v2i[2]], dtype=float)
             vn3 = np.array(normals[v3i[2]], dtype=float)
-            avg_vertex_normal = (vn1 + vn2 + vn3) / 3.0
-            vm = np.linalg.norm(avg_vertex_normal)
-            if vm > 1e-12:
-                avg_vertex_normal /= vm
+            avg_vn = (vn1 + vn2 + vn3) / 3.0
+            l = np.linalg.norm(avg_vn)
+            if l > 1e-12:
+                avg_vn /= l
 
-        # Outward test
         tri_centroid = (a + b + c) / 3.0
-        center_vec = tri_centroid - model_centroid
-        center_len = np.linalg.norm(center_vec)
-        if center_len > 1e-12:
-            center_dir = center_vec / center_len
-        else:
-            center_dir = np.array([0.0, 0.0, 0.0])
+        outward_vec = tri_centroid - model_centroid
+        l2 = np.linalg.norm(outward_vec)
+        outward_dir = outward_vec / l2 if l2 > 1e-12 else np.array([0.0, 0.0, 0.0])
 
         should_reverse = False
         if apply_winding_normalization:
-            # Prefer vertex normals if present; ensure face normal aligns with outward direction
-            if avg_vertex_normal is not None:
-                if np.dot(face_normal_dir, avg_vertex_normal) < 0.0:
+            if avg_vn is not None:
+                if np.dot(face_dir, avg_vn) < 0.0:
                     should_reverse = True
                 normals_used_count += 1
             else:
-                # Use centroid direction for outward orientation
-                if np.dot(face_normal_dir, center_dir) < 0.0:
+                if np.dot(face_dir, outward_dir) < 0.0:
                     should_reverse = True
                 calculated_normals_used_count += 1
 
-        # Optional global inversion
         if invert_winding_logic:
             should_reverse = not should_reverse
 
         if should_reverse:
+            # Reverse vertex order and preserve matching UV/normal indices
             processed_triangles.append((v1_idx, v3_idx, v2_idx))
+            processed_triples_with_materials.append(((v1i, v3i, v2i), material))
             face_normal = -face_normal
             reversed_count += 1
         else:
             processed_triangles.append((v1_idx, v2_idx, v3_idx))
+            processed_triples_with_materials.append(((v1i, v2i, v3i), material))
 
         if emit_face_normals:
-            # Store (possibly flipped) face normal
             face_norm_vectors.append(face_normal)
 
     for a, b, c in processed_triangles:
@@ -187,8 +171,9 @@ def convert_to_custom_format(
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);\n")
 
+    # Group array uses processed order to stay aligned with triangle indices
     output_lines.append("    static constexpr uint8_t Group[TriangleCount] PROGMEM\n    {")
-    material_indices = [unique_materials.get(mat, 0) for _, mat in triangles_with_materials]
+    material_indices = [unique_materials.get(mat, 0) for _, mat in processed_triples_with_materials]
     for i in range(0, len(material_indices), 16):
         output_lines.append("        " + ", ".join(str(x) for x in material_indices[i:i+16]) + ",")
     output_lines.append("    };\n")
@@ -209,12 +194,12 @@ def convert_to_custom_format(
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto FaceNormalCount = sizeof(FaceNormals) / sizeof(vertex16_t);\n")
 
+    # --- UV Emission FIX: use processed_triples_with_materials instead of original triangles_with_materials ---
     has_texture_dims = texture_width is not None and texture_height is not None
     if emit_uv and has_texture_dims:
         used_uv_indices: List[int] = []
-        for tri, _ in triangles_with_materials:
-            for idx_trip in tri:
-                used_uv_indices.append(idx_trip[1] if idx_trip[1] is not None else -1)
+        for (v1i, v2i, v3i), _ in processed_triples_with_materials:
+            used_uv_indices.extend([v1i[1], v2i[1], v3i[1]])
 
         if not texcoords:
             texcoords = [(float(v[0]), float(v[1])) for v in processed_vertices]
@@ -222,7 +207,7 @@ def convert_to_custom_format(
         u_values: List[float] = []
         v_values: List[float] = []
         for uv_idx in used_uv_indices:
-            if 0 <= uv_idx < len(texcoords):
+            if uv_idx is not None and 0 <= uv_idx < len(texcoords):
                 uv = texcoords[uv_idx]
                 if len(uv) >= 2:
                     u_values.append(uv[0]); v_values.append(uv[1])
@@ -247,26 +232,20 @@ def convert_to_custom_format(
             base_h = next_pow2(base_h)
         width, height = base_w, base_h
 
-        if uv_wrap_mode == "auto":
-            mode = "wrap" if out_of_range else "clamp"
-        elif uv_wrap_mode in ("wrap", "clamp"):
-            mode = uv_wrap_mode
-        else:
-            mode = "clamp"
+        mode = "wrap" if (uv_wrap_mode == "wrap" or (uv_wrap_mode == "auto" and out_of_range)) else "clamp"
 
         output_lines.append(f"    static constexpr uint16_t UvMasterWidth = {width};\n")
         output_lines.append(f"    static constexpr uint16_t UvMasterHeight = {height};\n")
         output_lines.append("    static constexpr uint16_t UvCount = TriangleCount * 3;\n")
 
-        master_uvs: List[Tuple[int, int]] = []
-        # Precompute min/max only once for range mode
         u_min, u_max = min(u_values), max(u_values)
         v_min, v_max = min(v_values), max(v_values)
         if abs(u_max - u_min) < 1e-9: u_max = u_min + 1.0
         if abs(v_max - v_min) < 1e-9: v_max = v_min + 1.0
 
-        for tri, _ in triangles_with_materials:
-            for idx_trip in tri:
+        master_uvs: List[Tuple[int, int]] = []
+        for (v1i, v2i, v3i), _ in processed_triples_with_materials:
+            for idx_trip in (v1i, v2i, v3i):
                 uv_idx = idx_trip[1]
                 if uv_idx is not None and 0 <= uv_idx < len(texcoords) and len(texcoords[uv_idx]) >= 2:
                     u_raw, v_raw = texcoords[uv_idx][0], texcoords[uv_idx][1]
@@ -282,8 +261,7 @@ def convert_to_custom_format(
                         v_norm = min(max(v_raw, 0.0), 1.0)
                 else:
                     if mode == "wrap":
-                        u_norm = wrap01(u_raw)
-                        v_norm = wrap01(v_raw)
+                        u_norm = wrap01(u_raw); v_norm = wrap01(v_raw)
                     else:
                         u_norm = (u_raw - u_min) / (u_max - u_min)
                         v_norm = (v_raw - v_min) / (v_max - v_min)
@@ -296,7 +274,7 @@ def convert_to_custom_format(
                 master_uvs.append((u_q, v_q))
 
         output_lines.append(f"    static constexpr coordinate_t UVs{width}x{height}[UvCount] PROGMEM\n    {{")
-        for (u_q, v_q) in master_uvs:
+        for u_q, v_q in master_uvs:
             output_lines.append(f"        {{{u_q}, {v_q}}},")
         output_lines.append("    };\n")
 
@@ -305,11 +283,11 @@ def convert_to_custom_format(
         def level_count(w: int, h: int) -> int:
             cnt = 1
             while w > MIN_MIP_DIM or h > MIN_MIP_DIM:
-                w_next = max(MIN_MIP_DIM, w // 2)
-                h_next = max(MIN_MIP_DIM, h // 2)
-                if w_next == w and h_next == h:
+                mw2 = max(MIN_MIP_DIM, w // 2)
+                mh2 = max(MIN_MIP_DIM, h // 2)
+                if mw2 == w and mh2 == h:
                     break
-                w, h = w_next, h_next
+                w, h = mw2, mh2
                 cnt += 1
             return cnt
 
@@ -323,7 +301,7 @@ def convert_to_custom_format(
                     break
                 mip_w, mip_h = mip_w_next, mip_h_next
                 output_lines.append(f"    static constexpr coordinate_t UVs{mip_w}x{mip_h}_L{level}[UvCount] PROGMEM\n    {{")
-                for (u_q_master, v_q_master) in master_uvs:
+                for u_q_master, v_q_master in master_uvs:
                     u_q = min(mip_w - 1, u_q_master >> level)
                     v_q = min(mip_h - 1, v_q_master >> level)
                     output_lines.append(f"        {{{u_q}, {v_q}}},")
@@ -335,8 +313,14 @@ def convert_to_custom_format(
 
     output_lines.append("}\n")
 
+    # Diagnostics (adjusted to processed list)
+    if apply_winding_normalization:
+        print(f"Processed {file_name}: winding normalized then inverted={invert_winding_logic} (reversed {reversed_count}/{total_tris}); normals explicit {normals_used_count}, calculated {calculated_normals_used_count}.")
+    elif invert_winding_logic:
+        print(f"Processed {file_name}: simple inversion applied (reversed {reversed_count}/{total_tris}).")
+    else:
+        print(f"Processed {file_name}: winding untouched.")
     if emit_uv and has_texture_dims:
-        resolved_mode = ('wrap' if (uv_wrap_mode == 'wrap' or (uv_wrap_mode == 'auto' and out_of_range)) else 'clamp')
-        print(f"  UVs: mode={resolved_mode}, flipV={uv_v_flip}")
+        print("  UVs: emitted using processed triangle order (fixed).")
 
     return "\n".join(output_lines)
