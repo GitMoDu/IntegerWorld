@@ -39,11 +39,15 @@ def convert_to_custom_format(
     Normals:
       VertexNormals:
         Averaged from all OBJ-corner normals referencing each vertex index,
-        with fallback to averaged face normals if no explicit contributions.
+        with fallback to averaged geometric face normals if no explicit contributions.
         Quantization enforces integer vector magnitude == VERTEX16_UNIT (8192).
       FaceNormals:
-        Geometric face normals (CW) quantized to exact magnitude == VERTEX16_UNIT.
-      For degenerate cases a fallback (0,0,VERTEX16_UNIT) is used.
+        If OBJ contains vertex normals (n indices for every triangle corner) but no
+        separate face normals, we "interpolate" a face normal by averaging the three
+        referenced vertex normals (n1 + n2 + n3). This produces a smoothed face normal.
+        If any corner lacks a normal index (or normals list empty) we fall back to the
+        geometric cross product normal of the triangle (using CW ordering).
+        Quantized to magnitude == VERTEX16_UNIT. Degenerate -> (0,0,VERTEX16_UNIT).
 
     UV handling:
       uv_v_flip (default True): flip V (v = 1 - v) after normalization/wrapping.
@@ -154,12 +158,14 @@ def convert_to_custom_format(
     processed_triangles: List[Tuple[int, int, int]] = []
     processed_triples_with_materials: List[Tuple[Tuple[IndexTriple, IndexTriple, IndexTriple], Optional[str]]] = []
 
+    # Face normals for emission (may be averaged vertex normals)
     face_norm_vectors: List[np.ndarray] = []
 
     # For vertex normals accumulation (float)
     vertex_normal_accum = np.zeros((len(processed_vertices), 3), dtype=float)
     vertex_normal_count = np.zeros(len(processed_vertices), dtype=int)
 
+    # Geometric normals stored separately for vertex normal fallback logic
     per_triangle_face_normal: List[np.ndarray] = []
 
     for (v1i, v2i, v3i), material in triangles_with_materials:
@@ -171,12 +177,12 @@ def convert_to_custom_format(
         a = processed_vertices[v1_idx]
         b = processed_vertices[v3_idx]
         c = processed_vertices[v2_idx]
-        face_normal = np.cross(b - a, c - a)
-        per_triangle_face_normal.append(face_normal)
 
-        if emit_face_normals:
-            face_norm_vectors.append(face_normal)
+        # Geometric (cross product) normal for fallback / vertex normal fallback.
+        geo_face_normal = np.cross(b - a, c - a)
+        per_triangle_face_normal.append(geo_face_normal)
 
+        # Accumulate vertex normals (if present)
         if emit_vertex_normals and normals:
             for (vidx, _, nidx) in (v1i, v3i, v2i):
                 if nidx is not None and 0 <= nidx < len(normals):
@@ -185,9 +191,25 @@ def convert_to_custom_format(
                         vertex_normal_accum[vidx] += vn
                         vertex_normal_count[vidx] += 1
 
+        # Face normal emission:
+        # If every corner has an associated vertex normal index, average those vertex normals.
+        if emit_face_normals:
+            have_all_corner_normals = (
+                normals and
+                all(trip[2] is not None and 0 <= trip[2] < len(normals) for trip in (v1i, v3i, v2i))
+            )
+            if have_all_corner_normals:
+                n1 = np.array(normals[v1i[2]], dtype=float)
+                n2 = np.array(normals[v3i[2]], dtype=float)
+                n3 = np.array(normals[v2i[2]], dtype=float)
+                averaged = n1 + n2 + n3
+                face_norm_vectors.append(averaged)
+            else:
+                face_norm_vectors.append(geo_face_normal)
+
+    # Emit triangle indices
     for a_idx, b_idx, c_idx in processed_triangles:
         output_lines.append(f"        {{{a_idx}, {b_idx}, {c_idx}}},")
-
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);\n")
 
@@ -363,6 +385,8 @@ def convert_to_custom_format(
     # Diagnostics
     print(f"Processed {file_name}: CW triangles={len(processed_triangles)}; "
           f"vertex_normals={'yes' if emit_vertex_normals else 'no'}, face_normals={'yes' if emit_face_normals else 'no'}")
+    if emit_face_normals and normals:
+        print("  FaceNormals: averaged vertex normals where available.")
     if emit_uv and has_texture_dims:
         print("  UVs: emitted using CW triangle order.")
 
