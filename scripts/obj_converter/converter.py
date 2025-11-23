@@ -17,8 +17,8 @@ def convert_to_custom_format(
     *,
     center_vertices: bool = False,
     # Engine consumes clockwise (CW) mesh winding; we now always emit CW only.
-    emit_vertex_normals: bool = True,          # default ON now
-    emit_face_normals: bool = True,            # default ON now
+    emit_vertex_normals: bool = True,
+    emit_face_normals: bool = True,
     use_macro_for_normal_scale: bool = True,
     emit_uv: bool = True,
     emit_uv_mips: bool = True,
@@ -38,21 +38,16 @@ def convert_to_custom_format(
 
     Normals:
       VertexNormals:
-        Averaged from all OBJ-corner normals referencing each vertex index.
-        If an OBJ corner lacks a normal index, we defer adding a contribution.
-        If a vertex receives no explicit normal contributions, a geometric
-        average of adjacent face normals is used as fallback.
+        Averaged from all OBJ-corner normals referencing each vertex index,
+        with fallback to averaged face normals if no explicit contributions.
+        Quantization enforces integer vector magnitude == VERTEX16_UNIT (8192).
       FaceNormals:
-        Geometric face normals after CW winding enforcement.
-      Both arrays emitted by default.
+        Geometric face normals (CW) quantized to exact magnitude == VERTEX16_UNIT.
+      For degenerate cases a fallback (0,0,VERTEX16_UNIT) is used.
 
     UV handling:
       uv_v_flip (default True): flip V (v = 1 - v) after normalization/wrapping.
-      uv_wrap_mode:
-        clamp: clamp UVs into [0,1]
-        wrap:  wrap UVs via fractional part (supports negative values)
-        auto:  wrap if any UV outside [0,1], otherwise clamp
-      UVs emitted only when texture dimensions provided.
+      uv_wrap_mode: clamp | wrap | auto
     """
     vertex_unit = 128
     NORMAL_SCALE = 8192
@@ -66,18 +61,57 @@ def convert_to_custom_format(
                 return f"-{macro_name}"
         return str(value)
 
-    def normalize_and_scale(vec: np.ndarray) -> Tuple[int, int, int]:
+    def quantize_normal(unit: np.ndarray) -> Tuple[int, int, int]:
+        """
+        Quantize a floating unit vector so that the resulting integer vector
+        has magnitude exactly NORMAL_SCALE (or as close as possible without exceeding).
+        """
+        # Initial scaled (float) components
+        scaled = unit * NORMAL_SCALE
+        xi = int(round(scaled[0]))
+        yi = int(round(scaled[1]))
+        zi = int(round(scaled[2]))
+
+        # Clamp individual components (safety)
+        xi = max(-NORMAL_SCALE, min(NORMAL_SCALE, xi))
+        yi = max(-NORMAL_SCALE, min(NORMAL_SCALE, yi))
+        zi = max(-NORMAL_SCALE, min(NORMAL_SCALE, zi))
+
+        # Adjust magnitude to be <= NORMAL_SCALE and try to reach exactly NORMAL_SCALE.
+        length_sq = xi * xi + yi * yi + zi * zi
+        target_sq = NORMAL_SCALE * NORMAL_SCALE
+
+        if length_sq == 0:
+            return 0, 0, NORMAL_SCALE  # fallback
+
+        # If overshoot or undershoot, re-scale using float factor, then round again.
+        if length_sq != target_sq:
+            length = float(np.sqrt(length_sq))
+            scale = NORMAL_SCALE / length  # bring magnitude to EXACT NORMAL_SCALE
+            x2 = int(round(xi * scale))
+            y2 = int(round(yi * scale))
+            z2 = int(round(zi * scale))
+
+            # Final clamp
+            x2 = max(-NORMAL_SCALE, min(NORMAL_SCALE, x2))
+            y2 = max(-NORMAL_SCALE, min(NORMAL_SCALE, y2))
+            z2 = max(-NORMAL_SCALE, min(NORMAL_SCALE, z2))
+
+            # Recompute length; if still off, accept closest (rounding limitation).
+            length_sq_2 = x2 * x2 + y2 * y2 + z2 * z2
+            if length_sq_2 == 0:
+                return 0, 0, NORMAL_SCALE
+            # Prefer the rescaled version if it is closer to target.
+            if abs(length_sq_2 - target_sq) <= abs(length_sq - target_sq):
+                xi, yi, zi = x2, y2, z2
+
+        return xi, yi, zi
+
+    def normalize_float(vec: np.ndarray) -> np.ndarray:
         mag = float(np.linalg.norm(vec))
-        if mag > 1e-6:
-            unit = vec / mag
-            x = int(round(unit[0] * NORMAL_SCALE))
-            y = int(round(unit[1] * NORMAL_SCALE))
-            z = int(round(unit[2] * NORMAL_SCALE))
-            x = max(-NORMAL_SCALE, min(NORMAL_SCALE, x))
-            y = max(-NORMAL_SCALE, min(NORMAL_SCALE, y))
-            z = max(-NORMAL_SCALE, min(NORMAL_SCALE, z))
-            return x, y, z
-        return 0, 0, NORMAL_SCALE
+        if mag > 1e-9:
+            return vec / mag
+        return np.array([0.0, 0.0, 1.0], dtype=float)
 
     output_lines: List[str] = []
     output_lines.append(f"namespace {file_name}\n{{")
@@ -122,11 +156,10 @@ def convert_to_custom_format(
 
     face_norm_vectors: List[np.ndarray] = []
 
-    # For vertex normals accumulation
+    # For vertex normals accumulation (float)
     vertex_normal_accum = np.zeros((len(processed_vertices), 3), dtype=float)
     vertex_normal_count = np.zeros(len(processed_vertices), dtype=int)
 
-    # Track face normals per triangle for fallback adjacency use
     per_triangle_face_normal: List[np.ndarray] = []
 
     for (v1i, v2i, v3i), material in triangles_with_materials:
@@ -145,7 +178,6 @@ def convert_to_custom_format(
             face_norm_vectors.append(face_normal)
 
         if emit_vertex_normals and normals:
-            # Accumulate OBJ corner normals if indices exist.
             for (vidx, _, nidx) in (v1i, v3i, v2i):
                 if nidx is not None and 0 <= nidx < len(normals):
                     vn = np.array(normals[nidx], dtype=float)
@@ -163,60 +195,43 @@ def convert_to_custom_format(
         output_lines.append("        " + ", ".join(str(x) for x in material_indices[i:i+16]) + ",")
     output_lines.append("    };\n")
 
-    # Build vertex normals: fallback to averaged adjacent face normals when no explicit contributions.
+    # Vertex normals (quantized magnitude == NORMAL_SCALE)
     if emit_vertex_normals:
-        # Fallback adjacency: sum face normals per vertex where no explicit contributions were added.
         if normals:
-            # Normalize explicit accumulations first; mark which need fallback.
             need_fallback = []
             for i in range(len(processed_vertices)):
                 if vertex_normal_count[i] == 0:
                     need_fallback.append(i)
                 else:
-                    # Normalize accumulated explicit normal
                     n = vertex_normal_accum[i]
-                    l = np.linalg.norm(n)
-                    if l > 1e-9:
-                        vertex_normal_accum[i] = n / l
-                    else:
-                        need_fallback.append(i)
+                    vertex_normal_accum[i] = normalize_float(n)
         else:
-            # No source normals at all: all vertices need fallback.
             need_fallback = list(range(len(processed_vertices)))
 
         if need_fallback:
-            # Build adjacency from processed triangles
             for tri_idx, (a_idx, b_idx, c_idx) in enumerate(processed_triangles):
                 fn = per_triangle_face_normal[tri_idx]
-                l = np.linalg.norm(fn)
-                if l > 1e-9:
-                    fn_unit = fn / l
-                else:
-                    fn_unit = np.array([0.0, 0.0, 0.0])
+                fn_unit = normalize_float(fn)
                 for vidx in (a_idx, b_idx, c_idx):
                     if vidx in need_fallback:
                         vertex_normal_accum[vidx] += fn_unit
-
-            # Normalize fallback
             for vidx in need_fallback:
                 n = vertex_normal_accum[vidx]
-                l = np.linalg.norm(n)
-                if l > 1e-9:
-                    vertex_normal_accum[vidx] = n / l
-                else:
-                    vertex_normal_accum[vidx] = np.array([0.0, 0.0, 1.0])
+                vertex_normal_accum[vidx] = normalize_float(n)
 
         output_lines.append("    static constexpr vertex16_t VertexNormals[] PROGMEM\n    {")
         for i in range(len(processed_vertices)):
-            x, y, z = normalize_and_scale(vertex_normal_accum[i])
+            x, y, z = quantize_normal(vertex_normal_accum[i])
             output_lines.append(f"        {{{format_component(x)}, {format_component(y)}, {format_component(z)}}},")
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto VertexNormalCount = sizeof(VertexNormals) / sizeof(vertex16_t);\n")
 
+    # Face normals (quantized magnitude == NORMAL_SCALE)
     if emit_face_normals:
         output_lines.append("    static constexpr vertex16_t FaceNormals[] PROGMEM\n    {")
         for nvec in face_norm_vectors:
-            x, y, z = normalize_and_scale(nvec)
+            unit = normalize_float(nvec)
+            x, y, z = quantize_normal(unit)
             output_lines.append(f"        {{{format_component(x)}, {format_component(y)}, {format_component(z)}}},")
         output_lines.append("    };\n")
         output_lines.append("    constexpr auto FaceNormalCount = sizeof(FaceNormals) / sizeof(vertex16_t);\n")
