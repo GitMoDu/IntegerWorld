@@ -64,6 +64,12 @@ def main() -> int:
             continue
 
         stem, _ = os.path.splitext(name)
+
+        # New: per-object output subdirectory
+        object_out_dir = os.path.join(output_dir, stem)
+        ensure_dir(object_out_dir)
+        print(f"  Output folder: {object_out_dir}")
+
         for cfg in active_configs:
             out_ns = stem + cfg["name"]
             text = convert_to_custom_format(
@@ -77,7 +83,7 @@ def main() -> int:
                 emit_vertex_normals=cfg.get("emit_vertex_normals", False),
                 emit_face_normals=cfg.get("emit_face_normals", False),
             )
-            out_file = os.path.join(output_dir, f"{stem}{cfg['name']}.txt")
+            out_file = os.path.join(object_out_dir, f"{stem}{cfg['name']}.txt")
             try:
                 write_text(out_file, text)
                 print(f"    -> {out_file}")
