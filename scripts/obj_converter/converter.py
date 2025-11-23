@@ -185,6 +185,9 @@ def convert_to_custom_format(
                         vertex_normal_accum[vidx] += vn
                         vertex_normal_count[vidx] += 1
 
+    for a_idx, b_idx, c_idx in processed_triangles:
+        output_lines.append(f"        {{{a_idx}, {b_idx}, {c_idx}}},")
+
     output_lines.append("    };\n")
     output_lines.append("    constexpr auto TriangleCount = sizeof(Triangles) / sizeof(triangle_face_t);\n")
 
