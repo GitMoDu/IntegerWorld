@@ -36,9 +36,10 @@ def convert_to_custom_format(
         * Dimensions optionally rounded up to power-of-two if uv_force_pow2=True.
         * If all UVs are within [0,1], scale directly to pixel grid.
         * Otherwise normalize over min..max before quantization.
+      Mip levels: DO NOT go below 8 in any dimension (minimum mip dimension is 8x?).
       Arrays:
         static constexpr coordinate_t UVs{W}x{H}[UvCount] PROGMEM
-        Optional mips UVs{w}x{h}_L{level} for each halved dimension until 1x1.
+        Optional mips UVs{w}x{h}_L{level} until both width and height <= 8.
       Note: UvMipLevelCount includes the master level (level 0).
     """
     vertex_unit = 128
@@ -191,18 +192,15 @@ def convert_to_custom_format(
     # UV emission (only if a texture was found)
     has_texture_dims = texture_width is not None and texture_height is not None
     if emit_uv and has_texture_dims:
-        # Collect per-triangle vertex UV indices
         used_uv_indices: List[int] = []
         for tri, _ in triangles_with_materials:
             for idx_trip in tri:
                 uv_index = idx_trip[1]
                 used_uv_indices.append(uv_index if uv_index is not None else -1)
 
-        # Fallback UV generation if none present: simple planar projection (XY)
         if not texcoords:
             texcoords = [(float(v[0]), float(v[1])) for v in processed_vertices]
 
-        # Gather used u,v
         u_values: List[float] = []
         v_values: List[float] = []
         for uv_idx in used_uv_indices:
@@ -242,7 +240,6 @@ def convert_to_custom_format(
         output_lines.append(f"    static constexpr uint16_t UvMasterHeight = {height};\n")
         output_lines.append("    static constexpr uint16_t UvCount = TriangleCount * 3;\n")
 
-        # Precompute master integer UVs once
         master_uvs: List[Tuple[int, int]] = []
         for tri, _ in triangles_with_materials:
             for idx_trip in tri:
@@ -269,25 +266,37 @@ def convert_to_custom_format(
             output_lines.append(f"        {{{u_q}, {v_q}}},")
         output_lines.append("    };\n")
 
-        # Compute total level count (includes master)
+        # Minimum mip dimension threshold
+        MIN_MIP_DIM = 8
+
         def level_count(w: int, h: int) -> int:
             cnt = 1
-            while w > 1 or h > 1:
-                w = max(1, w // 2)
-                h = max(1, h // 2)
+            while w > MIN_MIP_DIM or h > MIN_MIP_DIM:
+                w_next = max(MIN_MIP_DIM, w // 2)
+                h_next = max(MIN_MIP_DIM, h // 2)
+                if w_next == w and h_next == h:
+                    break  # cannot reduce further without dropping below threshold
+                w, h = w_next, h_next
                 cnt += 1
             return cnt
 
         if emit_uv_mips:
             mip_w, mip_h = width, height
             level = 1
-            while mip_w > 1 or mip_h > 1:
-                mip_w = max(1, mip_w // 2)
-                mip_h = max(1, mip_h // 2)
+            while mip_w > MIN_MIP_DIM or mip_h > MIN_MIP_DIM:
+                mip_w_next = max(MIN_MIP_DIM, mip_w // 2)
+                mip_h_next = max(MIN_MIP_DIM, mip_h // 2)
+                if mip_w_next == mip_w and mip_h_next == mip_h:
+                    break
+                mip_w, mip_h = mip_w_next, mip_h_next
                 output_lines.append(f"    static constexpr coordinate_t UVs{mip_w}x{mip_h}_L{level}[UvCount] PROGMEM\n    {{")
                 for (u_q_master, v_q_master) in master_uvs:
-                    u_q = min(mip_w - 1, u_q_master >> level)
-                    v_q = min(mip_h - 1, v_q_master >> level)
+                    # Shift relative to master scale, then clamp to new bounds
+                    # Using level shift still fine; if dimensions stopped early, shift continues.
+                    shift_uv_u = u_q_master >> level
+                    shift_uv_v = v_q_master >> level
+                    u_q = min(mip_w - 1, shift_uv_u)
+                    v_q = min(mip_h - 1, shift_uv_v)
                     output_lines.append(f"        {{{u_q}, {v_q}}},")
                 output_lines.append("    };\n")
                 level += 1
@@ -308,11 +317,9 @@ def convert_to_custom_format(
         print(f"  Emitted {len(processed_vertices)} vertex normals.")
     if emit_face_normals:
         print(f"  Emitted {len(face_norm_vectors)} face normals.")
-    # UV diagnostics
     if emit_uv:
         if has_texture_dims:
-            # width/level only defined when UVs were emitted
-            print(f"  UVs: emitted (master {width}x{height}, mip levels {'on' if emit_uv_mips else 'off'}).")
+            print("  UVs: emitted (minimum mip dimension 8).")
         else:
             print("  UVs: skipped (no texture found).")
 
