@@ -35,6 +35,12 @@ def convert_to_custom_format(
       (v1, v3, v2). Averaged face normals (from vertex normals) are re-oriented to match the CW
       geometric normal. Vertex normals are also re-oriented by comparing with a stored reference
       CW geometric normal (first triangle encountered).
+
+    Flipped winding detection and normalization:
+      Detects whether the source faces are predominantly flipped relative to CW emission by
+      comparing the original face order normal with the CW geometric normal. Corner vertex normals
+      from the source are re-oriented per-triangle to match the CW geometric normal to avoid
+      cancellation and ensure consistent vertex normal accumulation.
     """
     vertex_unit = 128
     NORMAL_SCALE = 8192
@@ -126,6 +132,10 @@ def convert_to_custom_format(
 
     geometric_cw_normals: List[np.ndarray] = []
 
+    # Flipped winding detection stats (compare original order vs CW geo normal)
+    flipped_count = 0
+    total_count = 0
+
     for (v1i, v2i, v3i), material in triangles_with_materials:
         v1_idx, v2_idx, v3_idx = v1i[0], v2i[0], v3i[0]
 
@@ -141,13 +151,26 @@ def convert_to_custom_format(
         geo_face_normal_cw = np.cross(b_cw - a, c_cw - a)
         geometric_cw_normals.append(geo_face_normal_cw)
 
-        # Accumulate vertex normals from OBJ (original per-corner)
+        # Compare original face order normal (v1, v2, v3) to CW normal to detect flipped source winding.
+        b_src = processed_vertices[v2_idx]
+        c_src = processed_vertices[v3_idx]
+        src_face_normal = np.cross(b_src - a, c_src - a)  # original order normal
+        if np.linalg.norm(geo_face_normal_cw) > 1e-9 and np.linalg.norm(src_face_normal) > 1e-9:
+            total_count += 1
+            if np.dot(src_face_normal, geo_face_normal_cw) < 0:
+                flipped_count += 1
+
+        # Accumulate vertex normals from OBJ (original per-corner), re-orient per-triangle to CW.
         if emit_vertex_normals and normals:
             for (vidx, _, nidx) in (v1i, v2i, v3i):
                 if nidx is not None and 0 <= nidx < len(normals):
                     vn = np.array(normals[nidx], dtype=float)
                     if np.linalg.norm(vn) > 1e-9:
-                        vertex_normal_accum[vidx] += vn
+                        # Re-orient corner normal to match CW geometric normal to avoid cancellation.
+                        vn_adj = vn
+                        if np.linalg.norm(geo_face_normal_cw) > 1e-9 and np.dot(vn, geo_face_normal_cw) < 0:
+                            vn_adj = -vn
+                        vertex_normal_accum[vidx] += vn_adj
                         vertex_normal_count[vidx] += 1
                         # Capture a reference geometric CW normal once
                         if np.linalg.norm(vertex_reference_normal[vidx]) < 1e-9 and np.linalg.norm(geo_face_normal_cw) > 1e-9:
@@ -346,13 +369,20 @@ def convert_to_custom_format(
 
     output_lines.append("}\n")
 
+    # Emit diagnostics
     print(f"Processed {file_name}: CW triangles={len(processed_triangles)}; "
           f"vertex_normals={'yes' if emit_vertex_normals else 'no'}, face_normals={'yes' if emit_face_normals else 'no'}")
     if emit_vertex_normals:
-        print("  VertexNormals: oriented to CW geometric normals.")
+        print("  VertexNormals: oriented to CW geometric normals (corner normals re-oriented per triangle).")
     if emit_face_normals and face_norm_vectors:
         print("  FaceNormals: CW geometric or re-oriented averaged.")
     if emit_uv and (texture_width is not None and texture_height is not None):
         print("  UVs emitted.")
+
+    if total_count > 0:
+        flipped_ratio = flipped_count / total_count
+        print(f"  Winding check: flipped={flipped_count}/{total_count} ({flipped_ratio:.2%}) relative to CW.")
+        if flipped_ratio > 0.6:
+            print("  Source appears predominantly CCW vs CW emission; indices normalized to CW.")
 
     return "\n".join(output_lines)
