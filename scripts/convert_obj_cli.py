@@ -112,6 +112,7 @@ def main() -> int:
                 faces_with_materials=faces_with_materials,
                 file_name=out_ns,
                 center_vertices=cfg["center_vertices"],
+                assume_ccw_winding=cfg.get("assume_ccw_winding", False),
                 emit_vertex_normals=cfg.get("emit_vertex_normals", False),
                 emit_face_normals=cfg.get("emit_face_normals", False),
                 emit_uv=(emit_uv and cfg.get("emit_uv", False)),

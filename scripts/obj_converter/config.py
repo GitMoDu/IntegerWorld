@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
 
 # Configurations:
-# - All output emits CW indices and face normals.
-# - Variants differ only by whether vertices are centered.
+# - All output emits face normals and vertex normals.
+# - Variants differ by centering and triangle winding (CW vs CCW "inverted").
 
 OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
     {
@@ -12,6 +12,7 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "emit_face_normals": True,
         "emit_uv": True,
         "emit_uv_mips": True,
+        "assume_ccw_winding": False,  # default CW
     },
     {
         "name": "_centered",
@@ -20,5 +21,24 @@ OUTPUT_CONFIGURATIONS: List[Dict[str, Any]] = [
         "emit_face_normals": True,
         "emit_uv": True,
         "emit_uv_mips": True,
+        "assume_ccw_winding": False,  # default CW
+    },
+    {
+        "name": "_raw_inverted",
+        "center_vertices": False,
+        "emit_vertex_normals": True,
+        "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
+        "assume_ccw_winding": True,  # inverted CCW
+    },
+    {
+        "name": "_centered_inverted",
+        "center_vertices": True,
+        "emit_vertex_normals": True,
+        "emit_face_normals": True,
+        "emit_uv": True,
+        "emit_uv_mips": True,
+        "assume_ccw_winding": True,  # inverted CCW
     },
 ]
