@@ -201,7 +201,7 @@ namespace IntegerWorld
 							b = Rgb8::Blue(texel);
 						}
 
-						return Rgb8::Color(
+						return Rgb8::Color(a,
 							MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(r) * R) >> 8),
 							MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(g) * G) >> 8),
 							MinValue<uint16_t>(UINT8_MAX, (static_cast<uint16_t>(b) * B) >> 8));
