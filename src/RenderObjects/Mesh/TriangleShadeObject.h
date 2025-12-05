@@ -238,9 +238,9 @@ namespace IntegerWorld
 
 			public:
 				SimpleStaticMeshTriangleObject(const vertex16_t* vertices, const triangle_face_t* triangles)
-					: VerticesSource(vertices)
+					: Base(VerticesSource, TrianglesSource, AlbedosSource, MaterialsSource)
+					, VerticesSource(vertices)
 					, TrianglesSource(triangles)
-					, Base(VerticesSource, TrianglesSource, AlbedosSource, MaterialsSource)
 				{
 				}
 

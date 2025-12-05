@@ -91,12 +91,12 @@ namespace Assets
 
 		public:
 			CubeMeshObject()
-				: VertexSource(Shapes::Cube::Vertices)
-				, TriangleSource(Shapes::Cube::Triangles)
-				, AlbedoSource(Palletes::Cube::Albedos)
-				, Base(VertexSource, TriangleSource, AlbedoSource,
+				: Base(VertexSource, TriangleSource, AlbedoSource,
 					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					MockNormalSource)
+				, VertexSource(Shapes::Cube::Vertices)
+				, TriangleSource(Shapes::Cube::Triangles)
+				, AlbedoSource(Palletes::Cube::Albedos)
 			{
 			}
 		};
@@ -133,16 +133,16 @@ namespace Assets
 
 			IntegerWorld::PrimitiveSources::Vertex::Static::Source VertexSource;
 			IntegerWorld::PrimitiveSources::Triangle::Static::Source TriangleSource;
-			IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource AlbedoSource;
+
+			IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource AlbedoSource{};
 
 		public:
 			OctahedronMeshObject()
-				: VertexSource(Shapes::Octahedron::Vertices)
-				, TriangleSource(Shapes::Octahedron::Triangles)
-				, AlbedoSource()
-				, Base(VertexSource, TriangleSource, AlbedoSource,
+				: Base(VertexSource, TriangleSource, AlbedoSource,
 					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					MockNormalSource)
+				, VertexSource(Shapes::Octahedron::Vertices)
+				, TriangleSource(Shapes::Octahedron::Triangles)
 			{
 			}
 

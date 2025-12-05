@@ -233,9 +233,9 @@ namespace IntegerWorld
 
 			public:
 				SimpleStaticEdgeLineObject(const vertex16_t* vertices, const edge_line_t* edges)
-					: VerticesSource(vertices)
+					: Base(VerticesSource, EdgesSource, AlbedosSource, MaterialsSource)
+					, VerticesSource(vertices)
 					, EdgesSource(edges)
-					, Base(VerticesSource, EdgesSource, AlbedosSource, MaterialsSource)
 				{
 				}
 

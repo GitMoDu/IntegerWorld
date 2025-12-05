@@ -32,7 +32,7 @@ namespace IntegerWorld
 				/// </summary>
 				/// <param name="n">Input 16-bit signed value (typically a vertex/component value). The function biases the value by VERTEX16_UNIT, clamps the result to [0, 2*VERTEX16_UNIT], and then scales with rounding into the 0..255 range.</param>
 				/// <returns>An 8-bit unsigned value (0..255) representing the biased, clamped, and rounded result of the input.</returns>
-				static uint8_t U8Normal(const int16_t n)
+				inline uint8_t U8Normal(const int16_t n)
 				{
 					// Bias to [0 .. 2*UNIT] and clamp.
 					int32_t s = int32_t(n) + int32_t(VERTEX16_UNIT);

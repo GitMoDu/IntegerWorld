@@ -51,12 +51,12 @@ namespace IntegerWorld
 					MaterialSourceType& materialSource = const_cast<MaterialSourceType&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					NormalSourceType& normalSource = const_cast<NormalSourceType&>(PrimitiveSources::Normal::NormalNoSourceInstance)
 				)
-					: VertexSource(vertexSource)
+					: Base()
+					, VertexSource(vertexSource)
 					, EdgeSource(edgeSource)
 					, AlbedoSource(albedoSource)
 					, MaterialSource(materialSource)
 					, NormalSource(normalSource)
-					, Base()
 				{
 				}
 

@@ -140,7 +140,7 @@ namespace IntegerWorld
 			}
 		}
 
-		static uint8_t ClipAgainstEdge(const point2d_t* inPts, const uint8_t inCount, point2d_t* outPts, ClipEdgeEnum edge, const int16_t w, const int16_t h)
+		inline uint8_t ClipAgainstEdge(const point2d_t* inPts, const uint8_t inCount, point2d_t* outPts, ClipEdgeEnum edge, const int16_t w, const int16_t h)
 		{
 			uint8_t outCount = 0;
 			if (inCount == 0)

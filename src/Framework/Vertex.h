@@ -65,7 +65,7 @@ namespace IntegerWorld
 	/// If the input length is zero or already equal to VERTEX16_UNIT, the vertex is left unchanged.
 	/// </summary>
 	/// <param name="vertex">Reference to  vertex16_t to normalize.</param>
-	static void NormalizeVertex16(vertex16_t& vertex)
+	inline void NormalizeVertex16(vertex16_t& vertex)
 	{
 		// Calculate the squared length of the vector.
 		const uint32_t lengthSquared = static_cast<uint32_t>(static_cast<int32_t>(vertex.x) * vertex.x) +
@@ -87,7 +87,7 @@ namespace IntegerWorld
 		}
 	}
 
-	static vertex16_t GetNormal16(const vertex16_t& vectorA, const vertex16_t& vectorB)
+	inline vertex16_t GetNormal16(const vertex16_t& vectorA, const vertex16_t& vectorB)
 	{
 		int32_t normalX = (static_cast<int32_t>(vectorA.y) * vectorB.z)
 			- (static_cast<int32_t>(vectorA.z) * vectorB.y);
@@ -116,7 +116,7 @@ namespace IntegerWorld
 		};
 	}
 
-	static vertex16_t GetNormal16(const vertex16_t& vertexA, const vertex16_t& vertexB, const vertex16_t& vertexC)
+	inline vertex16_t GetNormal16(const vertex16_t& vertexA, const vertex16_t& vertexB, const vertex16_t& vertexC)
 	{
 		return GetNormal16(
 			{ static_cast<int16_t>(vertexB.x - vertexA.x),
@@ -127,7 +127,7 @@ namespace IntegerWorld
 			  static_cast<int16_t>(vertexC.z - vertexA.z) });
 	}
 
-	static uint16_t Distance16(const vertex16_t& a, const vertex16_t& b)
+	inline uint16_t Distance16(const vertex16_t& a, const vertex16_t& b)
 	{
 		// Calculate squared differences for each axis.
 		const int16_t dx = b.x - a.x;
@@ -151,7 +151,7 @@ namespace IntegerWorld
 	/// <param name="c">The third signed 16-bit input value.</param>
 	/// <returns>A signed 16-bit value containing the truncated, approximate average of the three inputs.
 	/// The result is computed using scaling and a fixed-point divide-by-3 approximation, so it may differ slightly from the exact arithmetic mean.</returns>
-	static int16_t AverageApproximate(const int16_t a, const int16_t b, const int16_t c)
+	inline int16_t AverageApproximate(const int16_t a, const int16_t b, const int16_t c)
 	{
 		// 3 value sum.
 		int32_t sum = static_cast<int32_t>(a) + b + c;

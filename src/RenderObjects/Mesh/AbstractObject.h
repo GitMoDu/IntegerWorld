@@ -50,13 +50,13 @@ namespace IntegerWorld
 					NormalSourceType& normalSource = const_cast<NormalSourceType&>(PrimitiveSources::Normal::NormalNoSourceInstance),
 					UvSourceType& uvSource = const_cast<UvSourceType&>(PrimitiveSources::Uv::NoUvSourceInstance)
 				)
-					: VertexSource(vertexSource)
+					: Base()
+					, VertexSource(vertexSource)
 					, TriangleSource(triangleSource)
 					, AlbedoSource(albedoSource)
 					, MaterialSource(materialSource)
 					, NormalSource(normalSource)
 					, UvSource(uvSource)
-					, Base()
 				{
 				}
 

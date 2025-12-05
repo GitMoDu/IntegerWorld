@@ -12,7 +12,7 @@ namespace IntegerWorld
 			static constexpr int16_t RangeMin = 1024;
 			static constexpr int16_t RangeMax = DRAW_DISTANCE_MAX;
 
-			static uint8_t ZDepth8(const int16_t z)
+			inline uint8_t ZDepth8(const int16_t z)
 			{
 				if (z >= RangeMax)
 				{
@@ -27,8 +27,8 @@ namespace IntegerWorld
 					return Curves::Power2U8<>::Get(UINT8_MAX - ((uint32_t(z - RangeMin) * UINT8_MAX) / uint32_t(RangeMax - RangeMin)));
 				}
 			}
-
-			static uint16_t ZDepth16(const int16_t z)
+			
+			inline uint16_t ZDepth16(const int16_t z)
 			{
 				if (z >= RangeMax)
 				{

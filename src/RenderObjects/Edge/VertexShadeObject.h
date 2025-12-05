@@ -152,9 +152,9 @@ namespace IntegerWorld
 							{
 								// Calculate edge normal from the vertex position in object space.
 								auto vertex = Vertices[primitiveIndex];
-								worldNormal = { vertex.x - WorldPosition.x,
-									vertex.y - WorldPosition.y,
-									vertex.z - WorldPosition.z };
+								worldNormal = { static_cast<int16_t>(vertex.x - WorldPosition.x),
+									static_cast<int16_t>(vertex.y - WorldPosition.y),
+									static_cast<int16_t>(vertex.z - WorldPosition.z) };
 								NormalizeVertex16(worldNormal);
 							}
 
@@ -244,9 +244,9 @@ namespace IntegerWorld
 			public:
 				SimpleStaticEdgeVertexObject(const vertex16_t* vertices,
 					const edge_line_t* edges)
-					: VerticesSource(vertices)
+					: Base(VerticesSource, EdgesSource, AlbedosSource, MaterialsSource)
+					, VerticesSource(vertices)
 					, EdgesSource(edges)
-					, Base(VerticesSource, EdgesSource, AlbedosSource, MaterialsSource)
 				{
 				}
 
