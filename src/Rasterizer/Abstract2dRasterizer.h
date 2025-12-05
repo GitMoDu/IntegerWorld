@@ -297,7 +297,6 @@ namespace IntegerWorld
 			// Fixed-point X positions for original vertices.
 			const int32_t fx0 = IntToFixed(x0);
 			const int32_t fx1 = IntToFixed(x1);
-			const int32_t fx2 = IntToFixed(x2);
 
 			// Sorted Y (already ensured by caller dispatch order).
 			const int16_t hTop = y1 - y0;      // Height of top segment.
