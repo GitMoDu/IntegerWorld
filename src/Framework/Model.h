@@ -71,12 +71,16 @@ namespace IntegerWorld
 		Dimension4096 = 12
 	};
 
-
 	struct material_t
 	{
-		// Surface roughness affecting light scattering. Inversely related to shininess.
+		// Surface emission color intensity.
+		ufraction8_t Emit;
+
+		// Surface roughness affecting light scattering.
 		ufraction8_t Rough;
 
+		// Surface shininess affecting specular intensity.
+		ufraction8_t Shine;
 		// Surface glossiness affecting specular and fresnel focus.
 		ufraction8_t Gloss;
 

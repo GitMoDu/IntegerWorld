@@ -110,8 +110,14 @@ namespace IntegerWorld
 					const Rgb8::component_t albedoG = Rgb8::Green(albedo);
 					const Rgb8::component_t albedoB = Rgb8::Blue(albedo);
 
-					// Shine is the inverse of roughness (used to scale specular).
-					const ufraction8_t materialShine = UFRACTION8_1X - material.Rough;
+					if (material.Emit != 0)
+					{
+						// Add emissive component (unaffected by lighting).
+						const Rgb8::component_t emitR = Fraction(material.Emit, albedoR);
+						const Rgb8::component_t emitG = Fraction(material.Emit, albedoG);
+						const Rgb8::component_t emitB = Fraction(material.Emit, albedoB);
+						AddShade(emitR, emitG, emitB);
+					}
 
 					vertex16_t illuminationVector; // L
 					vertex16_t viewVector;         // V
@@ -194,7 +200,7 @@ namespace IntegerWorld
 						}
 
 						// Specular path only if surface has shine (inverse roughness > 0).
-						if (materialShine > 0)
+						if (material.Shine > 0)
 						{
 							// Half-vector approximation: average L and V via arithmetic right shift.
 							vertex16_t halfVector = {
@@ -284,7 +290,7 @@ namespace IntegerWorld
 #endif
 						// Final material application:
 						diffuse = Fraction(material.Rough, diffuse);
-						specular = Fraction(materialShine, specular);
+						specular = Fraction(material.Shine, specular);
 
 						// Diffuse accumulation (Lambert * albedo * light color).
 #if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)

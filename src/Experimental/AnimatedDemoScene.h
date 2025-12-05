@@ -215,8 +215,8 @@ public:
 		ObjectFloor.Translation.z = BaseDistance;
 
 		// Configure object dynamic materials.
-		ObjectSphere.SetMaterial(material_t{ UFRACTION8_1X, UFRACTION8_1X / 3, 0, FRACTION8_NEGATIVE_1X / 2 });
-		ObjectStar.SetMaterial(material_t{ UFRACTION8_1X / 16, UFRACTION8_1X, UFRACTION8_1X, FRACTION8_1X / 8 });
+		ObjectSphere.SetMaterial(material_t{ 0, UFRACTION8_1X, 0, UFRACTION8_1X / 3, 0, FRACTION8_NEGATIVE_1X / 2 });
+		ObjectStar.SetMaterial(material_t{ 0, UFRACTION8_1X / 16, UFRACTION8_1X, UFRACTION8_1X, UFRACTION8_1X, FRACTION8_1X / 8 });
 
 		// Configure background shader.
 		ObjectBackground.FragmentShader = &BackgroundShader;

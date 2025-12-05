@@ -135,7 +135,7 @@ namespace IntegerWorld
 						}
 						else
 						{
-							primitiveMaterial = { UFRACTION8_1X, 0, 0, 0 };
+							primitiveMaterial = { 0, UFRACTION8_1X, 0, 0, 0, 0 };
 						}
 
 						vertex16_t worldNormal;
