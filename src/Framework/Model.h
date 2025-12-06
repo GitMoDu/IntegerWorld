@@ -293,19 +293,19 @@ namespace IntegerWorld
 				return false;
 
 			// Check against left plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingLeftPlane, point) > planeTolerance)
+			if (PlaneDistanceToPoint(cullingLeftPlane, point) > static_cast<int16_t>(planeTolerance))
 				return false;
 
 			// Check against right plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingRightPlane, point) > planeTolerance)
+			if (PlaneDistanceToPoint(cullingRightPlane, point) > static_cast<int16_t>(planeTolerance))
 				return false;
 
 			// Check against top plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingTopPlane, point) > planeTolerance)
+			if (PlaneDistanceToPoint(cullingTopPlane, point) > static_cast<int16_t>(planeTolerance))
 				return false;
 
 			// Check against bottom plane. Point must be on the "inside" side of the plane.
-			if (PlaneDistanceToPoint(cullingBottomPlane, point) > planeTolerance)
+			if (PlaneDistanceToPoint(cullingBottomPlane, point) > static_cast<int16_t>(planeTolerance))
 				return false;
 
 			// If it passed all plane tests, the point is inside the frustum.
