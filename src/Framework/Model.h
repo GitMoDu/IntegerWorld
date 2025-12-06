@@ -59,6 +59,9 @@ namespace IntegerWorld
 	/// </summary>
 	enum class TextureDimensionEnum : uint8_t
 	{
+		Dimension1 = 0,
+		Dimension2 = 1,
+		Dimension4 = 2,
 		Dimension8 = 3,
 		Dimension16 = 4,
 		Dimension32 = 5,
@@ -103,11 +106,14 @@ namespace IntegerWorld
 		static constexpr uint16_t Height = static_cast<uint16_t>(1) << static_cast<uint8_t>(heightDimension);
 	};
 
+	// Common texture size presets.
 	using TextureSize8x8 = TemplateTextureSize<TextureDimensionEnum::Dimension8, TextureDimensionEnum::Dimension8>;
 	using TextureSize16x16 = TemplateTextureSize<TextureDimensionEnum::Dimension16, TextureDimensionEnum::Dimension16>;
 	using TextureSize32x32 = TemplateTextureSize<TextureDimensionEnum::Dimension32, TextureDimensionEnum::Dimension32>;
 	using TextureSize64x64 = TemplateTextureSize<TextureDimensionEnum::Dimension64, TextureDimensionEnum::Dimension64>;
 	using TextureSize128x128 = TemplateTextureSize<TextureDimensionEnum::Dimension128, TextureDimensionEnum::Dimension128>;
+	using TextureSize64x128 = TemplateTextureSize<TextureDimensionEnum::Dimension64, TextureDimensionEnum::Dimension128>;
+	using TextureSize128x64 = TemplateTextureSize<TextureDimensionEnum::Dimension128, TextureDimensionEnum::Dimension64>;
 	using TextureSize256x256 = TemplateTextureSize<TextureDimensionEnum::Dimension256, TextureDimensionEnum::Dimension256>;
 
 	struct edge_line_t
