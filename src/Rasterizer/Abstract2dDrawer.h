@@ -228,26 +228,25 @@ namespace IntegerWorld
 			default: // General convex polygon (up to 6 vertices) -> triangulate as a fan.
 				for (uint8_t i = 1; i + 1 < clippedVertexCount; i++)
 				{
-					if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x &&
-						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
+					const bool allSamePoint =
+						(clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x) &&
+						(clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y);
+
+					if (allSamePoint)
 					{
 						// Degenerate triangle collapsed to a point.
 						Surface.Pixel(color, clippedPolygon[0].x, clippedPolygon[0].y);
 					}
-					else if (clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x ||
-						clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)
+					else if (!allSamePoint &&
+						((clippedPolygon[0].x == clippedPolygon[i].x && clippedPolygon[0].x == clippedPolygon[i + 1].x) || (clippedPolygon[0].y == clippedPolygon[i].y && clippedPolygon[0].y == clippedPolygon[i + 1].y)))
 					{
-						// Degenerate triangle collapsed to a line.
-						Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y,
-							clippedPolygon[i].x, clippedPolygon[i].y);
-						Surface.Line(color, clippedPolygon[i].x, clippedPolygon[i].y,
-							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
+						// Degenerate triangle collapsed to a line (two segments to preserve intended coverage).
+						Surface.Line(color, clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[i].x, clippedPolygon[i].y);
+						Surface.Line(color, clippedPolygon[i].x, clippedPolygon[i].y, clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
 					}
 					else
 					{
-						Surface.TriangleFill(color, clippedPolygon[0].x, clippedPolygon[0].y,
-							clippedPolygon[i].x, clippedPolygon[i].y,
-							clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
+						Surface.TriangleFill(color, clippedPolygon[0].x, clippedPolygon[0].y, clippedPolygon[i].x, clippedPolygon[i].y, clippedPolygon[i + 1].x, clippedPolygon[i + 1].y);
 					}
 				}
 				break;
