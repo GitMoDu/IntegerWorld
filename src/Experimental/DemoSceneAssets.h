@@ -418,10 +418,10 @@ namespace Assets
 
 		public:
 			CubeMeshTriangleObject()
-				: VerticesSource(Cube::Vertices)
+				: Base(VerticesSource, TrianglesSource, AlbedosSource)
+				, VerticesSource(Cube::Vertices)
 				, TrianglesSource(Cube::Triangles)
 				, AlbedosSource(Palletes::Cube::Albedos, Palletes::Cube::AlbedoPallete)
-				, Base(VerticesSource, TrianglesSource, AlbedosSource)
 			{
 			}
 		};
@@ -458,14 +458,14 @@ namespace Assets
 
 		public:
 			CubeTexturedTriangleObject()
-				: VerticesSource(Cube::Vertices)
-				, TrianglesSource(Cube::Triangles)
-				, UvsSource(Assets::Uvs::Cube::UVs)
-				, Base(VerticesSource, TrianglesSource,
+				: Base(VerticesSource, TrianglesSource,
 					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
 					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					const_cast<PrimitiveSources::Normal::Static::NoSource&>(PrimitiveSources::Normal::NormalNoSourceInstance),
 					UvsSource)
+				, VerticesSource(Cube::Vertices)
+				, TrianglesSource(Cube::Triangles)
+				, UvsSource(Assets::Uvs::Cube::UVs)
 			{
 			}
 		};
@@ -500,14 +500,14 @@ namespace Assets
 
 		public:
 			CubeTexturedVertexObject()
-				: VerticesSource(Cube::Vertices)
-				, TrianglesSource(Cube::Triangles)
-				, UvsSource(Assets::Uvs::Cube::UVs)
-				, Base(VerticesSource, TrianglesSource,
+				: Base(VerticesSource, TrianglesSource,
 					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
 					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					const_cast<PrimitiveSources::Normal::Static::NoSource&>(PrimitiveSources::Normal::NormalNoSourceInstance),
 					UvsSource)
+				, VerticesSource(Cube::Vertices)
+				, TrianglesSource(Cube::Triangles)
+				, UvsSource(Assets::Uvs::Cube::UVs)
 			{
 			}
 		};
@@ -568,12 +568,12 @@ namespace Assets
 
 		public:
 			FloorPointCloudObject()
-				: VertexSource(Grid8x8::Vertices)
-				, NormalSource()
-				, Base(VertexSource,
+				: Base(VertexSource,
 					const_cast<PrimitiveSources::Albedo::Static::FullSource&>(PrimitiveSources::Albedo::FullAlbedoSourceInstance),
 					const_cast<PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
 					NormalSource)
+				, VertexSource(Grid8x8::Vertices)
+				, NormalSource()
 			{
 			}
 
@@ -708,10 +708,10 @@ namespace Assets
 
 		public:
 			CubeTexturedTriangleLitShader()
-				: TextureSource(Texture::Cube::Atlas, Texture::Cube::Width)
-				, Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
+				: Mesh::FragmentShaders::TriangleShade::TemplateTextureShader<
 				TextureSourceType,
 				TextureTriangleLitPixelShaderType>(TextureSource)
+				, TextureSource(Texture::Cube::Atlas)
 			{
 			}
 		};

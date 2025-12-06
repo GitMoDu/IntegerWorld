@@ -11,7 +11,7 @@ namespace Assets
 		{
 			static constexpr uint8_t UvCount = size_t(Shapes::Cube::TriangleCount) * 3;
 
-			static constexpr coordinate_t UVs[UvCount] PROGMEM
+			static constexpr uv_t UVs[UvCount] PROGMEM
 			{
 				// FRONT (-Z) cell (1,1)
 				{32,32}, {63,63}, {63,32},   // {0,2,1}
