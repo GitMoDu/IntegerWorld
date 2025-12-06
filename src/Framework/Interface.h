@@ -208,8 +208,14 @@ namespace IntegerWorld
 		virtual void FragmentShade(WindowRasterizer& rasterizer, const uint16_t primitiveIndex) = 0;
 	};
 
+	/// <summary>
+	/// Class interface for receiving notifications when a frame starts.
+	/// </summary>
 	struct IFrameListener
 	{
+		/// <summary>
+		/// Notifies that a new frame is starting.
+		/// </summary>
 		virtual void OnFrameStart() = 0;
 	};
 
