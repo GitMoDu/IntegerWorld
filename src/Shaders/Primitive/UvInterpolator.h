@@ -21,7 +21,7 @@ namespace IntegerWorld
 			static constexpr auto Bias = 1;
 
 		private:
-			coordinate_t UvA{}, UvB{}, UvC{};
+			uv_t UvA{}, UvB{}, UvC{};
 
 		public:
 			UvInterpolator() {}
@@ -34,18 +34,20 @@ namespace IntegerWorld
 				UvC = fragment.uvC;
 			}
 
-			coordinate_t UvFast(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
+			uv_t UvFast(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
 			{
-				return coordinate_t{
-					static_cast<int16_t>(Fraction<int16_t>(fractionA, UvA.x + Bias) +
-					 Fraction<int16_t>(fractionB, UvB.x + Bias) +
-					Fraction<int16_t>(fractionC, UvC.x + Bias)),
-					static_cast<int16_t>(Fraction<int16_t>(fractionA, UvA.y + Bias) +
-					 Fraction<int16_t>(fractionB, UvB.y + Bias) +
-					 Fraction<int16_t>(fractionC, UvC.y + Bias)) };
+				return uv_t{
+					static_cast<uint8_t>(
+						Fraction(fractionA, static_cast<uint16_t>(UvA.x) + Bias) +
+						Fraction(fractionB, static_cast<uint16_t>(UvB.x) + Bias) +
+						Fraction(fractionC, static_cast<uint16_t>(UvC.x) + Bias)),
+					static_cast<uint8_t>(
+						Fraction(fractionA, static_cast<uint16_t>(UvA.y) + Bias) +
+						Fraction(fractionB, static_cast<uint16_t>(UvB.y) + Bias) +
+						Fraction(fractionC, static_cast<uint16_t>(UvC.y) + Bias)) };
 			}
 
-			coordinate_t UvAccurate(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
+			uv_t UvAccurate(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
 			{
 				const uint32_t sum = static_cast<uint32_t>(fractionA) + fractionB + fractionC;
 
@@ -57,9 +59,9 @@ namespace IntegerWorld
 					+ static_cast<uint32_t>(UvB.y) * fractionB
 					+ static_cast<uint32_t>(UvC.y) * fractionC;
 
-				return coordinate_t{
-						static_cast<int16_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numU + SignedRightShift(sum, 1)) / sum))),
-						static_cast<int16_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numV + SignedRightShift(sum, 1)) / sum))) };
+				return uv_t{
+						static_cast<uint8_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numU + SignedRightShift(sum, 1)) / sum))),
+						static_cast<uint8_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numV + SignedRightShift(sum, 1)) / sum))) };
 			}
 		};
 	}

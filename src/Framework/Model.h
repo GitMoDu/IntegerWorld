@@ -64,11 +64,7 @@ namespace IntegerWorld
 		Dimension32 = 5,
 		Dimension64 = 6,
 		Dimension128 = 7,
-		Dimension256 = 8,
-		Dimension512 = 9,
-		Dimension1024 = 10,
-		Dimension2048 = 11,
-		Dimension4096 = 12
+		Dimension256 = 8
 	};
 
 	struct material_t
@@ -81,6 +77,7 @@ namespace IntegerWorld
 
 		// Surface shininess affecting specular intensity.
 		ufraction8_t Shine;
+
 		// Surface glossiness affecting specular and fresnel focus.
 		ufraction8_t Gloss;
 
@@ -113,7 +110,6 @@ namespace IntegerWorld
 	using TextureSize128x128 = TemplateTextureSize<TextureDimensionEnum::Dimension128, TextureDimensionEnum::Dimension128>;
 	using TextureSize256x256 = TemplateTextureSize<TextureDimensionEnum::Dimension256, TextureDimensionEnum::Dimension256>;
 
-
 	struct edge_line_t
 	{
 		uint16_t a;
@@ -127,17 +123,17 @@ namespace IntegerWorld
 		uint16_t c;
 	};
 
-	struct coordinate_t
+	struct uv_t
 	{
-		int16_t x;
-		int16_t y;
+		uint8_t x;
+		uint8_t y;
 	};
 
 	struct triangle_uv_t
 	{
-		coordinate_t a;
-		coordinate_t b;
-		coordinate_t c;
+		uv_t a;
+		uv_t b;
+		uv_t c;
 	};
 
 	struct billboard_fragment_t
@@ -202,9 +198,9 @@ namespace IntegerWorld
 		vertex16_t vertexB;
 		vertex16_t vertexC;
 
-		coordinate_t uvA;
-		coordinate_t uvB;
-		coordinate_t uvC;
+		uv_t uvA;
+		uv_t uvB;
+		uv_t uvC;
 
 		uint16_t index;
 		int16_t z;
@@ -220,9 +216,9 @@ namespace IntegerWorld
 		vertex16_t vertexB;
 		vertex16_t vertexC;
 
-		coordinate_t uvA;
-		coordinate_t uvB;
-		coordinate_t uvC;
+		uv_t uvA;
+		uv_t uvB;
+		uv_t uvC;
 
 		uint16_t index;
 		int16_t z;

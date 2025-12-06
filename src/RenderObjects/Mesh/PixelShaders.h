@@ -126,7 +126,7 @@ namespace IntegerWorld
 					Rgb8::color_t operator()(const int16_t x, const int16_t y)
 					{
 						const auto fractions = Sampler.GetWeights(x, y).GetFractions();
-						coordinate_t uv;
+						uv_t uv;
 						switch (uvInterpolationMode)
 						{
 						case PrimitiveShaders::UvInterpolationModeEnum::Fast:
@@ -177,7 +177,7 @@ namespace IntegerWorld
 					{
 						const auto fractions = Sampler.GetWeights(x, y).GetFractions();
 
-						coordinate_t uv;
+						uv_t uv;
 						switch (uvInterpolationMode)
 						{
 						case PrimitiveShaders::UvInterpolationModeEnum::Fast:
@@ -254,7 +254,7 @@ namespace IntegerWorld
 						uint8_t g;
 						uint8_t b;
 						{
-							coordinate_t uv;
+							uv_t uv;
 							switch (uvInterpolationMode)
 							{
 							case PrimitiveShaders::UvInterpolationModeEnum::Fast:

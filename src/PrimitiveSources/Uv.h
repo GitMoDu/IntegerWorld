@@ -21,45 +21,51 @@ namespace IntegerWorld
 					static constexpr triangle_uv_t GetUvs(const uint16_t triangleIndex)
 					{
 						return triangle_uv_t{
-							coordinate_t{ 0, 0 },
-							coordinate_t{ 0, 0 },
-							coordinate_t{ 0, 0 }
-						};
+							uv_t{ 0, 0 },
+							uv_t{ 0, 0 },
+							uv_t{ 0, 0 } };
 					}
 				};
 
 				class Source
 				{
 				private:
-					const coordinate_t* UvMap = nullptr;
+					const uv_t* UvMap = nullptr;
 
+#if defined(ARDUINO_ARCH_AVR)
 					triangle_uv_t Uvs{};
+#endif
 
 				public:
-					Source(const coordinate_t* uvMap) : UvMap(uvMap) {}
+					Source(const uv_t* uvMap) : UvMap(uvMap) {}
 
 					static constexpr bool HasUvs()
 					{
 						return true;
 					}
 
+#if defined(ARDUINO_ARCH_AVR)
 					const triangle_uv_t& GetUvs(const uint16_t triangleIndex)
 					{
 						const size_t baseIndex = static_cast<size_t>(triangleIndex) * 3;
 
-#if defined(ARDUINO_ARCH_AVR)
-						Uvs.a.x = (int16_t)pgm_read_word(&UvMap[baseIndex + 0].x);
-						Uvs.a.y = (int16_t)pgm_read_word(&UvMap[baseIndex + 0].y);
-						Uvs.b.x = (int16_t)pgm_read_word(&UvMap[baseIndex + 1].x);
-						Uvs.b.y = (int16_t)pgm_read_word(&UvMap[baseIndex + 1].y);
-						Uvs.c.x = (int16_t)pgm_read_word(&UvMap[baseIndex + 2].x);
-						Uvs.c.y = (int16_t)pgm_read_word(&UvMap[baseIndex + 2].y);
+						Uvs.a.x = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 0].x);
+						Uvs.a.y = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 0].y);
+						Uvs.b.x = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 1].x);
+						Uvs.b.y = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 1].y);
+						Uvs.c.x = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 2].x);
+						Uvs.c.y = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 2].y);
+					}
 #else
-						Uvs.a = UvMap[baseIndex + 0];
-						Uvs.b = UvMap[baseIndex + 1];
-						Uvs.c = UvMap[baseIndex + 2];
+					triangle_uv_t GetUvs(const uint16_t triangleIndex) const
+					{
+						const size_t baseIndex = static_cast<size_t>(triangleIndex) * 3;
+
+						return triangle_uv_t{
+							UvMap[baseIndex + 0],
+							UvMap[baseIndex + 1],
+							UvMap[baseIndex + 2] };
 #endif
-						return Uvs;
 					}
 				};
 			}

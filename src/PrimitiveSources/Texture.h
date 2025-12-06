@@ -25,12 +25,12 @@ namespace IntegerWorld
 					/// <summary>Pointer to texel data.</summary>
 					const Rgb8::color_t* Texels = nullptr;
 
-					static constexpr uint16_t WidthMask = TextureSize::Width - 1;
-					static constexpr uint16_t HeightMask = TextureSize::Height - 1;
+					static constexpr uint8_t WidthMask = TextureSize::Width - 1;
+					static constexpr uint8_t HeightMask = TextureSize::Height - 1;
 
 				public:
-					int16_t OffsetX = 0;
-					int16_t OffsetY = 0;
+					int8_t OffsetX = 0;
+					int8_t OffsetY = 0;
 
 				public:
 					/// <summary>
@@ -61,9 +61,10 @@ namespace IntegerWorld
 					/// <param name="u">Horizontal texel coordinate (column index).</param>
 					/// <param name="v">Vertical texel coordinate (row index).</param>
 					/// <returns>Texel color at (u, v).</returns>
-					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
+					Rgb8::color_t GetTexel(const uint8_t u, const uint8_t v) const
 					{
-						const size_t index = ((static_cast<size_t>((v + OffsetY) & HeightMask) * TextureSize::Width) + ((u + OffsetX) & WidthMask));
+						const uint16_t index = ((static_cast<uint16_t>(static_cast<uint8_t>(v + OffsetY) & HeightMask) * TextureSize::Width)
+							+ (static_cast<uint8_t>(u + OffsetX) & WidthMask));
 #if defined(ARDUINO_ARCH_AVR)
 						return static_cast<Rgb8::color_t>(pgm_read_dword(&Texels[index]));
 #else
@@ -89,12 +90,12 @@ namespace IntegerWorld
 					/// <summary>External texel buffer (mutable).</summary>
 					Rgb8::color_t* Texels;
 
-					static constexpr uint16_t WidthMask = TextureSize::Width - 1;
-					static constexpr uint16_t HeightMask = TextureSize::Height - 1;
+					static constexpr uint8_t WidthMask = TextureSize::Width - 1;
+					static constexpr uint8_t HeightMask = TextureSize::Height - 1;
 
 				public:
-					int16_t OffsetX = 0;
-					int16_t OffsetY = 0;
+					int8_t OffsetX = 0;
+					int8_t OffsetY = 0;
 
 				public:
 					/// <summary>
@@ -126,9 +127,10 @@ namespace IntegerWorld
 					/// <param name="u">Horizontal texel coordinate (column index).</param>
 					/// <param name="v">Vertical texel coordinate (row index).</param>
 					/// <returns>Texel color at (u, v).</returns>
-					Rgb8::color_t GetTexel(const uint16_t u, const uint16_t v) const
+					Rgb8::color_t GetTexel(const uint8_t u, const uint8_t v) const
 					{
-						const size_t index = ((static_cast<size_t>((v + OffsetY) & HeightMask) * TextureSize::Width) + ((u + OffsetX) & WidthMask));
+						const uint16_t index = ((static_cast<uint16_t>(static_cast<uint8_t>(v + OffsetY) & HeightMask) * TextureSize::Width)
+							+ (static_cast<uint8_t>(u + OffsetX) & WidthMask));
 
 						return static_cast<Rgb8::color_t>(Texels[index]);
 					}
