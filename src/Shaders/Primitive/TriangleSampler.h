@@ -16,13 +16,12 @@ namespace IntegerWorld
 
 		struct triangle_sample_weights_t
 		{
-			int16_t WeightA;
-			int16_t WeightB;
-			int16_t WeightC;
+			uint16_t WeightA;
+			uint16_t WeightB;
+			uint16_t WeightC;
 
 			triangle_sample_fractions_t GetFractions() const
 			{
-				//const uint16_t totalWeight = MinValue<uint32_t>(UINT16_MAX, static_cast<uint32_t>(WeightA) + WeightB + WeightC);
 				const uint16_t totalWeight = static_cast<uint16_t>(WeightA) + WeightB + WeightC;
 
 				// Weights are already normalized to fit in int16_t and properly perspective-corrected.
@@ -124,7 +123,7 @@ namespace IntegerWorld
 			template<typename fragment_t>
 			bool SetFragmentData(const fragment_t& fragment)
 			{
-				return SetTriangle(fragment);
+				return Abstract::AbstractSampler::SetTriangle(fragment);
 			}
 
 			/// <summary>
@@ -147,16 +146,16 @@ namespace IntegerWorld
 					// Map back to original vertex order if we swapped.
 					if (Swapped)
 					{
-						const uint16_t temp = wB;
+						const int16_t temp = wB;
 						wB = wC;
 						wC = temp;
 					}
 				}
 
 				return triangle_sample_weights_t{
-					MaxValue<int16_t>(wA, 0),
-					MaxValue<int16_t>(wB, 0),
-					MaxValue<int16_t>(wC, 0) };
+					static_cast<uint16_t>(MaxValue<int16_t>(wA, 0)),
+					static_cast<uint16_t>(MaxValue<int16_t>(wB, 0)),
+					static_cast<uint16_t>(MaxValue<int16_t>(wC, 0)) };
 			}
 		};
 
@@ -168,11 +167,11 @@ namespace IntegerWorld
 		{
 		private:
 			// Q format parameters for perspective correction.
-			static constexpr uint8_t Qbits = 24;
-			static constexpr uint32_t Qscale = static_cast<uint32_t>(1) << Qbits;
+			static constexpr uint8_t Qbits = 16;
+			static constexpr int32_t Qscale = static_cast<uint32_t>(1) << Qbits;
 
 			// Perspective-correction reciprocals (Qi = (1<<qBits)/z_i).
-			uint16_t Qa{}, Qb{}, Qc{};
+			ufraction16_t QfractionA{}, QfractionB{}, QfractionC{};
 
 		public:
 			TrianglePerspectiveCorrectSampler() : Abstract::AbstractSampler() {}
@@ -190,9 +189,14 @@ namespace IntegerWorld
 				if (!Abstract::AbstractSampler::SetTriangle(fragment))
 					return false;
 
-				Qa = Qscale / MaxValue<int16_t>(1, fragment.vertexA.z);
-				Qb = Qscale / MaxValue<int16_t>(1, fragment.vertexB.z);
-				Qc = Qscale / MaxValue<int16_t>(1, fragment.vertexC.z);
+				const uint16_t Qa = fragment.vertexA.z <= 1 ? Qscale : Qscale / fragment.vertexA.z;
+				const uint16_t Qb = fragment.vertexB.z <= 1 ? Qscale : Qscale / fragment.vertexB.z;
+				const uint16_t Qc = fragment.vertexC.z <= 1 ? Qscale : Qscale / fragment.vertexC.z;
+
+				const uint16_t sum = static_cast<uint16_t>(Qa) + Qb + Qc;
+				QfractionA = UFraction16::GetScalar<uint16_t>(Qa, sum);
+				QfractionB = UFraction16::GetScalar<uint16_t>(Qb, sum);
+				QfractionC = UFraction16::GetScalar<uint16_t>(Qc, sum);
 
 				return true;
 			}
@@ -206,47 +210,29 @@ namespace IntegerWorld
 			/// Each weight is non-negative and scaled down if necessary so the total fits within INT16_MAX while preserving relative ratios.</returns>
 			triangle_sample_weights_t GetWeights(const int16_t x, const int16_t y) const
 			{
-				uint32_t nA{}, nB{}, nC{};
+				int16_t wA{}, wB{}, wC{};
 				{
-					int16_t wA{}, wB{}, wC{};
+					const int16_t xmCx = x - Cx;
+					const int16_t ymCy = y - Cy;
+
+					wA = (static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy);
+					wB = (static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy);
+					wC = static_cast<int16_t>(ReducedArea) - wA - wB;
+
+					// Map back to original vertex order if we swapped.
+					if (Swapped)
 					{
-						const int16_t xmCx = x - Cx;
-						const int16_t ymCy = y - Cy;
-
-						wA = (static_cast<int32_t>(BmCy) * xmCx) + (static_cast<int32_t>(CmBx) * ymCy);
-						wB = (static_cast<int32_t>(CmAy) * xmCx) + (static_cast<int32_t>(AmCx) * ymCy);
-						wC = static_cast<int16_t>(ReducedArea) - wA - wB;
-
-						wA = MaxValue<int16_t>(wA, 0);
-						wB = MaxValue<int16_t>(wB, 0);
-						wC = MaxValue<int16_t>(wC, 0);
-
-						// Map back to original vertex order if we swapped.
-						if (Swapped)
-						{
-							const uint16_t temp = wB;
-							wB = wC;
-							wC = temp;
-						}
+						const int16_t temp = wB;
+						wB = wC;
+						wC = temp;
 					}
-
-					nA = static_cast<uint32_t>(wA) * Qa;
-					nB = static_cast<uint32_t>(wB) * Qb;
-					nC = static_cast<uint32_t>(wC) * Qc;
 				}
 
-				// Normalize to fit in int16_t if needed, preserving ratios.
-				while ((nA + nB + nC) > INT16_MAX)
-				{
-					nA >>= 1;
-					nB >>= 1;
-					nC >>= 1;
-				}
-
+				// Scale weights by perspective-correction Q fractions.
 				return triangle_sample_weights_t{
-					static_cast<int16_t>(nA),
-					static_cast<int16_t>(nB),
-					static_cast<int16_t>(nC) };
+					Fraction<uint16_t>(QfractionA, MaxValue<int16_t>(wA, 0)),
+					Fraction<uint16_t>(QfractionB, MaxValue<int16_t>(wB, 0)),
+					Fraction<uint16_t>(QfractionC, MaxValue<int16_t>(wC, 0)) };
 			}
 		};
 	}
