@@ -49,19 +49,21 @@ namespace IntegerWorld
 
 			uv_t UvAccurate(const ufraction16_t fractionA, const ufraction16_t fractionB, const ufraction16_t fractionC) const
 			{
-				const uint32_t sum = static_cast<uint32_t>(fractionA) + fractionB + fractionC;
+				const uint16_t sum = MaxValue<uint16_t>(1, static_cast<uint16_t>(fractionA) + fractionB + fractionC);
 
 				const uint32_t numU = static_cast<uint32_t>(UvA.x) * fractionA
 					+ static_cast<uint32_t>(UvB.x) * fractionB
-					+ static_cast<uint32_t>(UvC.x) * fractionC;
+					+ static_cast<uint32_t>(UvC.x) * fractionC
+					+ Bias;
 
 				const uint32_t numV = static_cast<uint32_t>(UvA.y) * fractionA
 					+ static_cast<uint32_t>(UvB.y) * fractionB
-					+ static_cast<uint32_t>(UvC.y) * fractionC;
+					+ static_cast<uint32_t>(UvC.y) * fractionC
+					+ Bias;
 
 				return uv_t{
-						static_cast<uint8_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numU + SignedRightShift(sum, 1)) / sum))),
-						static_cast<uint8_t>(MaxValue<uint32_t>(0, static_cast<uint32_t>((numV + SignedRightShift(sum, 1)) / sum))) };
+					static_cast<uint8_t>(numU / sum),
+					static_cast<uint8_t>(numV / sum) };
 			}
 		};
 	}
