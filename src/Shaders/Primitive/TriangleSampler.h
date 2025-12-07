@@ -168,7 +168,7 @@ namespace IntegerWorld
 		private:
 			// Q format parameters for perspective correction.
 			static constexpr uint8_t Qbits = 16;
-			static constexpr int32_t Qscale = static_cast<uint32_t>(1) << Qbits;
+			static constexpr uint32_t Qscale = static_cast<uint32_t>(1) << Qbits;
 
 			// Perspective-correction reciprocals (Qi = (1<<qBits)/z_i).
 			ufraction16_t QfractionA{}, QfractionB{}, QfractionC{};
@@ -189,14 +189,14 @@ namespace IntegerWorld
 				if (!Abstract::AbstractSampler::SetTriangle(fragment))
 					return false;
 
-				const uint16_t Qa = fragment.vertexA.z <= 1 ? Qscale : Qscale / fragment.vertexA.z;
-				const uint16_t Qb = fragment.vertexB.z <= 1 ? Qscale : Qscale / fragment.vertexB.z;
-				const uint16_t Qc = fragment.vertexC.z <= 1 ? Qscale : Qscale / fragment.vertexC.z;
+				const uint16_t qA = fragment.vertexA.z <= 1 ? Qscale : Qscale / fragment.vertexA.z;
+				const uint16_t qB = fragment.vertexB.z <= 1 ? Qscale : Qscale / fragment.vertexB.z;
+				const uint16_t qC = fragment.vertexC.z <= 1 ? Qscale : Qscale / fragment.vertexC.z;
 
-				const uint16_t sum = static_cast<uint16_t>(Qa) + Qb + Qc;
-				QfractionA = UFraction16::GetScalar<uint16_t>(Qa, sum);
-				QfractionB = UFraction16::GetScalar<uint16_t>(Qb, sum);
-				QfractionC = UFraction16::GetScalar<uint16_t>(Qc, sum);
+				const uint16_t sum = static_cast<uint16_t>(qA) + qB + qC;
+				QfractionA = UFraction16::GetScalar<uint16_t>(qA, sum);
+				QfractionB = UFraction16::GetScalar<uint16_t>(qB, sum);
+				QfractionC = UFraction16::GetScalar<uint16_t>(qC, sum);
 
 				return true;
 			}
