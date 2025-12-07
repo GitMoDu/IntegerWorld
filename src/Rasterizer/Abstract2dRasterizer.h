@@ -304,8 +304,8 @@ namespace IntegerWorld
 			const int16_t hTotal = y2 - y0;    // Total height.
 
 			// Fixed-point per-scanline X deltas along each relevant edge.
-			const int32_t dxLong = (hTotal != 0) ? (IntToFixed(x2 - x0) / hTotal) : 0; // Edge x0->x2
-			const int32_t dxTop = (hTop != 0) ? (IntToFixed(x1 - x0) / hTop) : 0; // Edge x0->x1
+			const int32_t dxLong = (hTotal != 0) ? (IntToFixed(x2 - x0) / hTotal) : 0;   // Edge x0->x2
+			const int32_t dxTop = (hTop != 0) ? (IntToFixed(x1 - x0) / hTop) : 0;        // Edge x0->x1
 			const int32_t dxBottom = (hBottom != 0) ? (IntToFixed(x2 - x1) / hBottom) : 0; // Edge x1->x2
 
 			// Determine orientation: compare long edge X at y1 vs actual x1.
@@ -322,8 +322,9 @@ namespace IntegerWorld
 
 				for (int_fast16_t y = y0; y < y1; y++)
 				{
-					const int16_t startX = FixedCeilToInt(MinValue<int32_t>(fxLeft, fxRight));
-					const int16_t endX = FixedCeilToInt(MaxValue<int32_t>(fxLeft, fxRight)) - 1;
+					// Top-left rule: left edge ceil, right edge ceil - 1 (half-open on the right).
+					const int16_t startX = FixedCeilToInt(fxLeft);
+					const int16_t endX = FixedCeilToInt(fxRight) - 1;
 
 					if (startX <= endX)
 					{
@@ -342,13 +343,14 @@ namespace IntegerWorld
 				// Working scanline edge positions and steps.
 				const int32_t stepLeft = longEdgeIsLeft ? dxLong : dxBottom;
 				const int32_t stepRight = longEdgeIsLeft ? dxBottom : dxLong;
-				int32_t fxLeft = longEdgeIsLeft ? fx0 + dxLong * hTop : fx1;
-				int32_t fxRight = longEdgeIsLeft ? fx1 : fx0 + dxLong * hTop;
+				int32_t fxLeft = longEdgeIsLeft ? (fx0 + dxLong * hTop) : fx1;
+				int32_t fxRight = longEdgeIsLeft ? fx1 : (fx0 + dxLong * hTop);
 
 				for (int_fast16_t y = y1; y < y2; y++)
 				{
-					const int16_t startX = FixedCeilToInt(MinValue<int32_t>(fxLeft, fxRight));
-					const int16_t endX = FixedCeilToInt(MaxValue<int32_t>(fxLeft, fxRight)) - 1;
+					// Top-left rule: left edge ceil, right edge ceil - 1 (half-open on the right).
+					const int16_t startX = FixedCeilToInt(fxLeft);
+					const int16_t endX = FixedCeilToInt(fxRight) - 1;
 
 					if (startX <= endX)
 					{
