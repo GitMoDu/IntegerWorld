@@ -167,7 +167,7 @@ namespace IntegerWorld
 				/// Collects primitives that passed culling, pushing them to the fragment collector
 				/// with their depth key for later sorting.
 				/// </summary>
-				void FragmentCollect(FragmentCollector& fragmentCollector) final
+				virtual void FragmentCollect(FragmentCollector& fragmentCollector) override
 				{
 					for (uint_fast16_t i = 0; i < TriangleCount; i++)
 					{
