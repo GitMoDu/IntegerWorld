@@ -38,12 +38,14 @@ namespace IntegerWorld
 			{
 				class Source
 				{
-				private:
+				public:
 					// External vertex array.
 					vertex16_t* Vertices = nullptr;
 
 				public:
-					Source(vertex16_t* vertices) : Vertices(vertices) {}
+					Source(vertex16_t* vertices = nullptr)
+						: Vertices(vertices) {
+					}
 
 					vertex16_t GetVertex(const uint16_t index) const
 					{
