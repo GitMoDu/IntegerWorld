@@ -262,7 +262,6 @@ namespace IntegerWorld
 						// Fresnel redistribution.
 #if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
 						if (Fresnel)
-						{
 #endif					
 							if (fresnel > 0)
 							{
@@ -285,9 +284,7 @@ namespace IntegerWorld
 									diffuse = Fraction(fresnel, diffuse);
 								}
 							}
-#if defined(INTEGER_WORLD_LIGHTS_SHADER_DEBUG)
-						}
-#endif
+
 						// Final material application:
 						diffuse = Fraction(material.Rough, diffuse);
 						specular = Fraction(material.Shine, specular);
