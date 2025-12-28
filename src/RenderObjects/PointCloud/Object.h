@@ -184,14 +184,14 @@ namespace IntegerWorld
 						switch (faceCulling)
 						{
 						case IntegerWorld::FaceCullingEnum::BackfaceCulling:
-							if ((Vertices[primitiveIndex].z - ScreenPosition.z) < 0)
+							if ((Vertices[primitiveIndex].z - ScreenPosition.z) > 0)
 							{
 								Primitives[primitiveIndex] = -VERTEX16_UNIT;
 								return false;
 							}
 							break;
 						case IntegerWorld::FaceCullingEnum::FrontfaceCulling:
-							if ((Vertices[primitiveIndex].z - ScreenPosition.z) > 0)
+							if ((Vertices[primitiveIndex].z - ScreenPosition.z) < 0)
 							{
 								Primitives[primitiveIndex] = -VERTEX16_UNIT;
 								return false;
@@ -210,7 +210,7 @@ namespace IntegerWorld
 				/// Collects primitives that passed culling, pushing them to the fragment collector
 				/// with their depth key for later sorting.
 				/// </summary>
-				void FragmentCollect(FragmentCollector& fragmentCollector) final
+				void FragmentCollect(FragmentCollector& fragmentCollector)
 				{
 					for (uint_fast16_t i = 0; i < VertexCount; i++)
 					{
