@@ -26,8 +26,6 @@ namespace IntegerWorld
 		using Abstract2dDrawer<SurfaceType>::IsInsideWindow;
 		using Abstract2dDrawer<SurfaceType>::ClipEndpointToWindow;
 		using Abstract2dDrawer<SurfaceType>::ClipTriangleToWindow;
-		using Abstract2dDrawer<SurfaceType>::FixedCeilToInt;
-		using Abstract2dDrawer<SurfaceType>::IntToFixed;
 		using Abstract2dDrawer<SurfaceType>::clippedPolygon;
 
 	public:
@@ -295,8 +293,8 @@ namespace IntegerWorld
 			}
 
 			// Fixed-point X positions for original vertices.
-			const int32_t fx0 = IntToFixed(x0);
-			const int32_t fx1 = IntToFixed(x1);
+			const int32_t fx0 = BresenhamSpace::IntToFixed(x0);
+			const int32_t fx1 = BresenhamSpace::IntToFixed(x1);
 
 			// Sorted Y (already ensured by caller dispatch order).
 			const int16_t hTop = y1 - y0;      // Height of top segment.
@@ -304,9 +302,9 @@ namespace IntegerWorld
 			const int16_t hTotal = y2 - y0;    // Total height.
 
 			// Fixed-point per-scanline X deltas along each relevant edge.
-			const int32_t dxLong = (hTotal != 0) ? (IntToFixed(x2 - x0) / hTotal) : 0;   // Edge x0->x2
-			const int32_t dxTop = (hTop != 0) ? (IntToFixed(x1 - x0) / hTop) : 0;        // Edge x0->x1
-			const int32_t dxBottom = (hBottom != 0) ? (IntToFixed(x2 - x1) / hBottom) : 0; // Edge x1->x2
+			const int32_t dxLong = (hTotal != 0) ? (BresenhamSpace::IntToFixed(x2 - x0) / hTotal) : 0;   // Edge x0->x2
+			const int32_t dxTop = (hTop != 0) ? (BresenhamSpace::IntToFixed(x1 - x0) / hTop) : 0;        // Edge x0->x1
+			const int32_t dxBottom = (hBottom != 0) ? (BresenhamSpace::IntToFixed(x2 - x1) / hBottom) : 0; // Edge x1->x2
 
 			// Determine orientation: compare long edge X at y1 vs actual x1.
 			const bool longEdgeIsLeft = ((fx0 + dxLong * hTop) <= fx1);
@@ -323,8 +321,8 @@ namespace IntegerWorld
 				for (int_fast16_t y = y0; y < y1; y++)
 				{
 					// Top-left rule: left edge ceil, right edge ceil - 1 (half-open on the right).
-					const int16_t startX = FixedCeilToInt(fxLeft);
-					const int16_t endX = FixedCeilToInt(fxRight) - 1;
+					const int16_t startX = BresenhamSpace::FixedCeilToInt(fxLeft);
+					const int16_t endX = BresenhamSpace::FixedCeilToInt(fxRight) - 1;
 
 					if (startX <= endX)
 					{
@@ -349,8 +347,8 @@ namespace IntegerWorld
 				for (int_fast16_t y = y1; y < y2; y++)
 				{
 					// Top-left rule: left edge ceil, right edge ceil - 1 (half-open on the right).
-					const int16_t startX = FixedCeilToInt(fxLeft);
-					const int16_t endX = FixedCeilToInt(fxRight) - 1;
+					const int16_t startX = BresenhamSpace::FixedCeilToInt(fxLeft);
+					const int16_t endX = BresenhamSpace::FixedCeilToInt(fxRight) - 1;
 
 					if (startX <= endX)
 					{

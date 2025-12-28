@@ -39,6 +39,47 @@ namespace IntegerWorld
 		Screen		// Blends the new color with the existing pixel color using the screen blend mode.
 	};
 
+	namespace BresenhamSpace
+	{
+		/// <summary>
+		/// Fixed-point scale used by line and triangle rendering.
+		/// </summary>
+		static constexpr uint8_t BRESENHAM_SCALE = 8;
+
+		// Bresenham fixed-point unit.
+		static constexpr int16_t FP_UNIT = SignedLeftShift<int16_t>(1, BRESENHAM_SCALE);
+
+		/// <summary>
+		/// Converts a 16-bit integer to a 32-bit fixed-point value by left-shifting it by BRESENHAM_SCALE while preserving the sign.
+		/// </summary>
+		/// <param name="x">The 16-bit signed integer input value to convert to fixed-point.</param>
+		/// <returns>A 32-bit signed integer representing the fixed-point result of x shifted left by BRESENHAM_SCALE.</returns>
+		inline constexpr int32_t IntToFixed(const int16_t x)
+		{
+			return SignedLeftShift<int32_t>(x, BRESENHAM_SCALE);
+		}
+
+		/// <summary>
+		/// Converts a fixed-point value to an integer by computing the ceiling of the value (rounding up) and returning it as an int16_t.
+		/// </summary>
+		/// <param name="fx">A fixed-point value stored in an int32_t. It is assumed to use BRESENHAM_SCALE fractional bits (i.e., scaled by FP_UNIT).</param>
+		/// <returns>The smallest integer (int16_t) greater than or equal to fx interpreted as a fixed-point number (equivalent to ceil(fx / FP_UNIT)). Computation uses SignedRightShift with BRESENHAM_SCALE.</returns>
+		inline constexpr int16_t FixedCeilToInt(const int32_t fx)
+		{
+			return SignedRightShift(fx + (FP_UNIT - 1), BRESENHAM_SCALE);
+		}
+
+		/// <summary>
+		/// Converts a 32-bit fixed-point value to a 16-bit integer by discarding its fractional part.
+		/// </summary>
+		/// <param name="fx">A 32-bit fixed-point value scaled by BRESENHAM_SCALE to convert.</param>
+		/// <returns>A 16-bit integer equal to fx shifted right by BRESENHAM_SCALE bits. The shift is performed by SignedRightShift, preserving the sign while discarding the fractional bits.</returns>
+		inline constexpr int16_t FixedFloorToInt(const int32_t fx)
+		{
+			return SignedRightShift(fx, BRESENHAM_SCALE);
+		}
+	}
+
 	/// <summary>
 	/// Abstract base class template for rasterizing onto a 2D surface.
 	/// - Owns a reference to the surface.
@@ -52,45 +93,6 @@ namespace IntegerWorld
 	template<typename SurfaceType>
 	class AbstractSurfaceRasterizer
 	{
-	protected:
-		/// <summary>
-		/// Fixed-point scale used by line and triangle rendering.
-		/// </summary>
-		static constexpr uint8_t BRESENHAM_SCALE = 8;
-
-		// Bresenham fixed-point unit.
-		static constexpr int32_t FP_UNIT = (int32_t(1) << BRESENHAM_SCALE);
-
-		/// <summary>
-		/// Converts a 16-bit integer to a 32-bit fixed-point value by left-shifting it by BRESENHAM_SCALE while preserving the sign.
-		/// </summary>
-		/// <param name="x">The 16-bit signed integer input value to convert to fixed-point.</param>
-		/// <returns>A 32-bit signed integer representing the fixed-point result of x shifted left by BRESENHAM_SCALE.</returns>
-		static constexpr int32_t IntToFixed(const int16_t x)
-		{
-			return SignedLeftShift<int32_t>(x, BRESENHAM_SCALE);
-		}
-
-		/// <summary>
-		/// Converts a fixed-point value to an integer by computing the ceiling of the value (rounding up) and returning it as an int16_t.
-		/// </summary>
-		/// <param name="fx">A fixed-point value stored in an int32_t. It is assumed to use BRESENHAM_SCALE fractional bits (i.e., scaled by FP_UNIT).</param>
-		/// <returns>The smallest integer (int16_t) greater than or equal to fx interpreted as a fixed-point number (equivalent to ceil(fx / FP_UNIT)). Computation uses SignedRightShift with BRESENHAM_SCALE.</returns>
-		static constexpr int16_t FixedCeilToInt(const int32_t fx)
-		{
-			return SignedRightShift(fx + (FP_UNIT - 1), BRESENHAM_SCALE);
-		}
-
-		/// <summary>
-		/// Converts a 32-bit fixed-point value to a 16-bit integer by discarding its fractional part.
-		/// </summary>
-		/// <param name="fx">A 32-bit fixed-point value scaled by BRESENHAM_SCALE to convert.</param>
-		/// <returns>A 16-bit integer equal to fx shifted right by BRESENHAM_SCALE bits. The shift is performed by SignedRightShift, preserving the sign while discarding the fractional bits.</returns>
-		static constexpr int16_t FixedFloorToInt(const int32_t fx)
-		{
-			return SignedRightShift(fx, BRESENHAM_SCALE);
-		}
-
 	protected:
 		/// <summary>
 		/// Outcode bit mask for Cohen-Sutherland style region tests.
