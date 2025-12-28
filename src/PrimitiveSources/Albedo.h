@@ -24,6 +24,20 @@ namespace IntegerWorld
 					}
 				};
 
+				template<Rgb8::color_t color>
+				struct FixedSource
+				{
+					static constexpr bool HasAlbedos()
+					{
+						return true;
+					}
+
+					static constexpr Rgb8::color_t GetAlbedo(const uint16_t groupIndex)
+					{
+						return color;
+					}
+				};
+
 				class Source
 				{
 				private:
