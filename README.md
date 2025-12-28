@@ -4,8 +4,12 @@
 
 ![Tiny demo scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/tiny_demo_scene_avr.gif)
 
-*Tiny Demo Scene running at ~33 fps on an Arduino AVR328 @ 16 Mhz*
+*Tiny Demo Scene 96x64 running at ~33 fps on an Arduino AVR328 @ 16 Mhz*
 
+
+![Christmas Tree scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/ChristmasTreeScene.gif)
+
+*Christmas Tree Scene 172x320 running at ~20 fps on a Raspberry Pi Pico 2 RP2350 @ 150 Mhz*
 
 ## Library
 - Arduino compatible.
