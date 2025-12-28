@@ -1,38 +1,49 @@
 # IntegerWorld
 
-**IntegerWorld** is a C++11 embedded graphics framework for efficient 2D and 3D rendering using integer math. It provides APIs for drawing and shading window-clipped points, lines, triangles, and rectangles, and interfaces with platform-independent targets such as framebuffers and direct draw.
+## Integer‑only 3D rendering engine for microcontrollers.
 
-![Tiny demo scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/tiny_demo_scene_avr.gif)
+- **Scene‑based 3D rendering**
+- **Triangle mesh rasterization**
+- **Per‑fragment lighting**
+- **Material‑driven shading**
+- **Depth‑sorted rendering**
+- **Platform‑agnostic output**
+- **Arduino compatible**
+- **Integer-only math for fast rendering with low memory use**
+---
 
-*Tiny Demo Scene 96x64 running at ~33 fps on an Arduino AVR328 @ 16 Mhz*
+## Christmas Tree Scene🎄
 
+![Christmas Tree Scene](media/ChristmasTreeScene.gif)
 
-![Christmas Tree scene](https://github.com/GitMoDu/IntegerWorld/raw/master/media/ChristmasTreeScene.gif)
+**RP2350 (Raspberry Pi Pico 2)**  
+- Resolution: **172×320**
+- Clock: **150 MHz**
+- Performance: **~20 FPS**
 
-*Christmas Tree Scene 172x320 running at ~20 fps on a Raspberry Pi Pico 2 RP2350 @ 150 Mhz*
+This scene is the **design target** for IntegerWorld:
+- triangle meshes, point clouds
+- material‑based shading
+- multiple light sources
+- custom shaders
+- objects imported from BlockMesh project
 
-## Library
-- Arduino compatible.
-- [Integer-only math](https://github.com/GitMoDu/IntegerSignal) for fast rendering with low memory use.
+---
 
-### 3D Engine
-- [Co-operative scheduler](https://github.com/arkhipenko/TaskScheduler) compatible render engine.
-- Rendering is done with Z-ordered painter's algorithm, with fragment collection and sorting approach.
-- Scene shading based on fragment color, position, normal, material and lights.
-- Material properties include Emissive, Diffuse, Specular and Metallic.
-- Included light sources: Point, Directional and Spotlight.
-- Included render objects: TriangleMesh, EdgeLine and PointCloud.
+## Scaling Down: Tiny Scene Demo on AVR
 
-### Rasterizer:
-  - Direct 2D and 3D drawing API for lines, triangles and rectangles.
-  - Platform-independent output (screen, framebuffer).
-  - Window clipping for all primitives, in 2D and 3D.
-  - Custom pixel shader support for lines and triangles.
+![AVR Demo Scene](media/tiny_demo_scene_avr.gif)
 
+**ATmega328 (Arduino AVR)**  
+- Resolution: **96×64**
+- Clock: **16 MHz**
+- Performance: **~33 FPS**
+
+Same pipeline, same math model — scaled to 8‑bit hardware
+
+---
 
 ## Dependencies
-TaskScheduler: https://github.com/arkhipenko/TaskScheduler
 
-IntegerSignal: https://github.com/GitMoDu/IntegerSignal
-
-
+- [TaskScheduler](https://github.com/arkhipenko/TaskScheduler)
+- [IntegerSignal](https://github.com/GitMoDu/IntegerSignal)
