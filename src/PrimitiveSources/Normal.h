@@ -37,14 +37,14 @@ namespace IntegerWorld
 						return true;
 					}
 
+					static constexpr vertex16_t Normal{ x, y, z };
+
 					/// <summary>
-					/// Mock normal source that always returns a zero vector.
-					/// </summary>
-					/// <param name="index"></param>
-					/// <returns></returns>
+					/// Returns a copy of the fixed normal vector.
+					/// 
 					static constexpr vertex16_t GetNormal(const uint16_t index)
 					{
-						return vertex16_t{ x, y, z };
+						return Normal;
 					}
 				};
 
