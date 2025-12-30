@@ -22,7 +22,6 @@ namespace Egfx
 		/// USE_DOUBLE_FRAME_BUFFER - Enable double buffering for the frame buffer(s). Enables rendering to one buffer while the other is being pushed to the display.
 		/// USE_LOG_FPS - Enable logging of FPS and engine performance to serial output. Requires GRAPHICS_ENGINE_MEASURE to be defined?
 		/// USE_DISPLAY_FPS - Enable on-screen display of FPS counter.
-		/// USE_TFT_BACKLIGHT_PIN - Enable TFT backlight pin on start.
 		/// </summary>
 		/// <typeparam name="FramebufferType">Type that defines framebuffer properties (e.g., BufferSize, FrameWidth, FrameHeight) and provides the framebuffer interface used by the engine.</typeparam>
 		/// <typeparam name="ScreenDriverType">Screen driver implementation type that uses the selected communications type to drive the display hardware.</typeparam>
@@ -158,15 +157,6 @@ namespace Egfx
 				if (!DrawerWrapper.AddDrawer(FpsDrawer))
 				{
 					return false;
-				}
-#endif
-
-				// Optional TFT backlight control.
-#if defined(USE_TFT_BACKLIGHT_PIN)
-				if (USE_TFT_BACKLIGHT_PIN != UINT8_MAX)
-				{
-					pinMode(USE_TFT_BACKLIGHT_PIN, OUTPUT);
-					digitalWrite(USE_TFT_BACKLIGHT_PIN, HIGH);
 				}
 #endif
 

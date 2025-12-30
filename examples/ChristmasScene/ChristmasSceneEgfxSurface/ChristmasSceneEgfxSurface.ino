@@ -1,21 +1,18 @@
 /*
-* Integer World Demo Scene for EGFX engine (https://github.com/GitMoDu/EGFX).
+* Christmas Scene Demo for Integer World 3D Engine with EGFX graphics surface.
 * Includes configurations for multiple screen drivers (uncomment driver).
 */
 
 #define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
-//#define GRAPHICS_ENGINE_MEASURE // Enable engine measuring and logging.
 //#define EGFX_PERFORMANCE_LOG // Enable performance logging for EGFX engine.
 //#define EGFX_PERFORMANCE_DEBUG // Enable performance debug logging for EGFX engine.
 
 //#define USE_DYNAMIC_FRAME_BUFFER // Enable dynamic allocation of framebuffer.
 #define USE_DOUBLE_FRAME_BUFFER // Enable double framebuffer.
 #define USE_DISPLAY_FPS // Enable FPS display drawer.
-//#define USE_LOG_FPS // Enable serial logging of FPS and engine performance.
-//#define USE_TFT_BACKLIGHT_PIN 7 // Optional TFT backlight control pin.
-//#define USE_TFT_BACKLIGHT_PIN 21 // Optional TFT backlight control pin.
+#define USE_LOG_FPS // Enable serial logging of FPS and engine performance.
 
 
 //#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
@@ -75,14 +72,12 @@ void halt()
 		;
 }
 
-
-
 void setup()
 {
 #if defined(DEBUG)
 	Serial.begin(SERIAL_BAUD_RATE);
-	//while (!Serial)
-		//;;
+	while (!Serial)
+		;;
 	delay(1000);
 #endif
 
@@ -98,11 +93,11 @@ void setup()
 		halt();
 	}
 	Scene.PrintLightsPositions();
-	//halt();
-// Attach the surface layer to renderer.
+	
+	// Attach the surface layer to renderer.
 	DisplayEngine.SetDrawLayer(Surface);
 
-	// Start Internet World Engine renderer.
+	// Start Integer World Engine renderer.
 	EngineRenderer.Start();
 
 #if defined(INTEGER_WORLD_PERFORMANCE_LOG)
