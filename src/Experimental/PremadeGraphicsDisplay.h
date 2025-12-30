@@ -149,6 +149,10 @@ namespace Egfx
 				// Set the Display Sync Type.
 				GraphicsEngine.SetSyncType(syncType);
 
+#if defined(USE_LOG_FPS)
+				EngineLog.Start();
+#endif
+
 #if defined(USE_DISPLAY_FPS)
 				// Add FPS drawer if enabled.
 				if (!DrawerWrapper.AddDrawer(FpsDrawer))
