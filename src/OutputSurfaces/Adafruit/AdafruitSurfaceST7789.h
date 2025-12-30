@@ -75,10 +75,10 @@ namespace IntegerWorld
 					if (BfiEnabled)
 					{
 						Display.enableDisplay(false);
-					}
-					if (Bkl != -1)
-					{
-						digitalWrite(Bkl, LOW);
+						if (Bkl != -1)
+						{
+							digitalWrite(Bkl, LOW);
+						}
 					}
 				}
 
