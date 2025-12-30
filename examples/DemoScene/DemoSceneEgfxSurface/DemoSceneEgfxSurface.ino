@@ -107,7 +107,7 @@ void setup()
 		digitalWrite(DisplayPins::BACKLIGHT, HIGH);
 	}
 
-	// Start Internet World Engine renderer.
+	// Start Integer World Engine renderer.
 	EngineRenderer.Start();
 
 #if defined(INTEGER_WORLD_PERFORMANCE_LOG) // Start performance logging.
@@ -121,12 +121,13 @@ void setup()
 	Surface.SizeX = FramebufferType::FrameWidth - margin;
 	Surface.SizeY = FramebufferType::FrameHeight - margin;
 
-	// Start the scene with the visible dimensions.
 	int16_t width, height;
 	uint8_t colorDepth;
 	Surface.GetSurfaceDimensions(width, height, colorDepth);
 
+	// Start the scene with the visible dimensions.
 	DemoScene.Start(EngineRenderer, width, height);
+
 #if defined(DEBUG)
 	Serial.println(F("Integer World 3D Demo Scene"));
 	Serial.print(F("Display "));
