@@ -12,7 +12,10 @@
 // Animated demo scene with multiple objects and lights. Re-used for various cross-platform examples.
 #include "Experimental/AnimatedDemoScene.h"
 
+#if defined(ARDUINO)
 // Pre made display engine with frame buffer, screen driver, render task, and optional FPS logging/drawing.
 #include "Experimental/PremadeGraphicsDisplay.h"
+#endif
+
 
 #endif

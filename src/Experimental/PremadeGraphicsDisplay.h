@@ -67,7 +67,7 @@ namespace Egfx
 
 			// Optional EGFX Graphics engine log task.
 #if defined(USE_LOG_FPS)
-			Egfx::EngineLogTask<2000> EngineLog;
+			Egfx::PerformanceLogTask<2000> EngineLog;
 #endif
 
 			// Optional FPS drawer.

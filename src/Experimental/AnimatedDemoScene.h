@@ -34,7 +34,12 @@ public:
 		Assets::Shapes::Sphere::TriangleCount
 		+ Assets::Shapes::Star::TriangleCount
 		+ Assets::Shapes::Cube::TriangleCount
-		+ Assets::Shapes::Grid8x8::VertexCount;
+		+ Assets::Shapes::Grid8x8::VertexCount
+		+ 2 // 2 point light billboards.
+#if defined(INTEGER_WORLD_FRUSTUM_DEBUG)
+		+ Assets::Debug::FrustumDebugger::PrimitiveCount
+#endif
+		;
 
 private:
 	enum class SceneLightsEnum : uint8_t
@@ -102,7 +107,6 @@ private:
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader TriangleShader{};
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::ZInterpolateShader TriangleZShader{};
 	RenderObjects::Mesh::FragmentShaders::TriangleShade::WireframeShader TriangleWireframeShader{};
-
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_DEMO)
 #if defined(INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY)
 	Assets::FragmentShaders::CubeTexturedVertexLitShader TriangleTextureShader{};
@@ -169,8 +173,7 @@ public:
 			|| !engineRenderer.AddObject(&ObjectBackground)
 			|| !engineRenderer.AddObject(&LightRedBillboardObject)
 			|| !engineRenderer.AddObject(&LightGreenBillboardObject)
-			|| !engineRenderer.AddObject(&ObjectFloor)
-			)
+			|| !engineRenderer.AddObject(&ObjectFloor))
 		{
 			SetAnimationEnabled(false);
 			return false;
@@ -209,7 +212,7 @@ public:
 
 		// Configure and place floor.
 		FloorShader.Radius = MaxValue(1, MinValue(width, height) / 96);
-		ObjectFloor.Resize = Scale16::GetFactor<uint8_t>(28, 1);
+		ObjectFloor.Resize = Scale16::GetFactor<uint8_t>(14, 1);
 		ObjectFloor.SetNormal({ 0, VERTEX16_UNIT, 0 });
 		ObjectFloor.Translation.y = (-DistanceUnit * 3) / 5;
 		ObjectFloor.Translation.z = BaseDistance;
@@ -262,7 +265,7 @@ private:
 
 		ObjectStar.Rotation.x = ObjectSphere.Rotation.x + GetAngle(120);
 		ObjectStar.Rotation.y = ObjectSphere.Rotation.y + GetAngle(120);
-		ObjectStar.Rotation.z = ObjectSphere.Rotation.z + GetAngle(120);;
+		ObjectStar.Rotation.z = ObjectSphere.Rotation.z + GetAngle(120);
 
 		ObjectCube.Rotation.x = ObjectSphere.Rotation.x + GetAngle(240);
 		ObjectCube.Rotation.y = ObjectSphere.Rotation.y + GetAngle(240);
