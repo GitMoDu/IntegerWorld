@@ -55,6 +55,8 @@ namespace IntegerWorld
 						Uvs.b.y = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 1].y);
 						Uvs.c.x = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 2].x);
 						Uvs.c.y = (uint8_t)pgm_read_byte(&UvMap[baseIndex + 2].y);
+
+						return Uvs;
 					}
 #else
 					triangle_uv_t GetUvs(const uint16_t triangleIndex) const
@@ -65,8 +67,8 @@ namespace IntegerWorld
 							UvMap[baseIndex + 0],
 							UvMap[baseIndex + 1],
 							UvMap[baseIndex + 2] };
-#endif
 					}
+#endif
 				};
 			}
 
