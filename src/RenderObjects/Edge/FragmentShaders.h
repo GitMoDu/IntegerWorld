@@ -3,6 +3,7 @@
 
 #include "../AbstractObject.h"
 #include "../../Shaders/Primitive/DepthSampler.h"
+#include "../../Shaders/Primitive/LineSampler.h"
 #include "PixelShaders.h"
 
 namespace IntegerWorld
@@ -24,17 +25,25 @@ namespace IntegerWorld
 						}
 					};
 
-					struct ColorInterpolateShader : IFragmentShader<edge_line_fragment_t>
+					struct ColorInterpolateShader : IFragmentShader<edge_vertex_fragment_t>
 					{
-						void FragmentShade(WindowRasterizer& rasterizer, const edge_line_fragment_t& fragment)
-						{
+						PixelShaders::VertexColorInterpolate PixelShader{};
 
+						void FragmentShade(WindowRasterizer& rasterizer, const edge_vertex_fragment_t& fragment)
+						{
+							if (PixelShader.SetFragmentData(
+								fragment.vertexA,
+								fragment.vertexB,
+								Rgb8::Color(fragment.redA, fragment.greenA, fragment.blueA),
+								Rgb8::Color(fragment.redB, fragment.greenB, fragment.blueB)))
+							{
+								rasterizer.RasterLine(fragment.vertexA, fragment.vertexB, PixelShader);
+							}
 						}
 					};
 
-					class ZShader : public IFragmentShader<edge_line_fragment_t>
+					struct ZShader : public IFragmentShader<edge_line_fragment_t>
 					{
-					public:
 						void FragmentShade(WindowRasterizer& rasterizer, const edge_line_fragment_t& fragment)
 						{
 							const uint8_t gray = PrimitiveShaders::DepthSampler::ZDepth8(fragment.z);
