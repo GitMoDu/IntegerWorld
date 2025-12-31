@@ -3,6 +3,7 @@
 
 // Core framework interfaces.
 #include "Framework/Interface.h"
+#include "Framework/Model.h"
 
 // Primitives for shaders.
 #include "Shaders/Primitive/TriangleSampler.h"
