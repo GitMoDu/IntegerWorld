@@ -21,14 +21,15 @@ namespace IntegerWorld
 				>
 				struct TemplateSource
 				{
+					static constexpr material_t StaticMaterial{ emit, rough, shine, gloss, specularTint, fresnel };
 					static constexpr bool HasMaterials()
 					{
 						return true;
 					}
 
-					static constexpr material_t GetMaterial(const uint16_t index)
+					static constexpr material_t GetMaterial(const uint16_t /*index*/)
 					{
-						return material_t{ emit, rough, shine, gloss, specularTint, fresnel };
+						return StaticMaterial;
 					}
 				};
 
