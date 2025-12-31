@@ -41,14 +41,14 @@ private:
 	Assets::RenderObjects::OctahedronEdgeObject ObjectOctahedron{};
 #else
 	// Shared shaders for objects.
-	RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader ObjectsShader{};
+	Assets::RenderObjects::Mesh::FragmentShaders::TriangleShade::FillShader ObjectsShader{};
 
 	// Mesh triangle objects.
 	Assets::RenderObjects::CubeMeshObject ObjectCube{};
 	Assets::RenderObjects::OctahedronMeshObject ObjectOctahedron{};
 #endif
 
-	Assets::SceneShaders::HeightSceneShader SceneShader{};
+	Assets::SceneShaders::GlobalLightSceneShader SceneShader{};
 
 	// Track animation color style.
 	bool Monochrome = false;

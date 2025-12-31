@@ -5,8 +5,6 @@
 
 namespace Assets
 {
-	using namespace IntegerWorld;
-
 	namespace Palletes
 	{
 		namespace Cube
@@ -31,6 +29,7 @@ namespace Assets
 
 	namespace RenderObjects
 	{
+		using namespace Shapes;
 		using namespace IntegerWorld::RenderObjects;
 
 		struct CubeEdgeObject : Edge::SimpleStaticEdgeLineObject<Shapes::Cube::VertexCount, Shapes::Cube::EdgeCount>
@@ -68,9 +67,7 @@ namespace Assets
 			FrustumCullingEnum::NoCulling,
 			FaceCullingEnum::BackfaceCulling,
 			IntegerWorld::PrimitiveSources::Albedo::Static::Source,
-			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
-			IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>
-			>
+			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource>
 		{
 		private:
 			using Base = IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
@@ -81,9 +78,7 @@ namespace Assets
 				FrustumCullingEnum::NoCulling,
 				FaceCullingEnum::BackfaceCulling,
 				IntegerWorld::PrimitiveSources::Albedo::Static::Source,
-				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
-				IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>
-			>;
+				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource>;
 
 			IntegerWorld::PrimitiveSources::Vertex::Static::Source VertexSource;
 			IntegerWorld::PrimitiveSources::Triangle::Static::Source TriangleSource;
@@ -92,8 +87,7 @@ namespace Assets
 		public:
 			CubeMeshObject()
 				: Base(VertexSource, TriangleSource, AlbedoSource,
-					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
-					MockNormalSource)
+					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance))
 				, VertexSource(Shapes::Cube::Vertices)
 				, TriangleSource(Shapes::Cube::Triangles)
 				, AlbedoSource(Palletes::Cube::Albedos)
@@ -116,8 +110,7 @@ namespace Assets
 			FrustumCullingEnum::NoCulling,
 			FaceCullingEnum::BackfaceCulling,
 			IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource,
-			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
-			IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>>
+			IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource>
 		{
 		private:
 			using Base = IntegerWorld::RenderObjects::Mesh::TriangleShadeObject<
@@ -128,8 +121,7 @@ namespace Assets
 				FrustumCullingEnum::NoCulling,
 				FaceCullingEnum::BackfaceCulling,
 				IntegerWorld::PrimitiveSources::Albedo::Dynamic::SingleSource,
-				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource,
-				IntegerWorld::PrimitiveSources::Normal::Static::FixedSource<0, 0, 0>>;
+				IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource>;
 
 			IntegerWorld::PrimitiveSources::Vertex::Static::Source VertexSource;
 			IntegerWorld::PrimitiveSources::Triangle::Static::Source TriangleSource;
@@ -139,8 +131,7 @@ namespace Assets
 		public:
 			OctahedronMeshObject()
 				: Base(VertexSource, TriangleSource, AlbedoSource,
-					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance),
-					MockNormalSource)
+					const_cast<IntegerWorld::PrimitiveSources::Material::DiffuseMaterialSource&>(PrimitiveSources::Material::DiffuseMaterialSourceInstance))
 				, VertexSource(Shapes::Octahedron::Vertices)
 				, TriangleSource(Shapes::Octahedron::Triangles)
 			{
@@ -177,27 +168,31 @@ namespace Assets
 	namespace SceneShaders
 	{
 		/// <summary>
-		/// Shades an object's albedo by reducing each RGB component based on the vertex height (y coordinate).
-		/// Assumes shape is centered at y=0, with shading range from around -SHAPE_UNIT/2 to +SHAPE_UNIT/2.
+		/// Applies a global lighting shade, brightening colors based on normal direction.
 		/// </summary>
-		class HeightSceneShader final : public ISceneShader
+		class GlobalLightSceneShader final : public ISceneShader
 		{
 		private:
-			// Hue aware, brightness reduction based on height.
-			static uint8_t ScaleColor(const uint8_t component, const uint8_t remove)
+			static uint8_t MixColor(const uint8_t component, const int8_t gain)
 			{
-				const uint8_t removeComponent = (uint16_t(remove) * component) >> 7;
-				return component > removeComponent ? component - removeComponent : 0;
+				const uint8_t scaled = int16_t(component >> 1) + SignedRightShift(static_cast<int16_t>(component) * gain, 8);
+
+				if (gain > 0)
+					return (UINT8_MAX - scaled) > gain ? scaled + gain : UINT8_MAX;
+				else
+					return scaled;
 			}
 
 		public:
-			Rgb8::color_t GetLitColor(const Rgb8::color_t albedo, const material_t& material, const vertex16_t& position, const vertex16_t& normal)
+			GlobalLightSceneShader() : ISceneShader() {}
+
+			Rgb8::color_t GetLitColor(const Rgb8::color_t albedo, const material_t& /*material*/, const vertex16_t& /*position*/, const vertex16_t& normal)
 			{
-				const uint8_t yDelta = LimitValue<int16_t, 0, (Shapes::SHAPE_UNIT * 4) / 5>((Shapes::SHAPE_UNIT / 2) - position.y) >> 4;
-				return Rgb8::Color(
-					ScaleColor(Rgb8::Red(albedo), yDelta),
-					ScaleColor(Rgb8::Green(albedo), yDelta),
-					ScaleColor(Rgb8::Blue(albedo), yDelta));
+				// Calculate normal gain based on normal x and y components (light is from top-left corner).
+				const int8_t normalGain = SignedRightShift(normal.y, 7) + SignedRightShift(normal.x, 7);
+				return Rgb8::Color(MixColor(Rgb8::Red(albedo), normalGain),
+					MixColor(Rgb8::Green(albedo), normalGain),
+					MixColor(Rgb8::Blue(albedo), normalGain));
 			}
 		};
 	}

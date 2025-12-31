@@ -1,17 +1,17 @@
 /*
 * Integer World Tiny Scene that fits in an AVR328 (Arduino OG).
-* Scene has no lights or scene shader.
+* Scene has 2 rotating objects lit by a simple global light.
 * Includes configurations for multiple screen drivers (uncomment driver and required include).
 * With DEMO_SCENE_EDGE_OBJECT: 2 edge objects. Without: 2 mesh objects.
 */
 
-#define DEBUG
+//#define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
-#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
-#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
+//#define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
+//#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level status measuring.
 
-#define DEMO_SCENE_EDGE_OBJECT // Enable alternate scene for monochrome and low RAM devices.
+//#define DEMO_SCENE_EDGE_OBJECT // Enable alternate scene for monochrome and low RAM devices.
 
 // Preset of SPI pin definitions for various platforms.
 #if defined(STM32H7xx) 
@@ -53,7 +53,7 @@
 #include <TScheduler.hpp>
 
 #include <SPI.h>
-#include <Wire.h>
+//#include <Wire.h>
 
 #include <IntegerWorld.h>
 #include <IntegerWorldTasks.h>
@@ -68,10 +68,10 @@
 //#include <IntegerWorldAdafruitSsd1331.h>
 //#include <IntegerWorldAdafruitSt77XX.h>
 //#include <IntegerWorldLexus2kSsd1306.h>
-//#include <IntegerWorldSumotoySsd1331.h>
+#include <IntegerWorldSumotoySsd1331.h>
 
 // Forward declare communications driver.
-TwoWire& WireInstance(Wire);
+//TwoWire& WireInstance(Wire);
 #if defined(ARDUINO_ARCH_STM32F1) || defined(STM32F1) || defined(ARDUINO_ARCH_STM32F4) || defined(STM32F4)
 SPIClass SpiInstance(3);
 #elif defined(ARDUINO_ARCH_RP2040)
@@ -84,15 +84,15 @@ SPIClass& SpiInstance(SPI);
 //IntegerWorld::Adafruit::Ssd1306I2c::FramebufferSurface Driver(WireInstance); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Ssd1306Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SSD1306
 //IntegerWorld::Adafruit::Sh1106Spi::FramebufferSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit_SH110X
-//IntegerWorld::Adafruit::Ssd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
+//IntegerWorld::Adafruit::Ssd1331::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST, true); // https://github.com/adafruit/Adafruit-SSD1331-OLED-Driver-Library-for-Arduino
 //IntegerWorld::Adafruit::St7735::DirectDrawSurface Driver(IntegerWorld::Adafruit::St7735::VariantEnum::Mini160x80Plugin, SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-ST7735-Library
 //IntegerWorld::Adafruit::St7789::DirectDrawSurface Driver(SpiInstance, TFT_CS, TFT_DC, TFT_RST); // https://github.com/adafruit/Adafruit-ST7735-Library
 
 //IntegerWorld::Lexus2k::Ssd1306I2c::DirectDrawSurface Driver{}; // https://github.com/lexus2k/ssd1306
 
-//IntegerWorld::Sumotoy::Ssd1331::DirectDrawSurface Driver(TFT_CS, TFT_DC, TFT_RST); // https://github.com/sumotoy/SSD_13XX
+IntegerWorld::Sumotoy::Ssd1331::DirectDrawSurface Driver(TFT_CS, TFT_DC, TFT_RST, true); // https://github.com/sumotoy/SSD_13XX
 
-IntegerWorld::MockOutput::OutputSurface<128, 128> Driver{}; // Mock output.
+//IntegerWorld::MockOutput::OutputSurface<128, 128> Driver{}; // Mock output.
 
 // Task scheduler.
 TS::Scheduler SchedulerBase{};
