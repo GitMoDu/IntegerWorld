@@ -72,7 +72,8 @@ namespace Assets
 		{
 			static constexpr vertex16_t AmbientLightDirection{ -VERTEX16_UNIT, -VERTEX16_UNIT, VERTEX16_UNIT };
 
-			static constexpr uint8_t SceneFoVPercent = 20;
+			static constexpr uint8_t SceneFoVPercent = 30; // Tall screens.
+			//static constexpr uint8_t SceneFoVPercent = 50;
 
 			static constexpr int16_t OrbitRadius = 2900;
 			static constexpr int16_t OrbitHeight = 1200;

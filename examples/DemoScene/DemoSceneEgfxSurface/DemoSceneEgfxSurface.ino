@@ -23,13 +23,13 @@
 //#define EGFX_PERFORMANCE_LOG // Enable performance logging for EGFX engine.
 //#define EGFX_PERFORMANCE_DEBUG // Enable performance debug logging for EGFX engine.
 
-#define USE_DYNAMIC_FRAME_BUFFER // Enable dynamic allocation of framebuffer.
-#define USE_DOUBLE_FRAME_BUFFER // Enable double framebuffer.
-//#define USE_DISPLAY_FPS // Enable FPS display counter.
+//#define USE_DYNAMIC_FRAME_BUFFER // Enable dynamic allocation of framebuffer.
+//#define USE_DOUBLE_FRAME_BUFFER // Enable double framebuffer.
+#define USE_DISPLAY_FPS // Enable FPS display counter.
 //#define USE_LOG_FPS // Enable serial logging of FPS and engine performance.
 
 #define INTEGER_WORLD_PERFORMANCE_LOG // Enable engine render status logging.
-#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
+//#define INTEGER_WORLD_PERFORMANCE_DEBUG // Enable engine debug level logging.
 
 #define INTEGER_WORLD_TEXTURED_CUBE_DEMO // Use textured cube object in the demo scene instead of colored cube.
 #define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Textured cube object with perspective correct and accurate texture mapping.
@@ -50,12 +50,15 @@
 // Process scheduler.
 TS::Scheduler SchedulerBase{};
 
+// Display communication instance.
+auto& DisplayInterface(DisplayConfig::Interface());
+
 // Display frame period in microseconds.
 static constexpr uint32_t FramePeriod = 16666 - 1;
 
 // EGFX graphics display engine, with optional logging task.
 Egfx::PremadeGraphicsDisplay::TemplateEngine<FramePeriod,
-	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayCommsInstance);
+	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayInterface);
 
 // Integer World output Surface for the EGFX graphics engine.
 IntegerWorld::EgfxSurface::FramebufferTemplate<FramebufferType> Surface(DisplayEngine.Framebuffer);
@@ -101,10 +104,10 @@ void setup()
 	DisplayEngine.SetDrawLayer(Surface);
 
 	// Enable backlight pin if defined.
-	if (DisplayPins::BACKLIGHT != UINT8_MAX)
+	if (DisplayConfig::BACKLIGHT != UINT8_MAX)
 	{
-		pinMode(DisplayPins::BACKLIGHT, OUTPUT);
-		digitalWrite(DisplayPins::BACKLIGHT, HIGH);
+		pinMode(DisplayConfig::BACKLIGHT, OUTPUT);
+		digitalWrite(DisplayConfig::BACKLIGHT, HIGH);
 	}
 
 	// Start Integer World Engine renderer.

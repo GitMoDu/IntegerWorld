@@ -6,12 +6,12 @@
 #define DEBUG
 #define SERIAL_BAUD_RATE 115200
 
-//#define EGFX_PERFORMANCE_LOG // Enable performance logging for EGFX engine.
-//#define EGFX_PERFORMANCE_DEBUG // Enable performance debug logging for EGFX engine.
+#define EGFX_PERFORMANCE_LOG // Enable performance logging for EGFX engine.
+//#define EGFX_PERFORMANCE_LOG_DETAIL // Enable detailed performance logging for EGFX engine.
 
 //#define USE_DYNAMIC_FRAME_BUFFER // Enable dynamic allocation of framebuffer.
 #define USE_DOUBLE_FRAME_BUFFER // Enable double framebuffer.
-#define USE_DISPLAY_FPS // Enable FPS display drawer.
+//#define USE_DISPLAY_FPS // Enable FPS display drawer.
 #define USE_LOG_FPS // Enable serial logging of FPS and engine performance.
 
 
@@ -22,16 +22,13 @@
 #define _TASK_OO_CALLBACKS
 #include <TScheduler.hpp>
 
+#include "DisplayConfiguration.h"
 
 #include <IntegerWorld.h>
 #include <IntegerWorldTasks.h>
 #include <IntegerWorldEgfx.h>
 
 #include <IntegerWorldExperimental.h>
-
-#include "DisplayConfiguration.h"
-
-//#define USE_TFT_BACKLIGHT_PIN DisplayPins::TFT_BACKLIGHT
 
 #include "ChristmasScene.h"
 
@@ -43,9 +40,12 @@ TS::Scheduler SchedulerBase{};
 // Display frame period in microseconds. Target 20 FPS.
 static constexpr uint32_t FramePeriod = 50000 - 1;
 
+// Display communication instance.
+auto& DisplayInterface(DisplayConfig::Interface());
+
 // EGFX graphics display engine, with optional logging task.
 Egfx::PremadeGraphicsDisplay::TemplateEngine<FramePeriod,
-	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayCommsInstance);
+	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayInterface);
 
 // Integer World output Surface for the EGFX graphics engine.
 IntegerWorld::EgfxSurface::FramebufferTemplate<FramebufferType> Surface(DisplayEngine.Framebuffer);
@@ -81,10 +81,10 @@ void setup()
 	delay(1000);
 #endif
 
-	if (DisplayPins::BACKLIGHT != UINT8_MAX)
+	if (DisplayConfig::BACKLIGHT != UINT8_MAX)
 	{
-		pinMode(DisplayPins::BACKLIGHT, OUTPUT);
-		digitalWrite(DisplayPins::BACKLIGHT, HIGH);
+		pinMode(DisplayConfig::BACKLIGHT, OUTPUT);
+		digitalWrite(DisplayConfig::BACKLIGHT, HIGH);
 	}
 
 	// Start EGFX graphics engine.
