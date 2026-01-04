@@ -156,11 +156,6 @@ public:
 		return true;
 	}
 
-	void OnFrameStart(const uint32_t predictedDisplayPeriod) final
-	{
-
-	}
-
 	void OnFrameStart() final
 	{
 		const uint32_t timestamp = micros();
