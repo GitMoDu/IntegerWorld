@@ -50,6 +50,8 @@ private:
 		EnumCount
 	};
 
+	static constexpr uint8_t FovPercent = 30;
+
 	static constexpr Rgb8::color_t Light1Color = Rgb8::RED;
 	static constexpr Rgb8::color_t Light2Color = Rgb8::GREEN;
 	static constexpr Rgb8::color_t Light3Color = Rgb8::BLUE;
@@ -179,8 +181,7 @@ public:
 			return false;
 		}
 
-		uint8_t fovPercent = 30;
-		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * fovPercent) / 100);
+		engineRenderer.SetFov((uint32_t(UFRACTION16_1X) * FovPercent) / 100);
 
 		// Configure animation based on surface dimensions.
 		ShapeMoveX = ((((int32_t)ShapeMove * 4) / 10) * width) / height;
