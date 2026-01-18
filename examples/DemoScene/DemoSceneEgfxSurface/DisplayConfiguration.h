@@ -54,8 +54,8 @@ using ScreenDriverType = Egfx::ScreenDriverSSD1331_96x64x16_SPI<DisplayConfig::C
 //using ScreenDriverType = Egfx::ScreenDriverST7735S_80x160x16_SPI<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
 //using ScreenDriverType = Egfx::ScreenDriverSSD1331_96x64x16_SPI<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
 //using ScreenDriverType = Egfx::ScreenDriverST7789_172x320x16_SPI<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
-//using ScreenDriverType = Egfx::ScreenDriverST7789T3_240x320x16_SPI<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
-//using ScreenDriverType = Egfx::ScreenDriverGC9107_128x128x16_SPI_Dma<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
+//using ScreenDriverType = Egfx::ScreenDriverST7789T3_240x320x16_SPI_Dma<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
+//using ScreenDriverType = Egfx::ScreenDriverGC9107_128x128x16_SPI<DisplayConfig::CS, DisplayConfig::DC, DisplayConfig::RESET>;
 using FramebufferType = Egfx::Color16Framebuffer<ScreenDriverType::ScreenWidth, ScreenDriverType::ScreenHeight, 0, EgfxOptions>;
 
 #endif

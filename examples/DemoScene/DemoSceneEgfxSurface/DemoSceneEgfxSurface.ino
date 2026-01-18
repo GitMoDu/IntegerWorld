@@ -14,7 +14,7 @@
 * #define INTEGER_WORLD_TEXTURED_CUBE_HIGH_QUALITY // Textured cube object with perspective correct and accurate texture mapping.
 * #define INTEGER_WORLD_LIGHTS_SHADER_DEBUG // Enable light component toggles in the scene lights shader.
 * #define INTEGER_WORLD_FRUSTUM_DEBUG // Enable engine frustum visualization in scene.
-* 
+*
 */
 
 #define DEBUG
@@ -60,11 +60,8 @@ static constexpr uint32_t FramePeriod = 16666 - 1;
 Egfx::PremadeGraphicsDisplay::TemplateEngine<FramePeriod,
 	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayInterface);
 
-// Integer World output Surface for the EGFX graphics engine.
-IntegerWorld::EgfxSurface::FramebufferTemplate<FramebufferType> Surface(DisplayEngine.Framebuffer);
-
 // Integer World engine renderer.
-IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount, AnimatedDemoScene::MaxDrawCallCount, 64> EngineRenderer(SchedulerBase, Surface);
+IntegerWorld::EngineRenderTask<AnimatedDemoScene::ObjectsCount, AnimatedDemoScene::MaxDrawCallCount, 64> EngineRenderer(SchedulerBase, DisplayEngine.Surface());
 
 // Demo scene and animator.
 AnimatedDemoScene DemoScene(SchedulerBase);
@@ -100,9 +97,6 @@ void setup()
 		halt();
 	}
 
-	// Attach the surface layer to renderer.
-	DisplayEngine.SetDrawLayer(Surface);
-
 	// Enable backlight pin if defined.
 	if (DisplayConfig::BACKLIGHT != UINT8_MAX)
 	{
@@ -119,14 +113,15 @@ void setup()
 
 	// EGFX Surface can be windowed.
 	const uint8_t margin = 0;
-	Surface.OffsetX = margin;
-	Surface.OffsetY = margin;
-	Surface.SizeX = FramebufferType::FrameWidth - margin;
-	Surface.SizeY = FramebufferType::FrameHeight - margin;
+	DisplayEngine.Surface().OffsetX = margin;
+	DisplayEngine.Surface().OffsetY = margin;
+	DisplayEngine.Surface().SizeX = FramebufferType::FrameWidth - margin;
+	DisplayEngine.Surface().SizeY = FramebufferType::FrameHeight - margin;
 
+	// Get the surface dimensions and color depth.
 	int16_t width, height;
 	uint8_t colorDepth;
-	Surface.GetSurfaceDimensions(width, height, colorDepth);
+	DisplayEngine.Surface().GetSurfaceDimensions(width, height, colorDepth);
 
 	// Start the scene with the visible dimensions.
 	DemoScene.Start(EngineRenderer, width, height);

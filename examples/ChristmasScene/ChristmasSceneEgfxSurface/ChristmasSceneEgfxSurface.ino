@@ -47,11 +47,8 @@ auto& DisplayInterface(DisplayConfig::Interface());
 Egfx::PremadeGraphicsDisplay::TemplateEngine<FramePeriod,
 	FramebufferType, ScreenDriverType> DisplayEngine(SchedulerBase, DisplayInterface);
 
-// Integer World output Surface for the EGFX graphics engine.
-IntegerWorld::EgfxSurface::FramebufferTemplate<FramebufferType> Surface(DisplayEngine.Framebuffer);
-
 // Integer World engine renderer.
-IntegerWorld::EngineRenderTask<ChristmasScene::ObjectsCount, ChristmasScene::MaxDrawCallCount, 64> EngineRenderer(SchedulerBase, Surface);
+IntegerWorld::EngineRenderTask<ChristmasScene::ObjectsCount, ChristmasScene::MaxDrawCallCount, 64> EngineRenderer(SchedulerBase, DisplayEngine.Surface());
 
 // Demo scene and animator.
 ChristmasScene Scene(EngineRenderer);
@@ -94,8 +91,6 @@ void setup()
 	}
 	Scene.PrintLightsPositions();
 	
-	// Attach the surface layer to renderer.
-	DisplayEngine.SetDrawLayer(Surface);
 
 	// Start Integer World Engine renderer.
 	EngineRenderer.Start();
@@ -104,17 +99,10 @@ void setup()
 	IntegerWorldEngineLog.Start();
 #endif
 
-	// EGFX Surface can be windowed.
-	const uint8_t margin = 0;
-	Surface.OffsetX = margin;
-	Surface.OffsetY = margin;
-	Surface.SizeX = FramebufferType::FrameWidth - margin;
-	Surface.SizeY = FramebufferType::FrameHeight - margin;
-
 	// Start the scene with the visible dimensions.
 	int16_t width, height;
 	uint8_t colorDepth;
-	Surface.GetSurfaceDimensions(width, height, colorDepth);
+	DisplayEngine.Surface().GetSurfaceDimensions(width, height, colorDepth);
 
 	if (!Scene.Start(EngineRenderer, width, height))
 	{

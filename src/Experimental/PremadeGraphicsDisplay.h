@@ -6,6 +6,8 @@
 #include <EgfxDisplayEngine.h>
 #include <EgfxScreenDrivers.h>
 
+#include "../OutputSurfaces/EgfxSurface.h"
+
 namespace Egfx
 {
 	/// <summary>
@@ -64,23 +66,27 @@ namespace Egfx
 			// Render push task for the graphics engine.
 			Egfx::DisplayEngineTask<FramebufferType, ScreenDriverType> GraphicsEngine;
 
+		public:
 			// Optional EGFX Graphics engine log task.
 #if defined(USE_LOG_FPS)
 			Egfx::PerformanceLogTask<2000> EngineLog;
 #endif
 
-			// Optional FPS drawer.
-#if defined(USE_DISPLAY_FPS)
-			static constexpr uint8_t FpsMargin = FramebufferType::FrameWidth / 20;
-			static constexpr uint8_t FpsFontScale = 2;
-			static constexpr uint8_t FpsSampleCount = 20;
-			using FpsLayout = Egfx::LayoutElement<FpsMargin, FpsMargin, FramebufferType::FrameWidth - FpsMargin * 2, FramebufferType::FrameHeight - FpsMargin * 2>;
-			using FpsFontDrawerType = BitmaskFont::TemplateColorScaledFontDrawer<BitmaskFonts::Plastic::FontType5x5, FontText::FullColorSource, FpsFontScale, FpsFontScale>;
-			Egfx::DisplayFpsDrawer<FpsLayout, Egfx::FpsDrawerPosition::TopRight, FpsFontDrawerType, FpsSampleCount> FpsDrawer;
+#if defined(USE_DISPLAY_FPS) // View composition with FPS display layer.
+			static constexpr uint8_t Margin = 10;
+			using FpsLayout = Framework::TemplateLayout<Margin, Margin,
+				FramebufferType::FrameWidth - Margin * 2, FramebufferType::FrameHeight - Margin * 2>;
+			template<typename UserViewType>
+			using HostViewType = Egfx::Framework::Assets::FpsDisplay::Views::CompositeWithFps<FpsLayout, UserViewType>;
+#else		// Surface view layer only.
+			template<typename UserViewType>
+			using HostViewType = Egfx::Framework::View::CompositeView<UserViewType>;
 #endif
+			// Complete view layer type for the graphics engine.
+			using ViewLayersType = HostViewType<IntegerWorld::EgfxSurface::FramebufferPointerTemplate<FramebufferType>>;
 
 			// Graphics engine task and drawer wrapper for user layer and FPS drawer.
-			Egfx::MultiDrawerWrapper<2> DrawerWrapper{};
+			Egfx::Framework::View::FrameAdapter<ViewLayersType> DrawerWrapper{};
 
 		public:
 			TemplateEngine(TS::Scheduler& scheduler, ScreenCommsInterfaceType& screenComms)
@@ -98,6 +104,14 @@ namespace Egfx
 			{
 			}
 
+			~TemplateEngine() = default;
+
+			// Integer World output Surface for the EGFX graphics engine.
+			auto& Surface()
+			{
+				return DrawerWrapper.ViewInstance.template view<0>();
+			}
+
 			void OnSetupFail()
 			{
 #if defined(USE_DYNAMIC_FRAME_BUFFER)
@@ -105,17 +119,6 @@ namespace Egfx
 #if defined(USE_DOUBLE_FRAME_BUFFER)
 				delete[] AltBuffer;
 #endif
-#endif
-			}
-
-			void SetDrawLayer(Egfx::IFrameDraw& drawer)
-			{
-				DrawerWrapper.ClearDrawers();
-				DrawerWrapper.AddDrawer(drawer);
-
-#if defined(USE_DISPLAY_FPS)
-				// Add FPS drawer on top, if enabled.
-				DrawerWrapper.AddDrawer(FpsDrawer);
 #endif
 			}
 
@@ -142,24 +145,18 @@ namespace Egfx
 					return false;
 				}
 
+				// Set the output surface buffer for the Integer World engine.
+				Surface().SetBuffer(Framebuffer);
+
 				// Set the drawer wrapper for the graphics engine.
 				GraphicsEngine.SetDrawer(&DrawerWrapper);
 
 				// Set the Display Sync Type.
 				GraphicsEngine.SetSyncType(syncType);
 
-#if defined(USE_LOG_FPS)
+#if defined(USE_LOG_FPS) // Optional performance logging.
 				EngineLog.Start();
 #endif
-
-#if defined(USE_DISPLAY_FPS)
-				// Add FPS drawer if enabled.
-				if (!DrawerWrapper.AddDrawer(FpsDrawer))
-				{
-					return false;
-				}
-#endif
-
 				return true;
 			}
 
